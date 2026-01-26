@@ -25,6 +25,9 @@ export default function Password({ password, setPassword }: passwordTypes) {
   const hasUppercase = /[A-Z]/.test(password);
   const hasSpecial = /[^A-Za-z0-9]/.test(password);
 
+  const isValidPassword =
+    hasMinLength && hasNumber && hasUppercase && hasSpecial;
+
   return (
     <div className="flex flex-col h-screen justify-between">
       <div className="px-12 text-center">
@@ -63,7 +66,15 @@ export default function Password({ password, setPassword }: passwordTypes) {
       </div>
       <button
         type="submit"
-        className="w-full bg-[#E1761F] py-3 text-center text-white rounded-4xl font-medium active:bg-black transition-all duration-200"
+        disabled={!isValidPassword}
+        className={`
+          w-full py-3 text-center rounded-4xl font-medium transition-all duration-200
+          ${
+            isValidPassword
+              ? "bg-[#E1761F] text-white active:bg-black"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }
+        `}
       >
         NEXT
       </button>

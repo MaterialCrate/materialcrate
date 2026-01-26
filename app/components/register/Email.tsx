@@ -6,6 +6,8 @@ interface emailTypes {
 }
 
 export default function Email({ email, setEmail }: emailTypes) {
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   return (
     <div className="flex flex-col h-full gap-10">
       <div className="px-12 text-center">
@@ -41,7 +43,15 @@ export default function Email({ email, setEmail }: emailTypes) {
         />
         <button
           type="submit"
-          className="w-full bg-[#E1761F] py-3 text-center text-white rounded-4xl font-medium active:bg-black transition-all duration-200"
+          disabled={!isValidEmail}
+          className={`
+          w-full py-3 text-center rounded-4xl font-medium transition-all duration-200
+          ${
+            isValidEmail
+              ? "bg-[#E1761F] text-white active:bg-black"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }
+        `}
         >
           NEXT
         </button>
