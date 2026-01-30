@@ -9,11 +9,11 @@ export default function Email({ email, setEmail }: emailTypes) {
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
-    <div className="flex flex-col h-full gap-10">
-      <div className="px-12 text-center">
+    <div className="h-screen relative w-full">
+      <div className="text-center fixed top-30 w-70 left-0 right-0 mx-auto">
         <h1 className="font-serif text-4xl">Let&#39;s get started</h1>
       </div>
-      <div className="space-y-5 flex flex-col justify-center">
+      <div className="space-y-5 flex flex-col w-full h-full justify-center">
         <button
           type="button"
           className="border border-black flex items-center justify-between w-full px-4 py-2 rounded-lg"

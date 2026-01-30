@@ -17,15 +17,12 @@ export default function Welcome({
   setSelectedOption,
 }: options) {
   return (
-    <div className="flex flex-col h-screen justify-between">
-      <div className="text-center font-serif text-3xl">
+    <div className="h-screen relative w-full">
+      <div className="text-center fixed top-30 w-70 left-0 right-0 mx-auto text-4xl">
         <h1>Welcome to Material Crate!</h1>
-        <h2>Where would you like to start?</h2>
-        <p className="font-sans text-sm mt-3">
-          Select what you intend to first do with material crate
-        </p>
+        <h2 className="text-xl">Where would you like to start?</h2>
       </div>
-      <div className="space-y-2">
+      <div className="space-y-2 flex flex-col w-full h-full justify-center">
         {options.map((option) => (
           <button
             key={option.id}
@@ -48,7 +45,7 @@ export default function Welcome({
         type="submit"
         disabled={!selectedOption}
         className={`
-          w-full py-3 text-center rounded-4xl font-medium transition-all duration-200
+          py-3 text-center rounded-4xl font-medium transition-all duration-200 fixed bottom-8 left-8 right-12 mx-auto
           ${
             selectedOption
               ? "bg-[#E1761F] text-white active:bg-black"

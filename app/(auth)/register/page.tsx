@@ -58,11 +58,20 @@ export default function Page() {
         throw new Error(body.error || "Signup failed");
       }
 
+      try {
+        localStorage.setItem(
+          "pendingProfile",
+          JSON.stringify({ email, username, institution, program }),
+        );
+      } catch {
+        // If storage fails, continue to login without profile sync.
+      }
+
       const loginUrl = new URL("/auth/login", window.location.origin);
       loginUrl.searchParams.set("login_hint", email);
       loginUrl.searchParams.set("returnTo", "/");
       window.location.href = loginUrl.toString();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || "Signup failed");
     } finally {
@@ -82,7 +91,7 @@ export default function Page() {
           onClick={() => setStep(step - 1)}
         />
       )}
-      <div className="w-12 h-12 bg-[#E1761F]"></div>
+      <div className="w-12 h-12 bg-[#E1761F] fixed"></div>
       {step === 1 ? (
         <Email email={email} setEmail={setEmail} />
       ) : step === 2 ? (
