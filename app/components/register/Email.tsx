@@ -1,4 +1,5 @@
 import React from "react";
+import { usePathname } from "next/navigation";
 
 interface emailTypes {
   email: string;
@@ -6,12 +7,15 @@ interface emailTypes {
 }
 
 export default function Email({ email, setEmail }: emailTypes) {
+  const pathname = usePathname();
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
     <div className="h-screen relative w-full">
       <div className="text-center fixed top-30 w-70 left-0 right-0 mx-auto">
-        <h1 className="font-serif text-4xl">Let&#39;s get started</h1>
+        <h1 className="font-serif text-4xl">
+          {pathname === "/register" ? "Let&#39;s get started" : "Welcome back"}
+        </h1>
       </div>
       <div className="space-y-5 flex flex-col w-full h-full justify-center">
         <button
