@@ -16,7 +16,7 @@ export default function Home() {
           className="flex-1 pl-4"
         />
       </div>
-      <main className="">
+      <main>
         <Post />
         <div className="px-6">
           <div className="h-px w-full bg-black/40 mt-6" />
