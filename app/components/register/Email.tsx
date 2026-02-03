@@ -1,5 +1,5 @@
 import React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 
 interface emailTypes {
@@ -9,6 +9,7 @@ interface emailTypes {
 
 export default function Email({ email, setEmail }: emailTypes) {
   const pathname = usePathname();
+  const router = useRouter();
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
@@ -38,14 +39,31 @@ export default function Email({ email, setEmail }: emailTypes) {
           <p className="text-xs">OR CONTINUE WITH EMAIL</p>
           <div className="h-px w-15 bg-linear-to-l from-transparent via-gray-500 to-black" />
         </div>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          className="border border-black w-full px-4 py-3 rounded-lg mt-4"
-          required
-        />
+        <div>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="border border-black w-full px-4 py-3 rounded-lg mt-4"
+            required
+          />
+          <p className="text-sm text-[#444444] font-medium mt-1.5">
+            {pathname === "/register"
+              ? "Already have an account? "
+              : "Don't have an account? "}
+            <span
+              className="text-black font-semibold"
+              onClick={() =>
+                router.push(
+                  `${pathname === "/register" ? "/login" : "/register"}`,
+                )
+              }
+            >
+              {pathname === "/register" ? "Sign up" : "Sign in"}
+            </span>
+          </p>
+        </div>
         <button
           type="submit"
           disabled={!isValidEmail}
