@@ -29,20 +29,9 @@ export default function Post() {
           algebra like I am 5.
         </p>
       </div>
-      <div className="overflow-y-scroll flex gap-3 pl-6">
-        <div className="bg-[#F3F3F3] h-45 w-78 rounded-2xl p-3 flex justify-between shrink-0">
-          <div className="bg-[#E8E8E8] h-full w-28 rounded-xl"></div>
-          <div>
-            <p className="text-[#202020] font-semibold">Algebra Unmystified</p>
-            <div className="text-[#8C8C8C] text-sm font-medium flex items-center gap-1.5">
-              <p>Computer Science</p>
-              <p>&bull;</p>
-              <p>2020</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-[#F3F3F3] h-45 w-78 rounded-2xl p-3 flex justify-between shrink-0">
-          <div className="bg-[#E8E8E8] h-full w-28 rounded-xl"></div>
+      <div className="overflow-y-scroll flex gap-3 px-6">
+        <div className="bg-[#F3F3F3] h-45 w-full rounded-2xl p-3 flex gap-4">
+          <div className="bg-[#E8E8E8] h-full w-30 rounded-xl"></div>
           <div>
             <p className="text-[#202020] font-semibold">Algebra Unmystified</p>
             <div className="text-[#8C8C8C] text-sm font-medium flex items-center gap-1.5">

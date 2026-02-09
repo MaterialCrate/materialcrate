@@ -1,9 +1,50 @@
+"use client";
+
+import { useState } from "react";
 import { FaBook, FaChevronDown } from "react-icons/fa";
+import { GoPlus } from "react-icons/go";
+import { RiFolderUploadLine } from "react-icons/ri";
 import Post from "./components/Post";
 
 export default function Home() {
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+
   return (
     <div className="pt-6">
+      <button
+        aria-label="Close more options"
+        type="button"
+        className={`fixed inset-0 z-40 transition-all duration-300 ease-out ${
+          moreOptionsOpen
+            ? "bg-black/25 backdrop-blur-[2px] opacity-100 pointer-events-auto"
+            : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
+        }`}
+        onClick={() => setMoreOptionsOpen(false)}
+      />
+      <div className="bottom-28 right-6 fixed z-50 flex flex-col items-end gap-2">
+        <button
+          aria-label="Upload button"
+          type="button"
+          className={`flex items-center gap-3 bg-white py-3 px-5 rounded-3xl transition-all duration-300 ease-out ${
+            moreOptionsOpen
+              ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
+              : "opacity-0 translate-y-3 scale-95 pointer-events-none"
+          }`}
+        >
+          <RiFolderUploadLine size={24} />
+          <p>Upload</p>
+        </button>
+        <button
+          title="more actions"
+          type="button"
+          className={`w-12 h-12 bg-white drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out ${
+            moreOptionsOpen ? "rotate-45 scale-105" : "rotate-0 scale-100"
+          }`}
+          onClick={() => setMoreOptionsOpen((prev) => !prev)}
+        >
+          <GoPlus size={30} />
+        </button>
+      </div>
       <div className="flex px-6 pb-6 border-b border-b-black/40">
         <div className="p-3 rounded-lg bg-[#EEEEEE] flex items-center gap-1">
           <FaBook size={20} />
