@@ -2,6 +2,7 @@
 
 import React from "react";
 import { usePathname } from "next/navigation";
+import ActionButton from "../ActionButton";
 
 interface passwordTypes {
   password: string;
@@ -67,20 +68,13 @@ export default function Password({ password, setPassword }: passwordTypes) {
           </div>
         )}
       </div>
-      <button
+      <ActionButton
         type="submit"
         disabled={shouldDisable || password.length < 1}
-        className={`
-          py-3 text-center rounded-4xl font-medium transition-all duration-200 fixed bottom-12 left-8 right-8 mx-auto
-          ${
-            shouldDisable || password.length < 1
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : "bg-[#E1761F] text-white active:bg-black"
-          }
-        `}
+        className="fixed bottom-12 left-8 right-8 mx-auto"
       >
         NEXT
-      </button>
+      </ActionButton>
     </div>
   );
 }

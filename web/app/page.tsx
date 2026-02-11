@@ -4,27 +4,37 @@ import { useState } from "react";
 import { FaBook, FaChevronDown } from "react-icons/fa";
 import { GoPlus } from "react-icons/go";
 import { RiFolderUploadLine } from "react-icons/ri";
-import Post from "./components/Post";
+import Post from "./components/home/Post";
+import UploadDrawer from "./components/home/UploadDrawer";
 
 export default function Home() {
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   return (
     <div className="pt-6">
+      <UploadDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
       <button
         aria-label="Close more options"
         type="button"
         className={`fixed inset-0 z-40 transition-all duration-300 ease-out ${
-          moreOptionsOpen
+          moreOptionsOpen || isDrawerOpen
             ? "bg-black/25 backdrop-blur-[2px] opacity-100 pointer-events-auto"
             : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
         }`}
-        onClick={() => setMoreOptionsOpen(false)}
+        onClick={() => {
+          setMoreOptionsOpen(false);
+          setIsDrawerOpen(false);
+        }}
       />
       <div className="bottom-28 right-6 fixed z-50 flex flex-col items-end gap-2">
         <button
           aria-label="Upload button"
           type="button"
+          onClick={() => setIsDrawerOpen(true)}
           className={`flex items-center gap-3 bg-white py-3 px-5 rounded-3xl transition-all duration-300 ease-out ${
             moreOptionsOpen
               ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"

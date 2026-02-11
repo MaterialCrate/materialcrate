@@ -1,4 +1,5 @@
 import React from "react";
+import ActionButton from "../ActionButton";
 
 interface passwordTypes {
   username: string;
@@ -24,20 +25,13 @@ export default function Username({ username, setUsername }: passwordTypes) {
           />
         </div>
       </div>
-      <button
+      <ActionButton
         type="submit"
         disabled={!username}
-        className={`
-          py-3 text-center rounded-4xl font-medium transition-all duration-200 fixed bottom-8 left-8 right-8 mx-auto
-          ${
-            username
-              ? "bg-[#E1761F] text-white active:bg-black"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-          }
-        `}
+        className="fixed bottom-8 left-8 right-8 mx-auto"
       >
         NEXT
-      </button>
+      </ActionButton>
     </div>
   );
 }

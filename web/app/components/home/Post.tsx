@@ -33,7 +33,7 @@ export default function Post() {
         <div className="bg-[#F3F3F3] h-45 w-full rounded-2xl p-3 flex gap-4">
           <div className="bg-[#E8E8E8] h-full w-30 rounded-xl"></div>
           <div>
-            <p className="text-[#202020] font-semibold">Algebra Unmystified</p>
+            <p className="text-[#202020] font-medium">Algebra Unmystified</p>
             <div className="text-[#8C8C8C] text-sm font-medium flex items-center gap-1.5">
               <p>Computer Science</p>
               <p>&bull;</p>

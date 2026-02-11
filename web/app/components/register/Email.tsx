@@ -1,6 +1,7 @@
 import React from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
+import ActionButton from "../ActionButton";
 
 interface emailTypes {
   email: string;
@@ -64,20 +65,12 @@ export default function Email({ email, setEmail }: emailTypes) {
             </span>
           </p>
         </div>
-        <button
+        <ActionButton
           type="submit"
           disabled={!isValidEmail}
-          className={`
-          w-full py-3 text-center rounded-4xl font-medium transition-all duration-200
-          ${
-            isValidEmail
-              ? "bg-[#E1761F] text-white active:bg-black"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-          }
-        `}
         >
           NEXT
-        </button>
+        </ActionButton>
       </div>
     </div>
   );

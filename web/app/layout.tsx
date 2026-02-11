@@ -5,6 +5,7 @@ import ConditionalNavbar from "./components/ConditionalNavbar";
 
 const inter = Inter({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-inter",
 });
 
