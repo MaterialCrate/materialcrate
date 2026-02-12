@@ -20,7 +20,7 @@ export default function ActionButton({
         py-3 text-center rounded-4xl font-medium transition-all duration-200
         ${
           disabled
-            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+            ? "bg-[#E5E5E5] text-[#818181] cursor-not-allowed"
             : "bg-[#E1761F] text-white active:bg-black"
         }
         ${className}
