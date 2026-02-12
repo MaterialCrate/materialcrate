@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  username      String   @unique
+  email         String   @unique
+  password      String
+  emailVerified Boolean  @default(false)
+  institution   String?
+  program       String?
+  posts         Post[]   @relation("UserPosts")
+  likes         Like[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Post {
+  id         String   @id @default(cuid())
+  fileUrl    String
+  title      String
+  courseCode String
+  description String?
+  year       Int?
+  authorId   String?
+  author     User?    @relation("UserPosts", fields: [authorId], references: [id], onDelete: SetNull)
+  likes      Like[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([authorId])
+  @@index([courseCode])
+}
+
+model Like {
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
+}

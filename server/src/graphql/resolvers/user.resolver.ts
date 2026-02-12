@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import User from "../../models/User";
+import { Prisma } from "@prisma/client";
+import { prisma } from "../../config/prisma";
 
 const createToken = (userId: string, email: string) => {
   const secret = process.env.JWT_SECRET;
@@ -13,56 +14,58 @@ const createToken = (userId: string, email: string) => {
 
 export const UserResolver = {
   Query: {
-    me: async (_: any, __: any, ctx: any) => {
+    me: async (_: unknown, __: unknown, ctx: any) => {
       if (!ctx.user?.sub) return null;
-      return User.findById(ctx.user.sub);
+      return prisma.user.findUnique({ where: { id: ctx.user.sub } });
     },
 
-    user: async (_: any, { id }: any) => {
-      return User.findById(id);
+    user: async (_: unknown, { id }: { id: string }) => {
+      return prisma.user.findUnique({ where: { id } });
     },
   },
 
   Mutation: {
-    signup: async (_: any, args: any) => {
+    signup: async (_: unknown, args: any) => {
       const { email, password, username, institution, program } = args;
 
       if (!email || !password || !username) {
         throw new Error("Email, password, and username are required");
       }
 
-      const existing = await User.findOne({
-        $or: [{ email }, { username }],
+      const existing = await prisma.user.findFirst({
+        where: {
+          OR: [{ email }, { username }],
+        },
       });
+
       if (existing) {
         throw new Error("Email or username already in use");
       }
 
       const hashed = await bcrypt.hash(password, 12);
-      const user = await User.create({
-        email,
-        password: hashed,
-        username,
-        institution,
-        program,
+      const user = await prisma.user.create({
+        data: {
+          email,
+          password: hashed,
+          username,
+          institution: institution ?? null,
+          program: program ?? null,
+        },
       });
 
       const token = createToken(user.id, user.email);
       return { token, user };
     },
-    login: async (_: any, args: any) => {
+
+    login: async (_: unknown, args: any) => {
       const { email, password } = args;
 
       if (!email || !password) {
         throw new Error("Email and password are required");
       }
 
-      const user = await User.findOne({ email });
-      if (!user) {
-        throw new Error("Invalid credentials");
-      }
-
-      if (!user.password) {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user || !user.password) {
         throw new Error("Invalid credentials");
       }
 
@@ -74,20 +77,31 @@ export const UserResolver = {
       const token = createToken(user.id, user.email);
       return { token, user };
     },
-    completeProfile: async (_: any, args: any, ctx: any) => {
+
+    completeProfile: async (_: unknown, args: any, ctx: any) => {
       if (!ctx.user?.sub) {
         throw new Error("Not authenticated");
       }
 
-      const user = await User.findById(ctx.user.sub);
-      if (!user) {
-        throw new Error("User not found");
+      try {
+        return await prisma.user.update({
+          where: { id: ctx.user.sub },
+          data: {
+            username: args.username,
+            institution: args.institution,
+            program: args.program ?? null,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          throw new Error("Username already in use");
+        }
+
+        throw error;
       }
-
-      Object.assign(user, args);
-      await user.save();
-
-      return user;
     },
   },
 };
