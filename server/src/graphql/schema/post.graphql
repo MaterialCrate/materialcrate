@@ -1,0 +1,22 @@
+type Post {
+  id: ID!
+  fileUrl: String!
+  title: String!
+  courseCode: String!
+  description: String
+  year: Int
+  author: User
+  createdAt: String!
+}
+
+extend type Mutation {
+  createPost(
+    fileBase64: String!
+    fileName: String!
+    mimeType: String!
+    title: String!
+    courseCode: String!
+    description: String
+    year: Int
+  ): Post!
+}

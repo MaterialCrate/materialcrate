@@ -18,28 +18,73 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
   const [courseCode, setCourseCode] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string>("");
+  const [alertMessage, setAlertMessage] = useState<string>("");
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("error");
+  const [isPublishing, setIsPublishing] = useState<boolean>(false);
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     if (file && file.size > 5 * 1024 * 1024) {
-      setError("File size exceeds 5MB limit.");
+      setAlertType("error");
+      setAlertMessage("File size exceeds 5MB limit.");
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
       return;
     }
-    setError("");
+    setAlertMessage("");
     setSelectedFile(file);
     event.target.value = "";
   }
 
-  const disabled = !selectedFile || title.length < 3 || courseCode.length < 3;
+  const disabled =
+    !selectedFile || title.length < 3 || courseCode.length < 3 || isPublishing;
+
+  async function handlePublish() {
+    if (!selectedFile || disabled) return;
+
+    setIsPublishing(true);
+    setAlertMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("title", title.trim());
+      formData.append("courseCode", courseCode.trim());
+      formData.append("description", description.trim());
+
+      const response = await fetch("/api/posts/create", {
+        method: "POST",
+        body: formData,
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to upload document");
+      }
+
+      setAlertType("success");
+      setAlertMessage("Document uploaded successfully.");
+      setSelectedFile(null);
+      setTitle("");
+      setCourseCode("");
+      setDescription("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      onClose();
+    } catch (error: any) {
+      setAlertType("error");
+      setAlertMessage(error?.message || "Failed to upload document");
+    } finally {
+      setIsPublishing(false);
+    }
+  }
 
   return (
     <>
-      {error && <Alert message={error} type="error" />}
+      {alertMessage && <Alert key={`${alertType}-${alertMessage}`} message={alertMessage} type={alertType} />}
       <div
         className={`fixed inset-x-0 top-40 bottom-0 bg-white z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out ${
           isOpen
@@ -128,6 +173,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
+            maxLength={30}
             className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] focus:outline-none"
           />
         </div>
@@ -140,6 +186,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             value={courseCode}
             onChange={(e) => setCourseCode(e.target.value)}
             required
+            maxLength={8}
             className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] focus:outline-none"
           />
         </div>
@@ -149,15 +196,17 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             placeholder="E.g. 'Notes for the first lecture'"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            maxLength={250}
             className="w-full rounded-lg px-3 pt-3 h-28 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] resize-none focus:outline-none"
           />
         </div>
         <ActionButton
           type="button"
           className="fixed bottom-12 left-8 right-8 mx-auto"
+          onClick={handlePublish}
           disabled={disabled}
         >
-          Publish
+          {isPublishing ? "Publishing..." : "Publish"}
         </ActionButton>
       </div>
     </>
