@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { GoXCircle } from "react-icons/go";
-import { RiFolderUploadLine } from "react-icons/ri";
-import { PiFilePdfLight, PiTrashLight } from "react-icons/pi";
+import {
+  CloseCircle,
+  DocumentUpload,
+  Trash,
+  DocumentText,
+} from "iconsax-reactjs";
 import ActionButton from "../ActionButton";
 import Alert from "../Alert";
 
@@ -19,7 +22,9 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
   const [description, setDescription] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [alertMessage, setAlertMessage] = useState<string>("");
-  const [alertType, setAlertType] = useState<"success" | "error" | "info">("error");
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">(
+    "error",
+  );
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -74,9 +79,11 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
         fileInputRef.current.value = "";
       }
       onClose();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setAlertType("error");
-      setAlertMessage(error?.message || "Failed to upload document");
+      setAlertMessage(
+        error instanceof Error ? error.message : "Failed to upload document",
+      );
     } finally {
       setIsPublishing(false);
     }
@@ -84,7 +91,13 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
 
   return (
     <>
-      {alertMessage && <Alert key={`${alertType}-${alertMessage}`} message={alertMessage} type={alertType} />}
+      {alertMessage && (
+        <Alert
+          key={`${alertType}-${alertMessage}`}
+          message={alertMessage}
+          type={alertType}
+        />
+      )}
       <div
         className={`fixed inset-x-0 top-40 bottom-0 bg-white z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out ${
           isOpen
@@ -98,7 +111,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
           className="flex justify-end w-full"
           onClick={onClose}
         >
-          <GoXCircle size={30} color="#737373" />
+          <CloseCircle size={30} color="#737373" />
         </button>
         <h4 className="text-center font-medium text-xl text-[#202020]">
           Share a New Material
@@ -122,7 +135,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
           >
             {!selectedFile ? (
               <>
-                <RiFolderUploadLine size={40} color="#B0B0B0" />
+                <DocumentUpload size={40} color="#B0B0B0" />
                 <div>
                   <p className="text-xs font-medium text-[#737373]">
                     Drag and drop or{" "}
@@ -137,9 +150,9 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
               </>
             ) : (
               <div className="flex justify-between items-center gap-2 w-full">
-                <div className="flex gap-2">
-                  <PiFilePdfLight size={30} color="#E1761F" />
-                  <div>
+                <div className="flex gap-2 items-center">
+                  <DocumentText size={38} color="#E1761F" variant="Bold" />
+                  <div className="flex flex-col justify-between">
                     <p className="text-xs text-[#202020] font-medium truncate max-w-56">
                       {selectedFile.name}
                     </p>
@@ -158,7 +171,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
                     }
                   }}
                 >
-                  <PiTrashLight size={22} color="#E00505" />
+                  <Trash size={22} color="#E00505" />
                 </button>
               </div>
             )}

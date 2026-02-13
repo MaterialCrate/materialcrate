@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FaBook, FaChevronDown } from "react-icons/fa";
-import { GoPlus } from "react-icons/go";
-import { RiFolderUploadLine } from "react-icons/ri";
+import { Book, ArrowDown2, Add, DocumentUpload } from "iconsax-reactjs";
 import Post from "./components/home/Post";
 import UploadDrawer from "./components/home/UploadDrawer";
 
@@ -41,7 +39,7 @@ export default function Home() {
               : "opacity-0 translate-y-3 scale-95 pointer-events-none"
           }`}
         >
-          <RiFolderUploadLine size={24} />
+          <DocumentUpload size={24} />
           <p>Upload</p>
         </button>
         <button
@@ -52,17 +50,17 @@ export default function Home() {
           }`}
           onClick={() => setMoreOptionsOpen((prev) => !prev)}
         >
-          <GoPlus size={30} />
+          <Add size={30} />
         </button>
       </div>
-      <div className="flex px-6 pb-6 border-b border-b-black/40">
-        <div className="p-3 rounded-lg bg-[#EEEEEE] flex items-center gap-1">
-          <FaBook size={20} />
-          <FaChevronDown size={14} color="#959595" />
+      <div className="flex px-6 pb-6 shadow-sm">
+        <div className="p-2 rounded-lg bg-[#EEEEEE] flex items-center gap-1">
+          <Book size={22} variant="Bold" />
+          <ArrowDown2 size={14} color="#959595" />
         </div>
         <input
           placeholder="What material do you want to find?"
-          className="flex-1 pl-4"
+          className="flex-1 pl-4 placeholder:text-[#B0B0B0] outline-none text-sm"
         />
       </div>
       <main>

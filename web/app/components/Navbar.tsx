@@ -3,24 +3,21 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { TbHome, TbFolders, TbArchive, TbUser } from "react-icons/tb";
+import { Home, FolderOpen, Archive, Profile } from "iconsax-reactjs";
+import type { Icon as IconsaxIcon } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 
 type NavItem = {
   label: string;
   href: string;
-  Icon: React.ComponentType<{
-    size?: number;
-    color?: string;
-    strokeWidth?: number;
-  }>;
+  Icon: IconsaxIcon;
 };
 
 const items: NavItem[] = [
-  { label: "Home", href: "/", Icon: TbHome },
-  { label: "Workspace", href: "/workspace", Icon: TbFolders },
-  { label: "Archive", href: "/archive", Icon: TbArchive },
-  { label: "Me", href: "/me", Icon: TbUser },
+  { label: "Home", href: "/", Icon: Home },
+  { label: "Workspace", href: "/workspace", Icon: FolderOpen },
+  { label: "Archive", href: "/archive", Icon: Archive },
+  { label: "Me", href: "/me", Icon: Profile },
 ];
 
 export default function Navbar() {
@@ -32,7 +29,7 @@ export default function Navbar() {
     <ul className="font-semibold text-xs flex w-full justify-between px-12">
       {items.map(({ label, href, Icon }) => {
         const isActive = pathname === href;
-        const color = isActive ? "#000000" : "#959595";
+        const color = isActive ? "#E1761F" : "#959595";
         return (
           <li key={href} className="flex flex-col items-center">
             <Link
@@ -46,8 +43,8 @@ export default function Navbar() {
                 router.push("/login");
               }}
             >
-              <Icon size={36} color={color} strokeWidth={1.1} />
-              <p className={isActive ? "text-black" : "text-[#959595]"}>
+              <Icon size={28} color={color} variant={isActive ? "Bold" : "Linear"} />
+              <p className={isActive ? "text-[#E1761F]" : "text-[#959595]"}>
                 {label}
               </p>
             </Link>

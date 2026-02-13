@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "iconsax-reactjs": "^0.0.8",
     "next": "16.1.4",
     "postcss": "^8.5.6",
     "react": "19.2.3",
