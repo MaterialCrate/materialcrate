@@ -23,3 +23,120 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+.mc-alert {
+  --mc-alert-indicator: #3b82f6;
+  pointer-events: none;
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  z-index: 50;
+  transform: translateX(-50%);
+  animation: mc-alert-slide 3000ms ease-in-out forwards;
+}
+
+.mc-alert--success {
+  --mc-alert-indicator: #22c55e;
+}
+
+.mc-alert--error {
+  --mc-alert-indicator: #ef4444;
+}
+
+.mc-alert--info {
+  --mc-alert-indicator: #3b82f6;
+}
+
+.mc-alert__bubble {
+  width: fit-content;
+  max-width: calc(100vw - 2rem);
+  overflow: hidden;
+  border-radius: 9999px;
+  transform-origin: center;
+  animation: mc-alert-expand 3000ms ease-in-out forwards;
+}
+
+.mc-alert__content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mc-alert__dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--mc-alert-indicator);
+}
+
+.mc-alert__text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #202020;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  animation: mc-alert-text 3000ms ease-in-out forwards;
+}
+
+@keyframes mc-alert-slide {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+}
+
+@keyframes mc-alert-expand {
+  0%,
+  12% {
+    transform: scaleX(0.08);
+    padding: 0;
+    border: 0 solid transparent;
+    background: var(--mc-alert-indicator);
+    box-shadow: none;
+  }
+  25%,
+  72% {
+    transform: scaleX(1);
+    padding: 0.75rem 1rem;
+    border: 1px solid #5a5959;
+    background: #ffffff;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
+  }
+  88%,
+  100% {
+    transform: scaleX(0.08);
+    padding: 0;
+    border: 0 solid transparent;
+    background: var(--mc-alert-indicator);
+    box-shadow: none;
+  }
+}
+
+@keyframes mc-alert-text {
+  0%,
+  22% {
+    opacity: 0;
+  }
+  30%,
+  72% {
+    opacity: 1;
+  }
+  84%,
+  100% {
+    opacity: 0;
+  }
+}

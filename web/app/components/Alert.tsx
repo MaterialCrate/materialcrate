@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 interface AlertProps {
@@ -5,13 +7,27 @@ interface AlertProps {
   type: "success" | "error" | "info";
 }
 
+const typeClass: Record<AlertProps["type"], string> = {
+  success: "mc-alert--success",
+  error: "mc-alert--error",
+  info: "mc-alert--info",
+};
+
 export default function Alert({ message, type }: AlertProps) {
+  if (!message) return null;
+
   return (
-    <div className="absolute top-12 left-1/2 transform -translate-x-1/2 bg-white text-sm px-4 py-3 rounded-3xl border border-[#5A5959] shadow-lg flex items-center gap-5 z-50">
-      <div
-        className={`h-4 w-4 rounded-full bg-${type === "success" ? "green" : type === "error" ? "red" : "blue"}-500`}
-      />
-      <p>{message}</p>
+    <div
+      role="alert"
+      aria-live="polite"
+      className={`mc-alert ${typeClass[type]}`}
+    >
+      <div className="mc-alert__bubble">
+        <div className="mc-alert__content">
+          <div className="mc-alert__dot" />
+          <p className="mc-alert__text">{message}</p>
+        </div>
+      </div>
     </div>
   );
 }
