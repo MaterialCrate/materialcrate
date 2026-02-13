@@ -3,7 +3,7 @@ import { More, Heart, Messages2, Archive } from "iconsax-reactjs";
 
 export default function Post() {
   return (
-    <div className="mt-6 space-y-4">
+    <div className="mt-4 space-y-4">
       <div className="flex justify-between items-center px-6">
         <div className="flex items-center gap-2">
           <div className="w-12 h-12 bg-[#D3D3D3] rounded-full" />

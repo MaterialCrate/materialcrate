@@ -53,7 +53,7 @@ export default function Home() {
           <Add size={30} />
         </button>
       </div>
-      <div className="flex px-6 pb-6 shadow-sm">
+      <div className="flex px-6 pb-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)]">
         <div className="p-2 rounded-lg bg-[#EEEEEE] flex items-center gap-1">
           <Book size={22} variant="Bold" />
           <ArrowDown2 size={14} color="#959595" />
@@ -66,7 +66,7 @@ export default function Home() {
       <main>
         <Post />
         <div className="px-6">
-          <div className="h-px w-full bg-black/40 mt-6" />
+          <div className="h-px w-full bg-black/40 mt-4" />
         </div>
         <Post />
       </main>
