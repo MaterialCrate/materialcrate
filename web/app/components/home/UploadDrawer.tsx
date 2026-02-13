@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { GoXCircle } from "react-icons/go";
 import { RiFolderUploadLine } from "react-icons/ri";
 import { PiFilePdfLight, PiTrashLight } from "react-icons/pi";
@@ -16,10 +16,13 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
   const [title, setTitle] = useState<string>("");
   const [courseCode, setCourseCode] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string>("");
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     setSelectedFile(file);
+    event.target.value = "";
   }
 
   const disabled = !selectedFile || title.length < 3 || courseCode.length < 3;
@@ -48,6 +51,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
           Select document to share<span className="text-red-500">*</span>
         </p>
         <input
+          ref={fileInputRef}
           id="material-upload"
           type="file"
           accept=".pdf,application/pdf"
@@ -92,6 +96,9 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
                 onClick={(e) => {
                   e.stopPropagation();
                   setSelectedFile(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                  }
                 }}
               >
                 <PiTrashLight size={22} color="#E00505" />
@@ -105,7 +112,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
           Document title<span className="text-red-500">*</span>
         </p>
         <input
-          placeholder="E.g. 'Stanford CS 101 Notes'"
+          placeholder="E.g. 'Stanford CS 101 Notes' (at least 3 characters)"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           required
@@ -117,7 +124,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
           Course code<span className="text-red-500">*</span>
         </p>
         <input
-          placeholder="E.g. 'CS 101'"
+          placeholder="E.g. 'CS 101' (at least 3 characters)"
           value={courseCode}
           onChange={(e) => setCourseCode(e.target.value)}
           required
@@ -138,7 +145,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
         className="fixed bottom-12 left-8 right-8 mx-auto"
         disabled={disabled}
       >
-        Share Material
+        Publish
       </ActionButton>
     </div>
   );
