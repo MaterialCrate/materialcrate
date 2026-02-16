@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import Email from "@/app/components/register/Email";
 import Password from "@/app/components/register/Password";
+import Verification from "@/app/components/register/Verification";
 import Username from "@/app/components/register/Username";
 import Institution from "@/app/components/register/Institution";
 import Program from "@/app/components/register/Program";
@@ -26,12 +27,14 @@ export default function Page() {
       setStep(2);
     } else if (step === 2 && password) {
       setStep(3);
-    } else if (step === 3 && username) {
+    } else if (step === 3) {
       setStep(4);
-    } else if (step === 4 && institution) {
+    } else if (step === 4 && username) {
       setStep(5);
-    } else if (step === 5 && program) {
+    } else if (step === 5 && institution) {
       setStep(6);
+    } else if (step === 6 && program) {
+      setStep(7);
     }
   };
 
@@ -58,8 +61,7 @@ export default function Page() {
         throw new Error(body.error || "Signup failed");
       }
 
-      const emailParam = encodeURIComponent(email);
-      window.location.href = `/verify-email${emailParam ? `?email=${emailParam}` : ""}`;
+      window.location.href = "/login";
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || "Signup failed");
@@ -71,7 +73,7 @@ export default function Page() {
   return (
     <form
       className="flex flex-col h-screen items-center px-8 py-12 gap-16 relative"
-      onSubmit={step < 6 ? handleNext : handleSubmit}
+      onSubmit={step < 7 ? handleNext : handleSubmit}
     >
       {step !== 1 && (
         <HiOutlineArrowLeft
@@ -86,17 +88,20 @@ export default function Page() {
       ) : step === 2 ? (
         <Password password={password} setPassword={setPassword} />
       ) : step === 3 ? (
-        <Username username={username} setUsername={setUsername} />
+        <Verification email={email} />
       ) : step === 4 ? (
+        <Username username={username} setUsername={setUsername} />
+      ) : step === 5 ? (
         <Institution
           institution={institution}
           setInstitution={setInstitution}
         />
-      ) : step === 5 ? (
+      ) : step === 6 ? (
         <Program program={program} setProgram={setProgram} />
       ) : (
         <Welcome selectedOption={toGoPage} setSelectedOption={setToGoPage} />
       )}
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
     </form>
   );
 }

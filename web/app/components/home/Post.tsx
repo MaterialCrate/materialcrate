@@ -73,8 +73,12 @@ export default function Post({ post }: PostProps) {
             <p className="text-[#202020] font-medium text-sm">{post.title}</p>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
               <p>{post.courseCode}</p>
-              <p>&bull;</p>
-              <p>{post.year ?? "N/A"}</p>
+              {post.year && (
+                <>
+                  <p>&bull;</p>
+                  <p>{post.year}</p>
+                </>
+              )}
             </div>
           </div>
         </a>

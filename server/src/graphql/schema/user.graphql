@@ -2,6 +2,7 @@ type User {
   id: ID!
   username: String!
   email: String!
+  emailVerified: Boolean!
   institution: String
   program: String
   createdAt: String
@@ -26,6 +27,8 @@ type Mutation {
     program: String
   ): AuthPayload
   login(email: String!, password: String!): AuthPayload
+  verifyEmail(token: String!): Boolean!
+  resendVerificationEmail(email: String!): Boolean!
   completeProfile(
     username: String!
     institution: String!

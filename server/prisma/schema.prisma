@@ -13,6 +13,8 @@ model User {
   email         String   @unique
   password      String
   emailVerified Boolean  @default(false)
+  emailVerificationToken          String?
+  emailVerificationTokenExpiresAt DateTime?
   institution   String?
   program       String?
   posts         Post[]   @relation("UserPosts")

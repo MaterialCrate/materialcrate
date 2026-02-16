@@ -2,6 +2,10 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import {
+  sendVerificationEmailForUser,
+  verifyEmailToken,
+} from "../../auth/emailVerification";
 
 const createToken = (userId: string, email: string) => {
   const secret = process.env.JWT_SECRET;
@@ -53,6 +57,8 @@ export const UserResolver = {
         },
       });
 
+      await sendVerificationEmailForUser(user.id, user.email);
+
       const token = createToken(user.id, user.email);
       return { token, user };
     },
@@ -69,6 +75,10 @@ export const UserResolver = {
         throw new Error("Invalid credentials");
       }
 
+      if (!user.emailVerified) {
+        throw new Error("Email is not verified");
+      }
+
       const ok = await bcrypt.compare(password, user.password);
       if (!ok) {
         throw new Error("Invalid credentials");
@@ -76,6 +86,38 @@ export const UserResolver = {
 
       const token = createToken(user.id, user.email);
       return { token, user };
+    },
+
+    verifyEmail: async (_: unknown, { token }: { token: string }) => {
+      if (!token) {
+        throw new Error("Verification token is required");
+      }
+
+      return verifyEmailToken(token);
+    },
+
+    resendVerificationEmail: async (
+      _: unknown,
+      { email }: { email: string },
+    ) => {
+      if (!email) {
+        throw new Error("Email is required");
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        return true;
+      }
+
+      if (user.emailVerified) {
+        return true;
+      }
+
+      await sendVerificationEmailForUser(user.id, user.email);
+      return true;
     },
 
     completeProfile: async (_: unknown, args: any, ctx: any) => {
