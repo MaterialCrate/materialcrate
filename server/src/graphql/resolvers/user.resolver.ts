@@ -30,10 +30,10 @@ export const UserResolver = {
 
   Mutation: {
     signup: async (_: unknown, args: any) => {
-      const { email, password, username, institution, program } = args;
+      const { email, password, username, fullName, institution, program } = args;
 
-      if (!email || !password || !username) {
-        throw new Error("Email, password, and username are required");
+      if (!email || !password || !username || !fullName) {
+        throw new Error("Email, password, username, and full name are required");
       }
 
       const existing = await prisma.user.findFirst({
@@ -52,6 +52,7 @@ export const UserResolver = {
           email,
           password: hashed,
           username,
+          fullName,
           institution: institution ?? null,
           program: program ?? null,
         },

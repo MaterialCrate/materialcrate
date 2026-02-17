@@ -6,6 +6,7 @@ import Email from "@/app/components/register/Email";
 import Password from "@/app/components/register/Password";
 import Verification from "@/app/components/register/Verification";
 import Username from "@/app/components/register/Username";
+import FullName from "@/app/components/register/FullName";
 import Institution from "@/app/components/register/Institution";
 import Program from "@/app/components/register/Program";
 import Welcome from "@/app/components/register/Welcome";
@@ -15,6 +16,7 @@ export default function Page() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [username, setUsername] = useState<string>("");
+  const [fullName, setFullName] = useState<string>("");
   const [institution, setInstitution] = useState<string>("");
   const [program, setProgram] = useState<string>("");
   const [toGoPage, setToGoPage] = useState<string>("");
@@ -29,10 +31,12 @@ export default function Page() {
       setStep(3);
     } else if (step === 3 && username) {
       setStep(4);
-    } else if (step === 4 && institution) {
+    } else if (step === 4 && fullName) {
       setStep(5);
-    } else if (step === 5 && program) {
+    } else if (step === 5 && institution) {
       setStep(6);
+    } else if (step === 6 && program) {
+      setStep(7);
     }
   };
 
@@ -49,6 +53,7 @@ export default function Page() {
           email,
           password,
           username,
+          fullName,
           institution,
           program,
         }),
@@ -59,7 +64,7 @@ export default function Page() {
         throw new Error(body.error || "Signup failed");
       }
 
-      setStep(7);
+      setStep(8);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || "Signup failed");
@@ -75,9 +80,9 @@ export default function Page() {
   return (
     <form
       className="flex flex-col h-screen items-center px-8 py-12 gap-16 relative"
-      onSubmit={step < 6 ? handleNext : step === 6 ? handleSubmit : handleNoopSubmit}
+      onSubmit={step < 7 ? handleNext : step === 7 ? handleSubmit : handleNoopSubmit}
     >
-      {step !== 1 && step !== 7 && (
+      {step !== 1 && step !== 8 && (
         <HiOutlineArrowLeft
           className="absolute top-5 left-5"
           size={30}
@@ -92,13 +97,15 @@ export default function Page() {
       ) : step === 3 ? (
         <Username username={username} setUsername={setUsername} />
       ) : step === 4 ? (
+        <FullName fullName={fullName} setFullName={setFullName} />
+      ) : step === 5 ? (
         <Institution
           institution={institution}
           setInstitution={setInstitution}
         />
-      ) : step === 5 ? (
-        <Program program={program} setProgram={setProgram} />
       ) : step === 6 ? (
+        <Program program={program} setProgram={setProgram} />
+      ) : step === 7 ? (
         <Welcome selectedOption={toGoPage} setSelectedOption={setToGoPage} />
       ) : (
         <Verification email={email} />

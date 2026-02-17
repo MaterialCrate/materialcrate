@@ -19,6 +19,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState<string>("");
   const [courseCode, setCourseCode] = useState<string>("");
+  const [year, setYear] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [alertMessage, setAlertMessage] = useState<string>("");
@@ -26,6 +27,10 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
     "error",
   );
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 60 }, (_, index) =>
+    String(currentYear - index),
+  );
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -58,6 +63,9 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
       formData.append("title", title.trim());
       formData.append("courseCode", courseCode.trim());
       formData.append("description", description.trim());
+      if (year) {
+        formData.append("year", year);
+      }
 
       const response = await fetch("/api/posts/create", {
         method: "POST",
@@ -74,6 +82,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
       setSelectedFile(null);
       setTitle("");
       setCourseCode("");
+      setYear("");
       setDescription("");
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -202,6 +211,26 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             maxLength={8}
             className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] focus:outline-none"
           />
+        </div>
+        <div className="space-y-1">
+          <p className="text-[#5B5B5B] text-sm">Year</p>
+          <select
+            title="Year picker"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            className={`w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs focus:outline-none ${
+              year ? "text-black" : "text-[#B1B1B1]"
+            }`}
+          >
+            <option value="" className="text-[#B1B1B1]">
+              Select year
+            </option>
+            {yearOptions.map((optionYear) => (
+              <option key={optionYear} value={optionYear}>
+                {optionYear}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-1">
           <p className="text-[#5B5B5B] text-sm">Document description</p>

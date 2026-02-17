@@ -11,6 +11,7 @@ export type HomePost = {
   createdAt: string;
   author?: {
     id: string;
+    fullName?: string | null;
     username: string;
   } | null;
 };
@@ -37,7 +38,10 @@ function formatTimeAgo(timestamp: string) {
 }
 
 export default function Post({ post }: PostProps) {
-  const authorName = post.author?.username || "Unknown user";
+  const authorFullName = post.author?.fullName || "Unknown user";
+  const authorUsername = post.author?.username
+    ? `@${post.author.username}`
+    : "@unknown";
   const createdLabel = formatTimeAgo(post.createdAt);
 
   return (
@@ -46,9 +50,9 @@ export default function Post({ post }: PostProps) {
         <div className="flex items-center gap-2">
           <div className="w-12 h-12 bg-[#D3D3D3] rounded-full" />
           <div>
-            <p className="font-medium text-[#202020]">{authorName}</p>
+            <p className="font-medium text-[#202020]">{authorFullName}</p>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
-              <p>@{authorName.toLowerCase().replace(/\s+/g, "")}</p>
+              <p>{authorUsername}</p>
               <p>&bull;</p>
               <p>{createdLabel}</p>
             </div>

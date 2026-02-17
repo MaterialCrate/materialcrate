@@ -62,10 +62,18 @@ export async function POST(req: Request) {
 
   const arrayBuffer = await file.arrayBuffer();
   const fileBase64 = Buffer.from(arrayBuffer).toString("base64");
-  const parsedYear =
-    typeof yearValue === "string" && yearValue.trim().length
-      ? Number.parseInt(yearValue, 10)
-      : null;
+  let parsedYear: number | null = null;
+  if (typeof yearValue === "string" && yearValue.trim().length) {
+    const trimmedYear = yearValue.trim();
+    if (!/^\d{4}$/.test(trimmedYear)) {
+      return NextResponse.json(
+        { error: "Year must be a 4-digit number" },
+        { status: 400 },
+      );
+    }
+
+    parsedYear = Number.parseInt(trimmedYear, 10);
+  }
 
   const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
     method: "POST",

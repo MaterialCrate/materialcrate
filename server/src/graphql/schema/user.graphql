@@ -1,6 +1,7 @@
 type User {
   id: ID!
   username: String!
+  fullName: String
   email: String!
   emailVerified: Boolean!
   institution: String
@@ -23,6 +24,7 @@ type Mutation {
     email: String!
     password: String!
     username: String!
+    fullName: String!
     institution: String
     program: String
   ): AuthPayload

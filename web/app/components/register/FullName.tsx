@@ -1,28 +1,25 @@
 import React from "react";
 import ActionButton from "../ActionButton";
 
-interface InstitutionProps {
-  institution: string;
-  setInstitution: React.Dispatch<React.SetStateAction<string>>;
+interface FullNameProps {
+  fullName: string;
+  setFullName: React.Dispatch<React.SetStateAction<string>>;
 }
 
-export default function Institution({
-  institution,
-  setInstitution,
-}: InstitutionProps) {
+export default function FullName({ fullName, setFullName }: FullNameProps) {
   return (
     <div className="h-screen relative w-full">
       <div className="text-center fixed top-30 w-70 left-0 right-0 mx-auto">
-        <h1 className="font-serif text-4xl">What is your instituion name?</h1>
+        <h1 className="font-serif text-4xl">Enter your full name</h1>
       </div>
       <div className="flex flex-col w-full h-full justify-center">
         <div>
-          <h4 className="font-medium">INSTITUTION NAME</h4>
+          <h4 className="font-medium">FULL NAME</h4>
           <input
             type="text"
-            value={institution}
-            onChange={(e) => setInstitution(e.target.value)}
-            placeholder="e.g. Copperbelt University"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="e.g. John Doe"
             className="border border-black w-full px-4 py-3 rounded-lg"
             required
           />
@@ -30,7 +27,7 @@ export default function Institution({
       </div>
       <ActionButton
         type="submit"
-        disabled={!institution}
+        disabled={!fullName}
         className="fixed bottom-8 left-8 right-8 mx-auto"
       >
         NEXT

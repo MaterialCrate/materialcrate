@@ -4,7 +4,7 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import ActionButton from "../ActionButton";
 
-interface passwordTypes {
+interface PasswordProps {
   password: string;
   setPassword: React.Dispatch<React.SetStateAction<string>>;
 }
@@ -23,7 +23,7 @@ const Rule = ({ ok, text }: rule) => (
   </p>
 );
 
-export default function Password({ password, setPassword }: passwordTypes) {
+export default function Password({ password, setPassword }: PasswordProps) {
   const pathname = usePathname();
   const isRegister = pathname === "/register";
   const hasMinLength = password.length >= 8;
