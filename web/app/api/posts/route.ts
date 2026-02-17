@@ -13,6 +13,8 @@ const POSTS_QUERY = `
       courseCode
       description
       year
+      likeCount
+      viewerHasLiked
       createdAt
       author {
         id

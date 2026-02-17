@@ -10,4 +10,7 @@ export const resolvers = {
     ...UserResolver.Mutation,
     ...PostResolver.Mutation,
   },
+  Post: {
+    ...PostResolver.Post,
+  },
 };

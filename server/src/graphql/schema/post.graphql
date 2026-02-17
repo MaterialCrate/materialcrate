@@ -6,6 +6,8 @@ type Post {
   description: String
   year: Int
   author: User
+  likeCount: Int!
+  viewerHasLiked: Boolean!
   createdAt: String!
 }
 
@@ -23,4 +25,5 @@ extend type Mutation {
     description: String
     year: Int
   ): Post!
+  togglePostLike(postId: ID!): Post!
 }

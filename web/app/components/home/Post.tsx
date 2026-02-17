@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { More, Heart, Messages2, Archive } from "iconsax-reactjs";
 
 export type HomePost = {
@@ -8,6 +10,8 @@ export type HomePost = {
   courseCode: string;
   description?: string | null;
   year?: number | null;
+  likeCount?: number;
+  viewerHasLiked?: boolean;
   createdAt: string;
   author?: {
     id: string;
@@ -43,6 +47,39 @@ export default function Post({ post }: PostProps) {
     ? `@${post.author.username}`
     : "@unknown";
   const createdLabel = formatTimeAgo(post.createdAt);
+  const [likeCount, setLikeCount] = useState<number>(post.likeCount ?? 0);
+  const [viewerHasLiked, setViewerHasLiked] = useState<boolean>(
+    Boolean(post.viewerHasLiked),
+  );
+  const [isLiking, setIsLiking] = useState<boolean>(false);
+
+  const handleLike = async () => {
+    if (isLiking) return;
+
+    setIsLiking(true);
+    try {
+      const response = await fetch("/api/posts/like", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: post.id }),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to toggle like");
+      }
+
+      const nextLikeCount = body?.post?.likeCount;
+      const nextViewerHasLiked = body?.post?.viewerHasLiked;
+
+      setLikeCount((previous) =>
+        Number.isFinite(nextLikeCount) ? nextLikeCount : previous,
+      );
+      setViewerHasLiked(Boolean(nextViewerHasLiked));
+    } finally {
+      setIsLiking(false);
+    }
+  };
 
   return (
     <div className="mt-4 space-y-4">
@@ -88,10 +125,19 @@ export default function Post({ post }: PostProps) {
         </a>
       </div>
       <div className="px-6 flex items-center gap-20">
-        <div className="flex items-center gap-1.5">
-          <Heart size={24} color="#808080" />
-          <p className="text-[#808080] text-xs">3.7K</p>
-        </div>
+        <button
+          type="button"
+          className="flex items-center gap-1.5 disabled:opacity-60"
+          onClick={handleLike}
+          disabled={isLiking}
+        >
+          <Heart
+            size={24}
+            color={viewerHasLiked ? "#E00505" : "#808080"}
+            variant={viewerHasLiked ? "Bold" : "Linear"}
+          />
+          <p className="text-[#808080] text-xs">{likeCount}</p>
+        </button>
         <div className="flex items-center gap-1.5">
           <Messages2 size={24} color="#808080" />
           <p className="text-[#808080] text-xs">20</p>
