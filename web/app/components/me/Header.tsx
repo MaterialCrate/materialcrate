@@ -1,8 +1,14 @@
+"use client";
+
+import React from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Edit2, Setting2 } from "iconsax-reactjs";
 import proStar from "@/assets/svg/pro-star.svg";
 
 export default function Header() {
+  const router = useRouter();
+
   return (
     <header className="w-full bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200 pt-12 px-6">
       <div className="flex justify-between items-center">
@@ -33,7 +39,11 @@ export default function Header() {
           </div>
         </div>
         <div className="flex items-center gap-6">
-          <button type="button" aria-label="edit profile">
+          <button
+            type="button"
+            aria-label="edit profile"
+            onClick={() => router.push("/me/edit")}
+          >
             <Edit2 size={22} color="#444444" />
           </button>
           <button type="button" aria-label="settings">

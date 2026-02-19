@@ -244,7 +244,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
         </div>
         <ActionButton
           type="button"
-          className="fixed bottom-12 left-8 right-8 mx-auto"
+          className="fixed bottom-12 left-8 right-8"
           onClick={handlePublish}
           disabled={disabled}
         >
