@@ -5,9 +5,19 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Edit2, Setting2 } from "iconsax-reactjs";
 import proStar from "@/assets/svg/pro-star.svg";
+import { useAuth } from "@/app/lib/auth-client";
 
 export default function Header() {
   const router = useRouter();
+  const { user } = useAuth();
+
+  const fullName =
+    [user?.firstName, user?.surname].filter(Boolean).join(" ").trim() ||
+    user?.username ||
+    "Unknown User";
+  const username = user?.username ? `@${user.username}` : "@unknown";
+  const followers = user?.followersCount ?? 0;
+  const following = user?.followingCount ?? 0;
 
   return (
     <header className="w-full bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200 pt-12 px-6">
@@ -15,8 +25,8 @@ export default function Header() {
         <div className="flex items-center gap-2">
           <div className="w-19 h-19 bg-white rounded-xl"></div>
           <div className="-space-y-1">
-            <p className="text-lg font-medium">John Doe</p>
-            <p className="text-[#333333] text-sm">@johndoe</p>
+            <p className="text-lg font-medium">{fullName}</p>
+            <p className="text-[#333333] text-sm">{username}</p>
           </div>
         </div>
         <button
@@ -31,11 +41,11 @@ export default function Header() {
         <div className="flex items-center gap-4">
           <div className="text-center">
             <p className="text-xs text-[#343434]">Followers</p>
-            <p className="text-xl font-semibold">123</p>
+            <p className="text-xl font-semibold">{followers}</p>
           </div>
           <div className="text-center">
             <p className="text-xs text-[#343434]">Following</p>
-            <p className="text-xl font-semibold">456</p>
+            <p className="text-xl font-semibold">{following}</p>
           </div>
         </div>
         <div className="flex items-center gap-6">
@@ -46,7 +56,11 @@ export default function Header() {
           >
             <Edit2 size={22} color="#444444" />
           </button>
-          <button type="button" aria-label="settings">
+          <button
+            type="button"
+            aria-label="settings"
+            onClick={() => router.push("/settings")}
+          >
             <Setting2 size={22} color="#444444" />
           </button>
         </div>

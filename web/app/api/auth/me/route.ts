@@ -12,6 +12,8 @@ const ME_QUERY = `
       username
       firstName
       surname
+      followersCount
+      followingCount
       institution
       program
     }

@@ -3,6 +3,10 @@ type User {
   username: String!
   firstName: String
   surname: String
+  followers: [User!]!
+  following: [User!]!
+  followersCount: Int!
+  followingCount: Int!
   email: String!
   emailVerified: Boolean!
   institution: String

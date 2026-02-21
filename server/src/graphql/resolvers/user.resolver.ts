@@ -179,4 +179,34 @@ export const UserResolver = {
       }
     },
   },
+  User: {
+    followers: async (user: { id: string }) => {
+      const follows = await (prisma as any).follow.findMany({
+        where: { followingId: user.id },
+        include: { follower: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return follows.map((entry: { follower: unknown }) => entry.follower);
+    },
+    following: async (user: { id: string }) => {
+      const follows = await (prisma as any).follow.findMany({
+        where: { followerId: user.id },
+        include: { following: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return follows.map((entry: { following: unknown }) => entry.following);
+    },
+    followersCount: async (user: { id: string }) => {
+      return (prisma as any).follow.count({
+        where: { followingId: user.id },
+      });
+    },
+    followingCount: async (user: { id: string }) => {
+      return (prisma as any).follow.count({
+        where: { followerId: user.id },
+      });
+    },
+  },
 };
