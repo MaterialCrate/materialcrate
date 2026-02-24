@@ -13,6 +13,9 @@ export const resolvers = {
   Post: {
     ...PostResolver.Post,
   },
+  Comment: {
+    ...PostResolver.Comment,
+  },
   User: {
     ...UserResolver.User,
   },

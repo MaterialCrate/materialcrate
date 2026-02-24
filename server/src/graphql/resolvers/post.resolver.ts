@@ -31,6 +31,7 @@ const buildPostInclude = (viewerId?: string) => {
     _count: {
       select: {
         likes: true,
+        comments: true,
       },
     },
   };
@@ -48,7 +49,39 @@ const buildPostInclude = (viewerId?: string) => {
 const mapPostForGraphQL = (post: any, viewerId?: string) => ({
   ...post,
   likeCount: post?._count?.likes ?? 0,
+  commentCount: post?._count?.comments ?? 0,
   viewerHasLiked: viewerId ? (post?.likes?.length ?? 0) > 0 : false,
+});
+
+const buildCommentInclude = (viewerId?: string) => {
+  const include: any = {
+    author: true,
+    post: {
+      include: {
+        author: true,
+      },
+    },
+    _count: {
+      select: {
+        commentLikes: true,
+      },
+    },
+  };
+
+  if (viewerId) {
+    include.commentLikes = {
+      where: { userId: viewerId },
+      select: { userId: true },
+    };
+  }
+
+  return include;
+};
+
+const mapCommentForGraphQL = (comment: any, viewerId?: string) => ({
+  ...comment,
+  likeCount: comment?._count?.commentLikes ?? 0,
+  viewerHasLiked: viewerId ? (comment?.commentLikes?.length ?? 0) > 0 : false,
 });
 
 const sanitizeAuthorIdentity = (author: any) => {
@@ -84,6 +117,25 @@ export const PostResolver = {
       });
 
       return posts.map((post) => mapPostForGraphQL(post, viewerId));
+    },
+    comments: async (
+      _: unknown,
+      { postId, limit = 50, offset = 0 }: { postId: string; limit?: number; offset?: number },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      const safeLimit = Math.max(1, Math.min(limit, 100));
+      const safeOffset = Math.max(0, offset);
+
+      const comments = await (prisma as any).comment.findMany({
+        where: { postId },
+        include: buildCommentInclude(viewerId),
+        orderBy: { createdAt: "desc" },
+        take: safeLimit,
+        skip: safeOffset,
+      });
+
+      return comments.map((comment: any) => mapCommentForGraphQL(comment, viewerId));
     },
   },
   Mutation: {
@@ -197,10 +249,143 @@ export const PostResolver = {
 
       return mapPostForGraphQL(updatedPost, viewerId);
     },
+    createComment: async (
+      _: unknown,
+      { postId, content }: { postId: string; content: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedContent = content?.trim();
+      if (!normalizedContent) {
+        throw new Error("Comment content is required");
+      }
+      if (normalizedContent.length > 2000) {
+        throw new Error("Comment content cannot exceed 2000 characters");
+      }
+
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { id: true },
+      });
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      const comment = await (prisma as any).comment.create({
+        data: {
+          postId,
+          authorId: viewerId,
+          content: normalizedContent,
+        },
+        include: buildCommentInclude(viewerId),
+      });
+
+      return mapCommentForGraphQL(comment, viewerId);
+    },
+    toggleCommentLike: async (
+      _: unknown,
+      { commentId }: { commentId: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const comment = await (prisma as any).comment.findUnique({
+        where: { id: commentId },
+        select: { id: true },
+      });
+      if (!comment) {
+        throw new Error("Comment not found");
+      }
+
+      const existingLike = await (prisma as any).commentLike.findUnique({
+        where: {
+          userId_commentId: {
+            userId: viewerId,
+            commentId,
+          },
+        },
+      });
+
+      if (existingLike) {
+        await (prisma as any).commentLike.delete({
+          where: {
+            userId_commentId: {
+              userId: viewerId,
+              commentId,
+            },
+          },
+        });
+      } else {
+        await (prisma as any).commentLike.create({
+          data: {
+            userId: viewerId,
+            commentId,
+          },
+        });
+      }
+
+      const updatedComment = await (prisma as any).comment.findUnique({
+        where: { id: commentId },
+        include: buildCommentInclude(viewerId),
+      });
+      if (!updatedComment) {
+        throw new Error("Comment not found");
+      }
+
+      return mapCommentForGraphQL(updatedComment, viewerId);
+    },
   },
   Post: {
     author: (post: any) => sanitizeAuthorIdentity(post.author),
     likeCount: (post: any) => post.likeCount ?? post?._count?.likes ?? 0,
+    commentCount: (post: any) => post.commentCount ?? post?._count?.comments ?? 0,
+    comments: async (
+      post: { id: string },
+      { limit = 20, offset = 0 }: { limit?: number; offset?: number },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      const safeLimit = Math.max(1, Math.min(limit, 100));
+      const safeOffset = Math.max(0, offset);
+
+      const comments = await (prisma as any).comment.findMany({
+        where: { postId: post.id },
+        include: buildCommentInclude(viewerId),
+        orderBy: { createdAt: "desc" },
+        take: safeLimit,
+        skip: safeOffset,
+      });
+
+      return comments.map((comment: any) => mapCommentForGraphQL(comment, viewerId));
+    },
     viewerHasLiked: (post: any) => Boolean(post.viewerHasLiked),
+  },
+  Comment: {
+    post: async (comment: any) => {
+      if (comment.post) {
+        return mapPostForGraphQL(comment.post);
+      }
+
+      const post = await prisma.post.findUnique({
+        where: { id: comment.postId },
+        include: buildPostInclude(),
+      });
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      return mapPostForGraphQL(post);
+    },
+    author: (comment: any) => sanitizeAuthorIdentity(comment.author),
+    likeCount: (comment: any) =>
+      comment.likeCount ?? comment?._count?.commentLikes ?? 0,
+    viewerHasLiked: (comment: any) => Boolean(comment.viewerHasLiked),
   },
 };
