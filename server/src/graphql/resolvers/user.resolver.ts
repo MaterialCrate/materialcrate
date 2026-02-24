@@ -18,6 +18,13 @@ const createToken = (userId: string, email: string) => {
 
 const RESERVED_USERNAMES = new Set(["deleted", "disabled"]);
 
+const toIsoStringOrNull = (value: unknown) => {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
+};
+
 export const UserResolver = {
   Query: {
     me: async (_: unknown, __: unknown, ctx: any) => {
@@ -315,5 +322,15 @@ export const UserResolver = {
         where: { followerId: user.id },
       });
     },
+    createdAt: (user: { createdAt?: unknown }) => toIsoStringOrNull(user.createdAt),
+    deletedAt: (user: { deletedAt?: unknown }) => toIsoStringOrNull(user.deletedAt),
+    disabledAt: (user: { disabledAt?: unknown }) =>
+      toIsoStringOrNull(user.disabledAt),
+    disabledUntil: (user: { disabledUntil?: unknown }) =>
+      toIsoStringOrNull(user.disabledUntil),
+    subscriptionStartedAt: (user: { subscriptionStartedAt?: unknown }) =>
+      toIsoStringOrNull(user.subscriptionStartedAt),
+    subscriptionEndsAt: (user: { subscriptionEndsAt?: unknown }) =>
+      toIsoStringOrNull(user.subscriptionEndsAt),
   },
 };

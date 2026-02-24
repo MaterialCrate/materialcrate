@@ -1,18 +1,46 @@
 "use client";
 
-import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "iconsax-reactjs";
+import { Fragment } from "react";
+import { useAuth } from "@/app/lib/auth-client";
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "-";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "-";
+
+  return parsed.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};
+
+const formatSeoProvider = (provider: string) =>
+  provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase();
+
+const formatPlan = (plan?: string | null) => {
+  if (!plan) return "free";
+  return plan.toLowerCase();
+};
 
 export default function Page() {
   const router = useRouter();
-  const [accountInfo] = useState({
-    email: "john.doe@example.com",
-    password: "",
-    accountPlan: "Pro",
-    dateJoined: "January 1, 2023",
-    linkedAccounts: ["Google", "Facebook"],
-  });
+  const { user, isLoading } = useAuth();
+
+  const accountInfo = {
+    email: user?.email ?? "-",
+    password: "********",
+    accountPlan: formatPlan(user?.subscriptionPlan),
+    subscriptionStartedAt: formatDate(user?.subscriptionStartedAt),
+    subscriptionEndsAt: formatDate(user?.subscriptionEndsAt),
+    dateJoined: formatDate(user?.createdAt),
+    linkedAccounts: Array.isArray(user?.linkedSEOs)
+      ? user.linkedSEOs.map(formatSeoProvider)
+      : [],
+  };
 
   const accountInfoMap = [
     {
@@ -28,10 +56,19 @@ export default function Page() {
           key: "password",
         },
         {
-          label: "Account Plan",
+          label: "Subscription Plan",
           value: accountInfo.accountPlan,
           key: "accountPlan",
         },
+        ...(accountInfo.accountPlan === "pro"
+          ? [
+              {
+                label: "Subscription Due",
+                value: accountInfo.subscriptionEndsAt,
+                key: "subscriptionEndsAt",
+              },
+            ]
+          : []),
         {
           label: "Date Joined",
           value: accountInfo.dateJoined,
@@ -66,8 +103,13 @@ export default function Page() {
           <h1>Account Information</h1>
         </div>
       </header>
+      {isLoading ? (
+        <div className="w-full bg-white rounded-lg py-3 px-3 text-sm text-[#3D3D3D]">
+          Loading account information...
+        </div>
+      ) : null}
       {accountInfoMap.map((container) => (
-        <React.Fragment key={container.container2.key}>
+        <Fragment key={container.container2.key}>
           <div className="w-full bg-white rounded-lg py-3 flex flex-col gap-4 mb-4">
             {container.container1.map((item) => (
               <div
@@ -77,7 +119,9 @@ export default function Page() {
                 <div className="text-sm font-medium">{item.label}</div>
                 <div className="text-sm">
                   {Array.isArray(item.value)
-                    ? item.value.join(", ")
+                    ? item.value.length
+                      ? item.value.join(", ")
+                      : "-"
                     : item.value ||
                       (item.key === "password" ? "********" : "-")}
                 </div>
@@ -101,7 +145,7 @@ export default function Page() {
               {container.container3.label}
             </button>
           </div>
-        </React.Fragment>
+        </Fragment>
       ))}
     </div>
   );
