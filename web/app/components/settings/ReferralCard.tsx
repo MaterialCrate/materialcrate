@@ -3,8 +3,11 @@ import { Information, Copy } from "iconsax-reactjs";
 
 export default function ReferralCard() {
   return (
-    <div className="py-3 px-3 w-full rounded-xl overflow-hidden bg-linear-to-br from-[#C85A00] via-[#D96A05] to-[#F39A47]">
-      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#ffffff_1px,transparent_1px)] bg-size-[20px_20px]" />
+    <div className="relative py-3 px-3 w-full rounded-xl overflow-hidden bg-linear-to-br from-[#C85A00] via-[#D96A05] to-[#F39A47]">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-20 bg-[radial-gradient(#ffffff_1px,transparent_1px)] bg-size-[20px_20px]"
+      />
       <div className="flex gap-2 items-center">
         <p className="text-white font-medium">Refer a friend</p>
         <Information size={16} color="#FFFFFF" />

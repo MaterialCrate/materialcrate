@@ -8,6 +8,10 @@ type User {
   followersCount: Int!
   followingCount: Int!
   email: String!
+  linkedSEOs: [String!]!
+  subscriptionPlan: String!
+  subscriptionStartedAt: String
+  subscriptionEndsAt: String
   emailVerified: Boolean!
   deleted: Boolean!
   deletedAt: String

@@ -14,6 +14,10 @@ model User {
   surname       String?
   email         String
   password      String
+  linkedSEOs    String[] @default([])
+  subscriptionPlan      String   @default("free")
+  subscriptionStartedAt DateTime @default(now())
+  subscriptionEndsAt    DateTime?
   emailVerified Boolean  @default(false)
   emailVerificationToken          String?
   emailVerificationTokenExpiresAt DateTime?
@@ -26,6 +30,7 @@ model User {
   program       String?
   posts         Post[]   @relation("UserPosts")
   likes         Like[]
+  seoAccounts   SeoAccount[]
   followerRelations Follow[] @relation("UserFollowers")
   followingRelations Follow[] @relation("UserFollowing")
   createdAt     DateTime @default(now())
@@ -33,6 +38,26 @@ model User {
 
   @@index([username])
   @@index([email])
+}
+
+enum SeoProvider {
+  GOOGLE
+  FACEBOOK
+}
+
+model SeoAccount {
+  id             String      @id @default(cuid())
+  userId         String
+  provider       SeoProvider
+  providerUserId String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUserId])
+  @@unique([userId, provider])
+  @@index([userId])
 }
 
 model Post {

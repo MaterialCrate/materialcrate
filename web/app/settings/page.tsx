@@ -6,31 +6,66 @@ import { useRouter } from "next/navigation";
 import ReferralCard from "../components/settings/ReferralCard";
 import ActionButton from "../components/ActionButton";
 
+const settingPages = [
+  {
+    title: "Profile & Account",
+    buttons: [
+      {
+        key: "account-info",
+        text: "Account Information",
+        href: "/settings/account",
+      },
+    ],
+  },
+  {
+    title: "Privacy & Safety",
+    buttons: [
+      {
+        key: "profile-visibility",
+        text: "Profile Visibility",
+        href: "/settings/privacy/profile-visibility",
+      },
+      {
+        key: "content-visibility",
+        text: "Content Visibility",
+        href: "/settings/privacy/content-visibility",
+      },
+      {
+        key: "blocked-users",
+        text: "Blocked Users",
+        href: "/settings/privacy/blocked-users",
+      },
+    ],
+  },
+  {
+    title: "Communication Preferences",
+    buttons: [
+      {
+        key: "email-notifications",
+        text: "Email Notifications",
+        href: "/settings/notifications/email",
+      },
+      {
+        key: "push-notifications",
+        text: "Push Notifications",
+        href: "/settings/notifications/push",
+      },
+    ],
+  },
+  {
+    title: "Legal",
+    buttons: [
+      {
+        key: "terms-of-service",
+        text: "Terms of Service",
+        href: "/settings/privacy/terms-of-service",
+      },
+    ],
+  },
+];
+
 export default function Settings() {
   const router = useRouter();
-
-  const settingPages = [
-    {
-      title: "Account Management",
-      buttons: [{ key: "account-info", text: "Account Information" }],
-    },
-    {
-      title: "Notifications",
-      buttons: [
-        { key: "email-notifications", text: "Email Notifications" },
-        { key: "push-notifications", text: "Push Notifications" },
-      ],
-    },
-    {
-      title: "Privacy and Security",
-      buttons: [
-        { key: "profile-visibility", text: "Profile Visibility" },
-        { key: "content-visibility", text: "Content Visibility" },
-        { key: "blocked-users", text: "Blocked Users" },
-        { key: "Terms of Service", text: "Terms of Service" },
-      ],
-    },
-  ];
 
   return (
     <div className="space-y-4 pt-30 px-6 bg-[#F7F7F7] h-screen">
@@ -52,6 +87,7 @@ export default function Settings() {
                 <button
                   type="button"
                   key={button.key}
+                  onClick={() => router.push(button.href)}
                   className="flex items-center justify-between w-full"
                 >
                   <p className="text-sm text-[#3D3D3D]">{button.text}</p>
