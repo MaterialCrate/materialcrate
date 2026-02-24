@@ -17,6 +17,10 @@ type Comment {
   id: ID!
   post: Post!
   postId: ID!
+  parentId: ID
+  parent: Comment
+  replies(limit: Int = 20, offset: Int = 0): [Comment!]!
+  replyCount: Int!
   author: User!
   content: String!
   likeCount: Int!
@@ -27,7 +31,12 @@ type Comment {
 
 extend type Query {
   posts: [Post!]!
-  comments(postId: ID!, limit: Int = 50, offset: Int = 0): [Comment!]!
+  comments(
+    postId: ID!
+    parentCommentId: ID
+    limit: Int = 50
+    offset: Int = 0
+  ): [Comment!]!
 }
 
 extend type Mutation {
@@ -41,6 +50,6 @@ extend type Mutation {
     year: Int
   ): Post!
   togglePostLike(postId: ID!): Post!
-  createComment(postId: ID!, content: String!): Comment!
+  createComment(postId: ID!, content: String!, parentCommentId: ID): Comment!
   toggleCommentLike(commentId: ID!): Comment!
 }

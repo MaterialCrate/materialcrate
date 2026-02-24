@@ -61,9 +61,15 @@ const buildCommentInclude = (viewerId?: string) => {
         author: true,
       },
     },
+    parent: {
+      include: {
+        author: true,
+      },
+    },
     _count: {
       select: {
         commentLikes: true,
+        replies: true,
       },
     },
   };
@@ -81,6 +87,7 @@ const buildCommentInclude = (viewerId?: string) => {
 const mapCommentForGraphQL = (comment: any, viewerId?: string) => ({
   ...comment,
   likeCount: comment?._count?.commentLikes ?? 0,
+  replyCount: comment?._count?.replies ?? 0,
   viewerHasLiked: viewerId ? (comment?.commentLikes?.length ?? 0) > 0 : false,
 });
 
@@ -120,7 +127,17 @@ export const PostResolver = {
     },
     comments: async (
       _: unknown,
-      { postId, limit = 50, offset = 0 }: { postId: string; limit?: number; offset?: number },
+      {
+        postId,
+        parentCommentId = null,
+        limit = 50,
+        offset = 0,
+      }: {
+        postId: string;
+        parentCommentId?: string | null;
+        limit?: number;
+        offset?: number;
+      },
       ctx: GraphQLContext,
     ) => {
       const viewerId = ctx.user?.sub;
@@ -128,7 +145,7 @@ export const PostResolver = {
       const safeOffset = Math.max(0, offset);
 
       const comments = await (prisma as any).comment.findMany({
-        where: { postId },
+        where: { postId, parentId: parentCommentId },
         include: buildCommentInclude(viewerId),
         orderBy: { createdAt: "desc" },
         take: safeLimit,
@@ -251,7 +268,15 @@ export const PostResolver = {
     },
     createComment: async (
       _: unknown,
-      { postId, content }: { postId: string; content: string },
+      {
+        postId,
+        content,
+        parentCommentId,
+      }: {
+        postId: string;
+        content: string;
+        parentCommentId?: string | null;
+      },
       ctx: GraphQLContext,
     ) => {
       const viewerId = ctx.user?.sub;
@@ -275,10 +300,25 @@ export const PostResolver = {
         throw new Error("Post not found");
       }
 
+      const normalizedParentCommentId = parentCommentId?.trim() || null;
+      if (normalizedParentCommentId) {
+        const parentComment = await (prisma as any).comment.findUnique({
+          where: { id: normalizedParentCommentId },
+          select: { id: true, postId: true },
+        });
+        if (!parentComment) {
+          throw new Error("Parent comment not found");
+        }
+        if (parentComment.postId !== postId) {
+          throw new Error("Parent comment does not belong to this post");
+        }
+      }
+
       const comment = await (prisma as any).comment.create({
         data: {
           postId,
           authorId: viewerId,
+          parentId: normalizedParentCommentId,
           content: normalizedContent,
         },
         include: buildCommentInclude(viewerId),
@@ -356,7 +396,7 @@ export const PostResolver = {
       const safeOffset = Math.max(0, offset);
 
       const comments = await (prisma as any).comment.findMany({
-        where: { postId: post.id },
+        where: { postId: post.id, parentId: null },
         include: buildCommentInclude(viewerId),
         orderBy: { createdAt: "desc" },
         take: safeLimit,
@@ -384,6 +424,45 @@ export const PostResolver = {
       return mapPostForGraphQL(post);
     },
     author: (comment: any) => sanitizeAuthorIdentity(comment.author),
+    parentId: (comment: any) => comment.parentId ?? null,
+    parent: async (comment: any, _: unknown, ctx: GraphQLContext) => {
+      if (!comment.parentId) {
+        return null;
+      }
+      if (comment.parent) {
+        return mapCommentForGraphQL(comment.parent, ctx.user?.sub);
+      }
+
+      const parentComment = await (prisma as any).comment.findUnique({
+        where: { id: comment.parentId },
+        include: buildCommentInclude(ctx.user?.sub),
+      });
+      if (!parentComment) {
+        return null;
+      }
+
+      return mapCommentForGraphQL(parentComment, ctx.user?.sub);
+    },
+    replies: async (
+      comment: { id: string },
+      { limit = 20, offset = 0 }: { limit?: number; offset?: number },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      const safeLimit = Math.max(1, Math.min(limit, 100));
+      const safeOffset = Math.max(0, offset);
+
+      const replies = await (prisma as any).comment.findMany({
+        where: { parentId: comment.id },
+        include: buildCommentInclude(viewerId),
+        orderBy: { createdAt: "asc" },
+        take: safeLimit,
+        skip: safeOffset,
+      });
+
+      return replies.map((reply: any) => mapCommentForGraphQL(reply, viewerId));
+    },
+    replyCount: (comment: any) => comment.replyCount ?? comment?._count?.replies ?? 0,
     likeCount: (comment: any) =>
       comment.likeCount ?? comment?._count?.commentLikes ?? 0,
     viewerHasLiked: (comment: any) => Boolean(comment.viewerHasLiked),

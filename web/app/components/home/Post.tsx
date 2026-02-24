@@ -11,6 +11,7 @@ export type HomePost = {
   description?: string | null;
   year?: number | null;
   likeCount?: number;
+  commentCount?: number;
   viewerHasLiked?: boolean;
   createdAt: string;
   author?: {
@@ -23,6 +24,7 @@ export type HomePost = {
 
 type PostProps = {
   post: HomePost;
+  onCommentClick?: (post: HomePost) => void;
 };
 
 function formatTimeAgo(timestamp: string) {
@@ -33,7 +35,6 @@ function formatTimeAgo(timestamp: string) {
   const numericTimestamp = Number(trimmed);
 
   if (Number.isFinite(numericTimestamp)) {
-    // Accept both Unix seconds and Unix milliseconds.
     value =
       numericTimestamp < 1_000_000_000_000
         ? numericTimestamp * 1000
@@ -57,7 +58,7 @@ function formatTimeAgo(timestamp: string) {
   return `${days}d ago`;
 }
 
-export default function Post({ post }: PostProps) {
+export default function Post({ post, onCommentClick }: PostProps) {
   const authorFullName =
     [post.author?.firstName, post.author?.surname]
       .map((part) => part?.trim())
@@ -158,10 +159,14 @@ export default function Post({ post }: PostProps) {
           />
           <p className="text-[#808080] text-xs">{likeCount}</p>
         </button>
-        <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          className="flex items-center gap-1.5"
+          onClick={() => onCommentClick?.(post)}
+        >
           <Messages2 size={24} color="#808080" />
-          <p className="text-[#808080] text-xs">20</p>
-        </div>
+          <p className="text-[#808080] text-xs">{post.commentCount ?? 0}</p>
+        </button>
         <Archive size={24} color="#808080" />
       </div>
     </div>

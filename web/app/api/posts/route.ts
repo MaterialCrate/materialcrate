@@ -14,6 +14,7 @@ const POSTS_QUERY = `
       description
       year
       likeCount
+      commentCount
       viewerHasLiked
       createdAt
       author {
