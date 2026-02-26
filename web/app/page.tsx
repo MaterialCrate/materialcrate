@@ -10,6 +10,9 @@ export default function Home() {
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
+  const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
+    null,
+  );
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
 
@@ -47,7 +50,14 @@ export default function Home() {
         isOpen={isUploadDrawerOpen}
         onClose={() => setIsUploadDrawerOpen(false)}
       />
-      <CommentDrawer isOpen={isCommentDrawerOpen} onClose={() => setIsCommentDrawerOpen(false)} />
+      <CommentDrawer
+        isOpen={isCommentDrawerOpen}
+        onClose={() => {
+          setIsCommentDrawerOpen(false);
+          setActiveCommentPostId(null);
+        }}
+        postId={activeCommentPostId}
+      />
       <button
         aria-label="Close more options"
         type="button"
@@ -60,6 +70,7 @@ export default function Home() {
           setMoreOptionsOpen(false);
           setIsUploadDrawerOpen(false);
           setIsCommentDrawerOpen(false);
+          setActiveCommentPostId(null);
         }}
       />
       <div className="bottom-28 right-6 fixed z-50 flex flex-col items-end gap-2">
@@ -105,14 +116,15 @@ export default function Home() {
         ) : (
           posts.map((post, index) => (
             <div key={post.id}>
-              <Post
-                post={post}
-                onCommentClick={() => {
-                  setIsCommentDrawerOpen(true);
-                  setMoreOptionsOpen(false);
-                  setIsUploadDrawerOpen(false);
-                }}
-              />
+                <Post
+                  post={post}
+                  onCommentClick={(selectedPost) => {
+                    setActiveCommentPostId(selectedPost.id);
+                    setIsCommentDrawerOpen(true);
+                    setMoreOptionsOpen(false);
+                    setIsUploadDrawerOpen(false);
+                  }}
+                />
               {index < posts.length - 1 ? (
                 <div className="px-6">
                   <div className="h-px w-full bg-black/40 mt-4" />
