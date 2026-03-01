@@ -18,6 +18,7 @@ export default function Header() {
   const username = user?.username ? `@${user.username}` : "@unknown";
   const followers = user?.followersCount ?? 0;
   const following = user?.followingCount ?? 0;
+  const subscriptionPlan = user?.subscriptionPlan ?? "free";
 
   return (
     <header className="w-full bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200 pt-12 px-6">
@@ -29,18 +30,37 @@ export default function Header() {
             <p className="text-[#333333] text-sm">{username}</p>
           </div>
         </div>
-        <button
-          type="button"
-          className="px-3 py-1 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
-        >
-          <Image src={proStar} alt="Pro star" width={16} height={16} />
-          <p className="text-white text-sm font-medium">Pro</p>
-        </button>
+        {subscriptionPlan === "free" ? (
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              aria-label="edit profile"
+              onClick={() => router.push("/me/edit")}
+            >
+              <Edit2 size={22} color="#444444" />
+            </button>
+            <button
+              type="button"
+              aria-label="settings"
+              onClick={() => router.push("/settings")}
+            >
+              <Setting2 size={22} color="#444444" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="px-3 py-1 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
+          >
+            <Image src={proStar} alt="Pro star" width={16} height={16} />
+            <p className="text-white text-sm font-medium">Pro</p>
+          </button>
+        )}
       </div>
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center gap-4">
           <div className="text-center">
-            <p className="text-xs text-[#343434]">Followers</p>
+            <p className="text-xs text-[#343434]">Follwers</p>
             <p className="text-xl font-semibold">{followers}</p>
           </div>
           <div className="text-center">
@@ -48,22 +68,32 @@ export default function Header() {
             <p className="text-xl font-semibold">{following}</p>
           </div>
         </div>
-        <div className="flex items-center gap-6">
+        {subscriptionPlan === "free" ? (
           <button
             type="button"
-            aria-label="edit profile"
-            onClick={() => router.push("/me/edit")}
+            className="px-3 py-1 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
           >
-            <Edit2 size={22} color="#444444" />
+            <Image src={proStar} alt="Pro star" width={16} height={16} />
+            <p className="text-white text-sm font-medium">Upgrade to Pro</p>
           </button>
-          <button
-            type="button"
-            aria-label="settings"
-            onClick={() => router.push("/settings")}
-          >
-            <Setting2 size={22} color="#444444" />
-          </button>
-        </div>
+        ) : (
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              aria-label="edit profile"
+              onClick={() => router.push("/me/edit")}
+            >
+              <Edit2 size={22} color="#444444" />
+            </button>
+            <button
+              type="button"
+              aria-label="settings"
+              onClick={() => router.push("/settings")}
+            >
+              <Setting2 size={22} color="#444444" />
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex items-center justify-between mt-10">
         <button
