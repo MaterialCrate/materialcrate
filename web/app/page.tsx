@@ -5,12 +5,17 @@ import { Book, ArrowDown2, Add, DocumentUpload } from "iconsax-reactjs";
 import Post, { type HomePost } from "./components/home/Post";
 import UploadDrawer from "./components/home/UploadDrawer";
 import CommentDrawer from "./components/home/CommentDrawer";
+import OptionsDrawer from "./components/home/OptionsDrawer";
 
 export default function Home() {
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
+  const [isPostOptionsDrawerOpen, setIsPostOptionsDrawerOpen] = useState(false);
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
+    null,
+  );
+  const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(
     null,
   );
   const [posts, setPosts] = useState<HomePost[]>([]);
@@ -58,11 +63,22 @@ export default function Home() {
         }}
         postId={activeCommentPostId}
       />
+      <OptionsDrawer
+        isOpen={isPostOptionsDrawerOpen}
+        onClose={() => {
+          setIsPostOptionsDrawerOpen(false);
+          setActiveOptionsPost(null);
+        }}
+        authorUsername={activeOptionsPost?.author?.username}
+      />
       <button
         aria-label="Close more options"
         type="button"
         className={`fixed inset-0 z-40 transition-all duration-300 ease-out ${
-          moreOptionsOpen || isUploadDrawerOpen || isCommentDrawerOpen
+          moreOptionsOpen ||
+          isUploadDrawerOpen ||
+          isCommentDrawerOpen ||
+          isPostOptionsDrawerOpen
             ? "bg-black/25 backdrop-blur-[2px] opacity-100 pointer-events-auto"
             : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
         }`}
@@ -70,7 +86,9 @@ export default function Home() {
           setMoreOptionsOpen(false);
           setIsUploadDrawerOpen(false);
           setIsCommentDrawerOpen(false);
+          setIsPostOptionsDrawerOpen(false);
           setActiveCommentPostId(null);
+          setActiveOptionsPost(null);
         }}
       />
       <div className="bottom-28 right-6 fixed z-50 flex flex-col items-end gap-2">
@@ -116,15 +134,25 @@ export default function Home() {
         ) : (
           posts.map((post, index) => (
             <div key={post.id}>
-                <Post
-                  post={post}
-                  onCommentClick={(selectedPost) => {
-                    setActiveCommentPostId(selectedPost.id);
-                    setIsCommentDrawerOpen(true);
-                    setMoreOptionsOpen(false);
-                    setIsUploadDrawerOpen(false);
-                  }}
-                />
+              <Post
+                post={post}
+                onCommentClick={(selectedPost) => {
+                  setActiveCommentPostId(selectedPost.id);
+                  setIsCommentDrawerOpen(true);
+                  setMoreOptionsOpen(false);
+                  setIsUploadDrawerOpen(false);
+                  setIsPostOptionsDrawerOpen(false);
+                  setActiveOptionsPost(null);
+                }}
+                onOptionsClick={(selectedPost) => {
+                  setActiveOptionsPost(selectedPost);
+                  setIsPostOptionsDrawerOpen(true);
+                  setMoreOptionsOpen(false);
+                  setIsUploadDrawerOpen(false);
+                  setIsCommentDrawerOpen(false);
+                  setActiveCommentPostId(null);
+                }}
+              />
               {index < posts.length - 1 ? (
                 <div className="px-6">
                   <div className="h-px w-full bg-black/40 mt-4" />

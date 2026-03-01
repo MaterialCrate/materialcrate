@@ -25,6 +25,7 @@ export type HomePost = {
 type PostProps = {
   post: HomePost;
   onCommentClick?: (post: HomePost) => void;
+  onOptionsClick?: (post: HomePost) => void;
 };
 
 function formatTimeAgo(timestamp: string) {
@@ -58,7 +59,7 @@ function formatTimeAgo(timestamp: string) {
   return `${days}d ago`;
 }
 
-export default function Post({ post, onCommentClick }: PostProps) {
+export default function Post({ post, onCommentClick, onOptionsClick }: PostProps) {
   const authorFullName =
     [post.author?.firstName, post.author?.surname]
       .map((part) => part?.trim())
@@ -116,7 +117,13 @@ export default function Post({ post, onCommentClick }: PostProps) {
             </div>
           </div>
         </div>
-        <More size={28} color="#959595" />
+        <button
+          type="button"
+          aria-label="Post options"
+          onClick={() => onOptionsClick?.(post)}
+        >
+          <More size={28} color="#959595" />
+        </button>
       </div>
       {post.description && (
         <div className="px-6">
