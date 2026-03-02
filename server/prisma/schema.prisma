@@ -33,6 +33,7 @@ model User {
   comments      Comment[]
   commentLikes  CommentLike[]
   seoAccounts   SeoAccount[]
+  workspace     Workspace?
   followerRelations Follow[] @relation("UserFollowers")
   followingRelations Follow[] @relation("UserFollowing")
   createdAt     DateTime @default(now())
@@ -73,11 +74,51 @@ model Post {
   author     User?    @relation("UserPosts", fields: [authorId], references: [id], onDelete: SetNull)
   likes      Like[]
   comments   Comment[]
+  savedInWorkspaces WorkspaceSavedPost[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([authorId])
   @@index([courseCode])
+}
+
+model Workspace {
+  id        String               @id @default(cuid())
+  userId    String               @unique
+  name      String               @default("My Workspace")
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folders   WorkspaceFolder[]
+  savedPosts WorkspaceSavedPost[]
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+}
+
+model WorkspaceFolder {
+  id          String               @id @default(cuid())
+  workspaceId String
+  name        String
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  savedPosts  WorkspaceSavedPost[]
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model WorkspaceSavedPost {
+  id          String           @id @default(cuid())
+  workspaceId String
+  folderId    String?
+  postId      String
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder      WorkspaceFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  post        Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+
+  @@unique([workspaceId, postId])
+  @@index([workspaceId, folderId])
+  @@index([postId])
 }
 
 model Like {

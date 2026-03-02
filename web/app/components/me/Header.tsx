@@ -21,7 +21,7 @@ export default function Header() {
   const subscriptionPlan = user?.subscriptionPlan ?? "free";
 
   return (
-    <header className="w-full bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200 pt-12 px-6">
+    <header className="w-full bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200 pt-12 px-6 z-50">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <div className="w-19 h-19 bg-white rounded-xl"></div>

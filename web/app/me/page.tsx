@@ -5,7 +5,7 @@ export default function MePage() {
   return (
     <div className="space-y-4">
       <Header />
-      <div className="px-6 flex justify-between">
+      <div className="px-6 flex justify-between gap-3">
         <Acheivement />
         <Acheivement />
       </div>

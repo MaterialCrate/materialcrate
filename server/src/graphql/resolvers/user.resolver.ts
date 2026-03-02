@@ -6,6 +6,7 @@ import {
   sendVerificationEmailForUser,
   verifyEmailCode,
 } from "../../auth/emailVerification";
+import { ensureWorkspaceForUserId } from "./workspace.resolver";
 
 const createToken = (userId: string, email: string) => {
   const secret = process.env.JWT_SECRET;
@@ -29,7 +30,10 @@ export const UserResolver = {
   Query: {
     me: async (_: unknown, __: unknown, ctx: any) => {
       if (!ctx.user?.sub) return null;
-      return prisma.user.findUnique({ where: { id: ctx.user.sub } });
+      const user = await prisma.user.findUnique({ where: { id: ctx.user.sub } });
+      if (!user) return null;
+      await ensureWorkspaceForUserId(user.id, ctx.user.sub);
+      return user;
     },
 
     user: async (_: unknown, { id }: { id: string }) => {
@@ -78,7 +82,14 @@ export const UserResolver = {
       };
 
       const user = await prisma.user.create({
-        data: createUserData as any,
+        data: {
+          ...(createUserData as any),
+          workspace: {
+            create: {
+              name: "My Workspace",
+            },
+          },
+        },
       }).catch((error) => {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -143,6 +154,8 @@ export const UserResolver = {
       if (!ok) {
         throw new Error("Invalid credentials");
       }
+
+      await ensureWorkspaceForUserId(user.id, user.id);
 
       const token = createToken(user.id, user.email);
       return { token, user };

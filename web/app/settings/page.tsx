@@ -69,7 +69,7 @@ export default function Settings() {
 
   return (
     <div className="space-y-4 pt-30 px-6 bg-[#F7F7F7] h-screen">
-      <header className="fixed top-0 left-0 right-0 bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center">
         <button aria-label="Back" type="button" onClick={() => router.back()}>
           <ArrowLeft size={24} />
         </button>
@@ -99,7 +99,7 @@ export default function Settings() {
         ))}
       </div>
       <ActionButton
-        className="fixed bottom-12 left-8 right-8 flex items-center justify-center gap-2"
+        className="w-full flex items-center justify-center gap-2"
         type="button"
       >
         <Logout size={20} color="#FFFFFF" />

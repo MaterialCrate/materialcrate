@@ -1,0 +1,42 @@
+type Workspace {
+  id: ID!
+  userId: ID!
+  name: String!
+  folders: [WorkspaceFolder!]!
+  savedPosts: [WorkspaceSavedPost!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type WorkspaceFolder {
+  id: ID!
+  workspaceId: ID!
+  name: String!
+  savedPosts: [WorkspaceSavedPost!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type WorkspaceSavedPost {
+  id: ID!
+  workspaceId: ID!
+  folderId: ID
+  postId: ID!
+  post: Post!
+  folder: WorkspaceFolder
+  createdAt: String!
+}
+
+extend type User {
+  workspace: Workspace!
+}
+
+extend type Query {
+  myWorkspace: Workspace!
+}
+
+extend type Mutation {
+  createWorkspaceFolder(name: String!): WorkspaceFolder!
+  savePostToWorkspace(postId: ID!, folderId: ID): WorkspaceSavedPost!
+  removeSavedPost(savedPostId: ID!): Boolean!
+}

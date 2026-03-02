@@ -59,7 +59,11 @@ function formatTimeAgo(timestamp: string) {
   return `${days}d ago`;
 }
 
-export default function Post({ post, onCommentClick, onOptionsClick }: PostProps) {
+export default function Post({
+  post,
+  onCommentClick,
+  onOptionsClick,
+}: PostProps) {
   const authorFullName =
     [post.author?.firstName, post.author?.surname]
       .map((part) => part?.trim())
@@ -138,8 +142,10 @@ export default function Post({ post, onCommentClick, onOptionsClick }: PostProps
           className="bg-[#F3F3F3] h-45 w-full rounded-2xl p-3 flex gap-4"
         >
           <div className="bg-[#E8E8E8] h-full w-30 rounded-xl"></div>
-          <div>
-            <p className="text-[#202020] font-medium text-sm">{post.title}</p>
+          <div className="space-y-1">
+            <p className="text-[#202020] font-medium text-sm leading-4">
+              {post.title}
+            </p>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
               <p>{post.courseCode}</p>
               {post.year && (
