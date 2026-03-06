@@ -35,7 +35,7 @@ export default function Password({ password, setPassword }: PasswordProps) {
   const shouldDisable = isRegister && !isValidPassword;
 
   return (
-    <div className="h-screen relative w-full">
+    <div className="h-full relative w-full">
       <div className="flex flex-col w-full h-full justify-center">
         <h4 className="font-medium">PASSWORD</h4>
         <input

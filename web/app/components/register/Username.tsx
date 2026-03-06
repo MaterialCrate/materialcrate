@@ -8,7 +8,7 @@ interface passwordTypes {
 
 export default function Username({ username, setUsername }: passwordTypes) {
   return (
-    <div className="h-screen relative w-full">
+    <div className="h-full relative w-full">
       <div className="flex flex-col w-full h-full justify-center">
         <div>
           <h4 className="font-medium">USERNAME</h4>

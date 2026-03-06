@@ -42,7 +42,7 @@ export default function FullName({
   );
 
   return (
-    <div className="h-screen relative w-full">
+    <div className="h-full relative w-full">
       <div className="flex flex-col w-full h-full justify-center gap-5">
         {nameInputs.map((input) => (
           <div key={input.key}>

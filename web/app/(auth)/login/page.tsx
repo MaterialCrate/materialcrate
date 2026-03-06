@@ -74,7 +74,7 @@ export default function Page() {
     <div>
       {error && <Alert type="error" message={error} />}
       <form
-        className="flex flex-col h-screen items-center px-8 py-12 gap-16 relative"
+        className="flex flex-col h-dvh items-center px-8 py-12 gap-16 relative"
         onSubmit={step < 2 ? handleNext : handleSubmit}
       >
         {step !== 1 && (

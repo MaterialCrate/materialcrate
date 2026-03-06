@@ -113,7 +113,7 @@ export default function Verification({ email }: VerificationProps) {
   };
 
   return (
-    <div className="h-screen relative w-full">
+    <div className="h-full relative w-full">
       <div className="text-center fixed top-30 w-70 left-0 right-0 mx-auto text-4xl">
         <h1>Verify email</h1>
         <h2 className="text-sm text-[#333333] mt-2">

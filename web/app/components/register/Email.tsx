@@ -19,7 +19,7 @@ export default function Email({ email, setEmail }: emailTypes) {
   };
 
   return (
-    <div className="h-screen relative w-full">
+    <div className="h-full relative w-full mt-10">
       <div className="space-y-5 flex flex-col w-full h-full justify-center">
         <button
           type="button"

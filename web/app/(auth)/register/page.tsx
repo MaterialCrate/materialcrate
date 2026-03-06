@@ -195,7 +195,7 @@ export default function Page() {
 
   return (
     <form
-      className="flex flex-col h-screen items-center px-8 py-12 gap-16 relative"
+      className="flex flex-col h-dvh items-center px-8 py-12 gap-16 relative"
       onSubmit={
         isSocialSignup
           ? step < 7

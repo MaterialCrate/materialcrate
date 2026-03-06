@@ -18,7 +18,7 @@ export default function Welcome({
   setSelectedOption,
 }: options) {
   return (
-    <div className="h-screen relative w-full">
+    <div className="h-full relative w-full">
       <div className="space-y-2 flex flex-col w-full h-full justify-center">
         {options.map((option) => (
           <button

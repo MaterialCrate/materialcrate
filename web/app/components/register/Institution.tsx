@@ -11,7 +11,7 @@ export default function Institution({
   setInstitution,
 }: InstitutionProps) {
   return (
-    <div className="h-screen relative w-full">
+    <div className="h-full relative w-full">
       <div className="flex flex-col w-full h-full justify-center">
         <div>
           <h4 className="font-medium">INSTITUTION NAME</h4>
