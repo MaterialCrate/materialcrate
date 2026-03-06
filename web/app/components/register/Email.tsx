@@ -12,17 +12,18 @@ export default function Email({ email, setEmail }: emailTypes) {
   const pathname = usePathname();
   const router = useRouter();
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const mode = pathname === "/register" ? "register" : "login";
+
+  const handleSocialAuth = (provider: "google" | "facebook") => {
+    router.push(`/api/auth/social/${provider}?mode=${mode}`);
+  };
 
   return (
     <div className="h-screen relative w-full">
-      <div className="text-center fixed top-30 w-70 left-0 right-0 mx-auto">
-        <h1 className="font-serif text-4xl">
-          {pathname === "/register" ? "Let's get started" : "Welcome back"}
-        </h1>
-      </div>
       <div className="space-y-5 flex flex-col w-full h-full justify-center">
         <button
           type="button"
+          onClick={() => handleSocialAuth("google")}
           className="border border-black flex items-center justify-between w-full px-4 py-3 rounded-lg"
         >
           <p className="font-medium">Continue with Google</p>
@@ -30,6 +31,7 @@ export default function Email({ email, setEmail }: emailTypes) {
         </button>
         <button
           type="button"
+          onClick={() => handleSocialAuth("facebook")}
           className="border border-black flex items-center justify-between w-full px-4 py-3 rounded-lg mb-15"
         >
           <p className="font-medium">Continue with Facebook</p>
@@ -46,7 +48,7 @@ export default function Email({ email, setEmail }: emailTypes) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="border border-black w-full px-4 py-3 rounded-lg mt-4"
+            className="border border-black w-full px-4 py-3 rounded-lg mt-4 focus:outline-none"
             required
           />
           <p className="text-sm text-[#444444] font-medium mt-1.5">
@@ -65,10 +67,7 @@ export default function Email({ email, setEmail }: emailTypes) {
             </span>
           </p>
         </div>
-        <ActionButton
-          type="submit"
-          disabled={!isValidEmail}
-        >
+        <ActionButton type="submit" disabled={!isValidEmail}>
           NEXT
         </ActionButton>
       </div>

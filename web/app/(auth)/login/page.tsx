@@ -2,11 +2,13 @@
 
 import React, { useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
+import { useSearchParams } from "next/navigation";
 import Email from "@/app/components/register/Email";
 import Password from "@/app/components/register/Password";
 import Alert from "@/app/components/Alert";
 
 export default function Page() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<number>(1);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -61,6 +63,13 @@ export default function Page() {
     }
   };
 
+  React.useEffect(() => {
+    const socialError = searchParams.get("error");
+    if (socialError) {
+      setError(socialError);
+    }
+  }, [searchParams]);
+
   return (
     <div>
       {error && <Alert type="error" message={error} />}
@@ -75,7 +84,12 @@ export default function Page() {
             onClick={() => setStep(step - 1)}
           />
         )}
-        <div className="w-12 h-12 bg-[#E1761F] fixed"></div>
+        <div className="absolute flex flex-col items-center gap-5 px-12">
+          <div className="w-12 h-12 bg-[#E1761F]" />
+          <h1 className="font-serif text-4xl text-center">
+            {step === 1 ? "Welcome Back" : "Enter your password"}
+          </h1>
+        </div>
         {step === 1 ? (
           <Email email={email} setEmail={setEmail} />
         ) : (

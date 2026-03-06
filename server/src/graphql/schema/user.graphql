@@ -44,6 +44,13 @@ type Mutation {
     program: String
   ): AuthPayload
   login(email: String!, password: String!): AuthPayload
+  socialAuth(
+    provider: String!
+    providerUserId: String!
+    email: String!
+    firstName: String
+    surname: String
+  ): AuthPayload
   verifyEmailCode(email: String!, code: String!): Boolean!
   resendVerificationEmail(email: String!): Boolean!
   deleteMyAccount: Boolean!

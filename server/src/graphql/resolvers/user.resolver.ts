@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import {
@@ -18,6 +19,96 @@ const createToken = (userId: string, email: string) => {
 };
 
 const RESERVED_USERNAMES = new Set(["deleted", "disabled"]);
+const SOCIAL_PROVIDER_MAP = {
+  google: "GOOGLE",
+  facebook: "FACEBOOK",
+} as const;
+
+type SocialProviderKey = keyof typeof SOCIAL_PROVIDER_MAP;
+type SocialProviderValue = (typeof SOCIAL_PROVIDER_MAP)[SocialProviderKey];
+
+const normalizeSocialProvider = (provider: unknown): SocialProviderValue => {
+  const normalized = String(provider || "").trim().toLowerCase();
+  if (normalized === "google") return SOCIAL_PROVIDER_MAP.google;
+  if (normalized === "facebook") return SOCIAL_PROVIDER_MAP.facebook;
+  throw new Error("Unsupported social provider");
+};
+
+const sanitizeUsernameCandidate = (value: string) => {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9_.]/g, "");
+  return normalized.slice(0, 24);
+};
+
+const generateUniqueUsername = async (baseValue: string) => {
+  const safeBase =
+    sanitizeUsernameCandidate(baseValue) ||
+    `user${Math.floor(Math.random() * 900000 + 100000)}`;
+  let candidate = safeBase;
+  let suffix = 0;
+
+  while (suffix < 1000) {
+    if (!RESERVED_USERNAMES.has(candidate.toLowerCase())) {
+      const existing = await (prisma as any).user.findFirst({
+        where: { username: candidate },
+        select: { id: true },
+      });
+      if (!existing) {
+        return candidate;
+      }
+    }
+
+    suffix += 1;
+    candidate = `${safeBase}${suffix}`.slice(0, 30);
+  }
+
+  throw new Error("Could not generate a unique username");
+};
+
+const ensureUserCanLogin = async (user: any) => {
+  if (!user) {
+    throw new Error("Invalid credentials");
+  }
+
+  if (user.deleted) {
+    throw new Error("Account has been deleted");
+  }
+
+  if (user.disabled) {
+    const now = new Date();
+    const disabledUntil = user.disabledUntil
+      ? new Date(user.disabledUntil)
+      : null;
+
+    if (disabledUntil && now >= disabledUntil) {
+      const reactivated = await (prisma as any).user.update({
+        where: { id: user.id },
+        data: {
+          disabled: false,
+          disabledAt: null,
+          disabledUntil: null,
+        },
+      });
+      return reactivated;
+    }
+
+    throw new Error("Account is disabled");
+  }
+
+  return user;
+};
+
+const includeProviderInLinkedSeos = (
+  linkedSEOs: unknown,
+  provider: SocialProviderValue,
+) => {
+  const existing = Array.isArray(linkedSEOs)
+    ? linkedSEOs.filter((value): value is string => typeof value === "string")
+    : [];
+  if (existing.includes(provider)) {
+    return existing;
+  }
+  return [...existing, provider];
+};
 
 const toIsoStringOrNull = (value: unknown) => {
   if (!value) return null;
@@ -159,6 +250,126 @@ export const UserResolver = {
 
       const token = createToken(user.id, user.email);
       return { token, user };
+    },
+    socialAuth: async (_: unknown, args: any) => {
+      const provider = normalizeSocialProvider(args.provider);
+      const providerUserId = String(args.providerUserId || "").trim();
+      const email = String(args.email || "").trim().toLowerCase();
+      const firstName = String(args.firstName || "").trim();
+      const surname = String(args.surname || "").trim();
+
+      if (!providerUserId || !email) {
+        throw new Error("providerUserId and email are required");
+      }
+
+      const derivedFirstName =
+        firstName || email.split("@")[0]?.trim() || "User";
+      const derivedSurname = surname || "User";
+
+      const existingSeoAccount = await (prisma as any).seoAccount.findUnique({
+        where: {
+          provider_providerUserId: {
+            provider,
+            providerUserId,
+          },
+        },
+        include: {
+          user: true,
+        },
+      });
+
+      if (existingSeoAccount?.user) {
+        const activeUser = await ensureUserCanLogin(existingSeoAccount.user);
+        const refreshedUser = await (prisma as any).user.update({
+          where: { id: activeUser.id },
+          data: {
+            firstName: activeUser.firstName || derivedFirstName,
+            surname: activeUser.surname || derivedSurname,
+            emailVerified: true,
+            linkedSEOs: includeProviderInLinkedSeos(
+              activeUser.linkedSEOs,
+              provider,
+            ),
+          },
+        });
+
+        await ensureWorkspaceForUserId(refreshedUser.id, refreshedUser.id);
+        const token = createToken(refreshedUser.id, refreshedUser.email);
+        return { token, user: refreshedUser };
+      }
+
+      const existingUserByEmail = await (prisma as any).user.findFirst({
+        where: { email },
+      });
+
+      if (existingUserByEmail) {
+        const activeUser = await ensureUserCanLogin(existingUserByEmail);
+
+        await (prisma as any).seoAccount.create({
+          data: {
+            userId: activeUser.id,
+            provider,
+            providerUserId,
+          },
+        }).catch((error: unknown) => {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === "P2002"
+          ) {
+            return null;
+          }
+
+          throw error;
+        });
+
+        const updatedUser = await (prisma as any).user.update({
+          where: { id: activeUser.id },
+          data: {
+            firstName: activeUser.firstName || derivedFirstName,
+            surname: activeUser.surname || derivedSurname,
+            emailVerified: true,
+            linkedSEOs: includeProviderInLinkedSeos(
+              activeUser.linkedSEOs,
+              provider,
+            ),
+          },
+        });
+
+        await ensureWorkspaceForUserId(updatedUser.id, updatedUser.id);
+        const token = createToken(updatedUser.id, updatedUser.email);
+        return { token, user: updatedUser };
+      }
+
+      const emailLocalPart = email.split("@")[0] || "user";
+      const username = await generateUniqueUsername(emailLocalPart);
+      const generatedPassword = randomBytes(32).toString("hex");
+      const password = await bcrypt.hash(generatedPassword, 12);
+
+      const createdUser = await (prisma as any).user.create({
+        data: {
+          email,
+          password,
+          username,
+          firstName: derivedFirstName,
+          surname: derivedSurname,
+          emailVerified: true,
+          linkedSEOs: [provider],
+          seoAccounts: {
+            create: {
+              provider,
+              providerUserId,
+            },
+          },
+          workspace: {
+            create: {
+              name: "My Workspace",
+            },
+          },
+        },
+      });
+
+      const token = createToken(createdUser.id, createdUser.email);
+      return { token, user: createdUser };
     },
 
     verifyEmailCode: async (
