@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import ActionButton from "../ActionButton";
 import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 
@@ -7,6 +7,9 @@ interface passwordTypes {
   setUsername: React.Dispatch<React.SetStateAction<string>>;
   onValidated?: (username: string) => void;
 }
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+const MIN_USERNAME_LENGTH = 3;
 
 export default function Username({
   username,
@@ -19,19 +22,17 @@ export default function Username({
   >(null);
   const [isLiveChecking, setIsLiveChecking] = useState<boolean>(false);
   const [isSubmitChecking, setIsSubmitChecking] = useState<boolean>(false);
-  const usernameRegex = /^[a-zA-Z0-9_]+$/;
-  const minUsernameLength = 3;
   const lastLiveCheckedUsernameRef = useRef<string>("");
   const isChecking = isLiveChecking || isSubmitChecking;
 
-  const getValidationError = (value: string) => {
-    if (!usernameRegex.test(value)) {
+  const getValidationError = useCallback((value: string) => {
+    if (!USERNAME_REGEX.test(value)) {
       return "Username may only contain letters, numbers, and underscores.";
     }
     return "";
-  };
+  }, []);
 
-  const checkUsernameAvailability = async (
+  const checkUsernameAvailability = useCallback(async (
     candidate: string,
     signal?: AbortSignal,
   ) => {
@@ -55,7 +56,7 @@ export default function Username({
       available: Boolean(body?.available),
       error: "",
     };
-  };
+  }, []);
 
   useEffect(() => {
     const trimmedUsername = username.trim();
@@ -109,7 +110,7 @@ export default function Username({
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [username]);
+  }, [checkUsernameAvailability, getValidationError, username]);
 
   const handleUsernameSet = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -162,13 +163,13 @@ export default function Username({
               className="border border-black w-full px-4 py-3 pr-12 rounded-lg focus:outline-none"
               required
             />
-            {isChecking && username.length >= minUsernameLength ? (
+            {isChecking && username.length >= MIN_USERNAME_LENGTH ? (
               <span
                 aria-hidden="true"
                 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-[#E1761F] border-t-transparent animate-spin"
               />
             ) : (
-              username.length >= minUsernameLength &&
+              username.length >= MIN_USERNAME_LENGTH &&
               !message && (
                 <p
                   className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold  ${isUsernameAvailable ? "text-green-500" : "text-red-500"}`}
@@ -190,7 +191,7 @@ export default function Username({
         disabled={
           !username.trim() ||
           isSubmitChecking ||
-          username.length < minUsernameLength ||
+          username.length < MIN_USERNAME_LENGTH ||
           getValidationError(username.trim()) !== "" ||
           isUsernameAvailable === false
         }

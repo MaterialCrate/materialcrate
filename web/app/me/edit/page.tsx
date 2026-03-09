@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Edit } from "iconsax-reactjs";
+import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 import Alert from "@/app/components/Alert";
 
 type UserProfile = {
@@ -12,6 +13,9 @@ type UserProfile = {
   institution: string;
   program: string;
 };
+
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+const MIN_USERNAME_LENGTH = 3;
 
 export default function ProfileEdit() {
   const [profile, setProfile] = useState<UserProfile>({
@@ -23,10 +27,53 @@ export default function ProfileEdit() {
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [message, setMessage] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [usernameMessage, setUsernameMessage] = useState<string>("");
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<
+    boolean | null
+  >(null);
+  const [isLiveChecking, setIsLiveChecking] = useState<boolean>(false);
+  const [isSubmitChecking, setIsSubmitChecking] = useState<boolean>(false);
+  const lastLiveCheckedUsernameRef = useRef<string>("");
+  const isChecking = isLiveChecking || isSubmitChecking;
+  const [fetchedUsername, setFetchedUsername] = useState<string>("");
 
   const router = useRouter();
+
+  const getValidationError = useCallback((value: string) => {
+    if (!USERNAME_REGEX.test(value)) {
+      return "Username may only contain letters, numbers, and underscores.";
+    }
+    return "";
+  }, []);
+
+  const checkUsernameAvailability = useCallback(
+    async (candidate: string, signal?: AbortSignal) => {
+      const response = await fetch(
+        `/api/auth/username-available?username=${encodeURIComponent(candidate)}`,
+        { signal },
+      );
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        return {
+          ok: false,
+          available: false,
+          error:
+            body?.error ||
+            "Error connecting to server. Please try again later.",
+        };
+      }
+
+      return {
+        ok: true,
+        available: Boolean(body?.available),
+        error: "",
+      };
+    },
+    [],
+  );
 
   useEffect(() => {
     let mounted = true;
@@ -49,6 +96,7 @@ export default function ProfileEdit() {
           institution: body.user.institution ?? "",
           program: body.user.program ?? "",
         });
+        setFetchedUsername(body.user.username ?? "");
       } catch (err: unknown) {
         if (!mounted) return;
         setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -66,16 +114,63 @@ export default function ProfileEdit() {
     };
   }, []);
 
+  useEffect(() => {
+    const trimmedUsername = profile.username.trim();
+
+    if (!trimmedUsername) {
+      setUsernameMessage("");
+      setIsLiveChecking(false);
+      return;
+    }
+
+    const validationError = getValidationError(trimmedUsername);
+    if (validationError) {
+      setUsernameMessage(validationError);
+      setIsLiveChecking(false);
+      return;
+    }
+
+    if (trimmedUsername === lastLiveCheckedUsernameRef.current) {
+      setIsLiveChecking(false);
+      return;
+    }
+
+    setIsLiveChecking(true);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      try {
+        const result = await checkUsernameAvailability(
+          trimmedUsername,
+          controller.signal,
+        );
+
+        if (!result.ok) {
+          setUsernameMessage(result.error);
+          return;
+        }
+
+        lastLiveCheckedUsernameRef.current = trimmedUsername;
+        setIsUsernameAvailable(result.available ? true : false);
+        setUsernameMessage("");
+      } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
+        setUsernameMessage(
+          "Error connecting to server. Please try again later.",
+        );
+      } finally {
+        setIsLiveChecking(false);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [checkUsernameAvailability, getValidationError, profile.username]);
+
   const textInputs = [
-    {
-      label: "Username",
-      value: profile.username,
-      onchange: (e: React.ChangeEvent<HTMLInputElement>) =>
-        setProfile({ ...profile, username: e.target.value }),
-      key: "username",
-      minLength: 3,
-      maxLength: 15,
-    },
     {
       label: "First Name",
       value: profile.firstName,
@@ -115,24 +210,52 @@ export default function ProfileEdit() {
   ];
 
   const isSaveDisabled =
+    !profile.username.trim() ||
+    profile.username.length < MIN_USERNAME_LENGTH ||
+    getValidationError(profile.username.trim()) !== "" ||
+    (isUsernameAvailable === false && profile.username !== fetchedUsername) ||
     textInputs.some((input) => input.value.trim().length < input.minLength) ||
     isLoading ||
-    isSaving;
+    isSaving ||
+    isSubmitChecking;
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSaveDisabled) return;
 
     setIsSaving(true);
-    setMessage("");
+    setSuccessMessage("");
     setError("");
 
     try {
+      setIsSubmitChecking(true);
+      const trimmedUsername = profile.username.trim();
+
+      const validationError = getValidationError(trimmedUsername);
+      if (validationError) {
+        setUsernameMessage(validationError);
+        return;
+      }
+
+      const usernameResult = await checkUsernameAvailability(trimmedUsername);
+      if (!usernameResult.ok) {
+        setUsernameMessage(usernameResult.error);
+        return;
+      }
+
+      if (!usernameResult.available) {
+        setIsUsernameAvailable(false);
+        return;
+      }
+
+      lastLiveCheckedUsernameRef.current = trimmedUsername;
+      setUsernameMessage("");
+
       const response = await fetch("/api/graphql/complete-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: profile.username.trim(),
+          username: trimmedUsername,
           firstName: profile.firstName.trim(),
           surname: profile.surname.trim(),
           institution: profile.institution.trim(),
@@ -145,17 +268,18 @@ export default function ProfileEdit() {
         throw new Error(body?.error || "Failed to save profile");
       }
 
-      setMessage("Profile updated successfully.");
+      setSuccessMessage("Profile updated successfully.");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save profile");
     } finally {
+      setIsSubmitChecking(false);
       setIsSaving(false);
     }
   };
 
   return (
     <div>
-      {message && <Alert type="success" message={message} />}
+      {successMessage && <Alert type="success" message={successMessage} />}
       {error && <Alert type="error" message={error} />}
       <header className="fixed top-0 left-0 right-0 bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center justify-between z-50">
         <button aria-label="Back" type="button" onClick={() => router.back()}>
@@ -174,6 +298,7 @@ export default function ProfileEdit() {
         </button>
       </header>
       <form
+        id="profile-form"
         className="pt-30 px-6 flex flex-col items-center gap-10"
         onSubmit={handleSave}
       >
@@ -188,6 +313,45 @@ export default function ProfileEdit() {
         </div>
         <div className="w-full">
           <h2 className="text-xl font-semibold">Personal Information</h2>
+          <div className="space-y-1 mt-4">
+            <p className="text-[#5B5B5B] text-sm font-medium">Username</p>
+            <div className="relative">
+              <input
+                placeholder={profile.username}
+                value={profile.username}
+                onChange={(e) => {
+                  setProfile({ ...profile, username: e.target.value });
+                  lastLiveCheckedUsernameRef.current = "";
+                }}
+                disabled={isLoading || isSaving}
+                required
+                minLength={MIN_USERNAME_LENGTH}
+                maxLength={15}
+                className="w-full rounded-lg px-3 py-3 pr-12 bg-[#F3F3F3]/50 shadow text-xs placeholder:text-[#B1B1B1] focus:outline-none"
+              />
+              {isChecking && profile.username.length >= MIN_USERNAME_LENGTH ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-[#E1761F] border-t-transparent animate-spin"
+                />
+              ) : (
+                profile.username.length >= MIN_USERNAME_LENGTH &&
+                !usernameMessage &&
+                profile.username !== fetchedUsername && (
+                  <p
+                    className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold ${isUsernameAvailable ? "text-green-500" : "text-red-500"}`}
+                  >
+                    {isUsernameAvailable ? (
+                      <IoMdCheckmarkCircle size={24} />
+                    ) : (
+                      <IoMdCloseCircle size={24} />
+                    )}
+                  </p>
+                )
+              )}
+            </div>
+            <p className="text-[12px] text-red-500">{usernameMessage}</p>
+          </div>
           {textInputs.map((input) => (
             <div className="space-y-1 mt-4" key={input.key}>
               <p className="text-[#5B5B5B] text-sm font-medium">
