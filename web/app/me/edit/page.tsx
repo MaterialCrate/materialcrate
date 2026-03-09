@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Edit } from "iconsax-reactjs";
-import ActionButton from "@/app/components/ActionButton";
 import Alert from "@/app/components/Alert";
 
 type UserProfile = {
@@ -158,13 +157,21 @@ export default function ProfileEdit() {
     <div>
       {message && <Alert type="success" message={message} />}
       {error && <Alert type="error" message={error} />}
-      <header className="fixed top-0 left-0 right-0 bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center">
+      <header className="fixed top-0 left-0 right-0 bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center justify-between z-50">
         <button aria-label="Back" type="button" onClick={() => router.back()}>
           <ArrowLeft size={24} />
         </button>
-        <div className="text-center flex-1 text-xl font-medium">
+        <div className="text-center text-xl font-medium">
           <h1>Profile</h1>
         </div>
+        <button
+          type="submit"
+          form="profile-form"
+          disabled={isSaveDisabled}
+          className="text-sm font-semibold text-[#E1761F] disabled:text-[#818181]"
+        >
+          Save
+        </button>
       </header>
       <form
         className="pt-30 px-6 flex flex-col items-center gap-10"
@@ -199,12 +206,6 @@ export default function ProfileEdit() {
             </div>
           ))}
         </div>
-        <ActionButton
-          type="submit"
-          label={isSaving ? "Saving..." : "Save Changes"}
-          className="fixed left-8 right-8 bottom-12"
-          disabled={isSaveDisabled}
-        />
       </form>
     </div>
   );

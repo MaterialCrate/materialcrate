@@ -174,6 +174,15 @@ export default function Page() {
     e.preventDefault();
   };
 
+  const handleUsernameValidated = (validatedUsername: string) => {
+    setUsername(validatedUsername);
+    if (isSocialSignup) {
+      setStep(5);
+      return;
+    }
+    setStep(4);
+  };
+
   const handleBack = () => {
     if (!isSocialSignup) {
       setStep(step - 1);
@@ -242,7 +251,11 @@ export default function Page() {
             Preparing your social profile...
           </div>
         ) : step === 3 ? (
-          <Username username={username} setUsername={setUsername} />
+          <Username
+            username={username}
+            setUsername={setUsername}
+            onValidated={handleUsernameValidated}
+          />
         ) : step === 5 ? (
           <Institution
             institution={institution}
@@ -258,7 +271,11 @@ export default function Page() {
       ) : step === 2 ? (
         <Password password={password} setPassword={setPassword} />
       ) : step === 3 ? (
-        <Username username={username} setUsername={setUsername} />
+        <Username
+          username={username}
+          setUsername={setUsername}
+          onValidated={handleUsernameValidated}
+        />
       ) : step === 4 ? (
         <FullName
           firstName={firstName}

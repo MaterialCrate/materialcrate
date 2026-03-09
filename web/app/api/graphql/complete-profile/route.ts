@@ -7,6 +7,7 @@ type CompleteProfileBody = {
   surname?: string;
   institution?: string;
   program?: string;
+  profilePicture?: string | null;
   email?: string;
 };
 
@@ -20,6 +21,7 @@ const COMPLETE_PROFILE_MUTATION = `
     $surname: String!
     $institution: String!
     $program: String
+    $profilePicture: String
   ) {
     completeProfile(
       username: $username
@@ -27,6 +29,7 @@ const COMPLETE_PROFILE_MUTATION = `
       surname: $surname
       institution: $institution
       program: $program
+      profilePicture: $profilePicture
     ) {
       email
       username
@@ -34,6 +37,7 @@ const COMPLETE_PROFILE_MUTATION = `
       surname
       institution
       program
+      profilePicture
     }
   }
 `;
@@ -80,6 +84,10 @@ export async function POST(req: Request) {
         surname: body.surname,
         institution: body.institution,
         program: body.program,
+        profilePicture:
+          typeof body.profilePicture === "string"
+            ? body.profilePicture.trim() || null
+            : undefined,
       },
     }),
   });

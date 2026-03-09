@@ -3,6 +3,7 @@ type User {
   username: String!
   firstName: String
   surname: String
+  profilePicture: String
   followers: [User!]!
   following: [User!]!
   followersCount: Int!
@@ -31,6 +32,7 @@ type AuthPayload {
 type Query {
   me: User
   user(id: ID!): User
+  usernameAvailable(username: String!): Boolean!
 }
 
 type Mutation {
@@ -62,5 +64,6 @@ type Mutation {
     surname: String!
     institution: String!
     program: String
+    profilePicture: String
   ): User
 }

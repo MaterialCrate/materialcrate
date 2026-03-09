@@ -12,6 +12,7 @@ model User {
   username      String
   firstName     String?
   surname       String?
+  profilePicture String?
   email         String
   password      String
   linkedSEOs    String[] @default([])

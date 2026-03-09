@@ -12,6 +12,7 @@ const ME_QUERY = `
       username
       firstName
       surname
+      profilePicture
       linkedSEOs
       subscriptionPlan
       subscriptionStartedAt

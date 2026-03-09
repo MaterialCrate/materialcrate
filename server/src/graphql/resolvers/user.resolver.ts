@@ -19,6 +19,7 @@ const createToken = (userId: string, email: string) => {
 };
 
 const RESERVED_USERNAMES = new Set(["deleted", "disabled"]);
+const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const SOCIAL_PROVIDER_MAP = {
   google: "GOOGLE",
   facebook: "FACEBOOK",
@@ -129,6 +130,34 @@ export const UserResolver = {
 
     user: async (_: unknown, { id }: { id: string }) => {
       return prisma.user.findUnique({ where: { id } });
+    },
+
+    usernameAvailable: async (
+      _: unknown,
+      { username }: { username: string },
+    ) => {
+      const trimmedUsername = username?.trim();
+      if (!trimmedUsername) return false;
+
+      if (!USERNAME_REGEX.test(trimmedUsername)) {
+        return false;
+      }
+
+      if (RESERVED_USERNAMES.has(trimmedUsername.toLowerCase())) {
+        return false;
+      }
+
+      const existing = await (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: trimmedUsername,
+            mode: "insensitive",
+          },
+        },
+        select: { id: true },
+      });
+
+      return !existing;
     },
   },
 
@@ -483,6 +512,11 @@ export const UserResolver = {
       const firstName = args.firstName?.trim();
       const surname = args.surname?.trim();
       const institution = args.institution?.trim();
+      const profilePicture = args.profilePicture?.trim();
+      const hasProfilePictureArg = Object.prototype.hasOwnProperty.call(
+        args,
+        "profilePicture",
+      );
 
       if (!username || !firstName || !surname || !institution) {
         throw new Error(
@@ -495,15 +529,21 @@ export const UserResolver = {
       }
 
       try {
+        const updateData: Record<string, unknown> = {
+          username,
+          firstName,
+          surname,
+          institution,
+          program: args.program ?? null,
+        };
+
+        if (hasProfilePictureArg) {
+          updateData.profilePicture = profilePicture || null;
+        }
+
         return await (prisma as any).user.update({
           where: { id: ctx.user.sub },
-          data: {
-            username,
-            firstName,
-            surname,
-            institution,
-            program: args.program ?? null,
-          },
+          data: updateData,
         });
       } catch (error) {
         if (
