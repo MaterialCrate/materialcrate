@@ -1,9 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { ArrowLeft } from "iconsax-reactjs";
 import { Fragment } from "react";
 import { useAuth } from "@/app/lib/auth-client";
+import Header from "@/app/components/settings/Header";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
@@ -27,7 +26,6 @@ const formatPlan = (plan?: string | null) => {
 };
 
 export default function Page() {
-  const router = useRouter();
   const { user, isLoading } = useAuth();
 
   const accountInfo = {
@@ -95,14 +93,7 @@ export default function Page() {
 
   return (
     <div className="pt-30 px-6 bg-[#F7F7F7] h-screen">
-      <header className="fixed top-0 left-0 right-0 bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center">
-        <button aria-label="Back" type="button" onClick={() => router.back()}>
-          <ArrowLeft size={24} />
-        </button>
-        <div className="text-center flex-1 text-xl font-medium">
-          <h1>Account Information</h1>
-        </div>
-      </header>
+      <Header title="Account Information" />
       {isLoading ? (
         <div className="w-full bg-white rounded-lg py-3 px-3 text-sm text-[#3D3D3D]">
           Loading account information...
