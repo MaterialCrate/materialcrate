@@ -16,8 +16,7 @@ export type HomePost = {
   createdAt: string;
   author?: {
     id: string;
-    firstName?: string | null;
-    surname?: string | null;
+    displayName?: string | null;
     username: string;
   } | null;
 };
@@ -64,11 +63,7 @@ export default function Post({
   onCommentClick,
   onOptionsClick,
 }: PostProps) {
-  const authorFullName =
-    [post.author?.firstName, post.author?.surname]
-      .map((part) => part?.trim())
-      .filter(Boolean)
-      .join(" ") || "Unknown user";
+  const authorFullName = post.author?.displayName?.trim() || "Unknown user";
   const authorUsername = post.author?.username
     ? `@${post.author.username}`
     : "@unknown";

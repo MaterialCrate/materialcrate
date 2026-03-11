@@ -9,8 +9,7 @@ interface CommentDrawerProps {
 
 type CommentAuthor = {
   id: string;
-  firstName?: string | null;
-  surname?: string | null;
+  displayName?: string | null;
   username?: string | null;
 };
 
@@ -52,12 +51,8 @@ function formatTimeAgo(timestamp: string) {
 }
 
 function getAuthorName(author?: CommentAuthor | null) {
-  const fullName = [author?.firstName, author?.surname]
-    .map((value) => value?.trim())
-    .filter(Boolean)
-    .join(" ");
-
-  if (fullName) return fullName;
+  const displayName = author?.displayName?.trim();
+  if (displayName) return displayName;
   if (author?.username?.trim()) return author.username;
   return "Unknown user";
 }

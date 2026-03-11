@@ -8,8 +8,7 @@ import Alert from "@/app/components/Alert";
 
 type UserProfile = {
   username: string;
-  firstName: string;
-  surname: string;
+  displayName: string;
   institution: string;
   program: string;
 };
@@ -20,8 +19,7 @@ const MIN_USERNAME_LENGTH = 3;
 export default function ProfileEdit() {
   const [profile, setProfile] = useState<UserProfile>({
     username: "",
-    firstName: "",
-    surname: "",
+    displayName: "",
     institution: "",
     program: "",
   });
@@ -91,8 +89,7 @@ export default function ProfileEdit() {
         if (!mounted) return;
         setProfile({
           username: body.user.username ?? "",
-          firstName: body.user.firstName ?? "",
-          surname: body.user.surname ?? "",
+          displayName: body.user.displayName ?? "",
           institution: body.user.institution ?? "",
           program: body.user.program ?? "",
         });
@@ -172,22 +169,13 @@ export default function ProfileEdit() {
 
   const textInputs = [
     {
-      label: "First Name",
-      value: profile.firstName,
+      label: "Display Name",
+      value: profile.displayName,
       onchange: (e: React.ChangeEvent<HTMLInputElement>) =>
-        setProfile({ ...profile, firstName: e.target.value }),
-      key: "firstName",
+        setProfile({ ...profile, displayName: e.target.value }),
+      key: "displayName",
       minLength: 2,
-      maxLength: 12,
-    },
-    {
-      label: "Surname",
-      value: profile.surname,
-      onchange: (e: React.ChangeEvent<HTMLInputElement>) =>
-        setProfile({ ...profile, surname: e.target.value }),
-      key: "surname",
-      minLength: 2,
-      maxLength: 15,
+      maxLength: 30,
     },
     {
       label: "Institution",
@@ -256,8 +244,7 @@ export default function ProfileEdit() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: trimmedUsername,
-          firstName: profile.firstName.trim(),
-          surname: profile.surname.trim(),
+          displayName: profile.displayName.trim(),
           institution: profile.institution.trim(),
           program: profile.program.trim() || null,
         }),

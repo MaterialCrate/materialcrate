@@ -1,8 +1,7 @@
 type User {
   id: ID!
   username: String!
-  firstName: String
-  surname: String
+  displayName: String!
   profilePicture: String
   followers: [User!]!
   following: [User!]!
@@ -33,6 +32,7 @@ type Query {
   me: User
   user(id: ID!): User
   usernameAvailable(username: String!): Boolean!
+  emailAvailable(email: String!): Boolean!
 }
 
 type Mutation {
@@ -40,8 +40,7 @@ type Mutation {
     email: String!
     password: String!
     username: String!
-    firstName: String!
-    surname: String!
+    displayName: String!
     institution: String
     program: String
   ): AuthPayload
@@ -50,8 +49,7 @@ type Mutation {
     provider: String!
     providerUserId: String!
     email: String!
-    firstName: String
-    surname: String
+    displayName: String
   ): AuthPayload
   verifyEmailCode(email: String!, code: String!): Boolean!
   resendVerificationEmail(email: String!): Boolean!
@@ -60,8 +58,7 @@ type Mutation {
   reactivateMyAccount: Boolean!
   completeProfile(
     username: String!
-    firstName: String!
-    surname: String!
+    displayName: String!
     institution: String!
     program: String
     profilePicture: String

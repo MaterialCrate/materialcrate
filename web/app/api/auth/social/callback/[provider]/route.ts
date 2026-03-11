@@ -13,23 +13,20 @@ const SOCIAL_AUTH_MUTATION = `
     $provider: String!
     $providerUserId: String!
     $email: String!
-    $firstName: String
-    $surname: String
+    $displayName: String
   ) {
     socialAuth(
       provider: $provider
       providerUserId: $providerUserId
       email: $email
-      firstName: $firstName
-      surname: $surname
+      displayName: $displayName
     ) {
       token
       user {
         id
         email
         username
-        firstName
-        surname
+        displayName
         institution
         program
         linkedSEOs
@@ -41,8 +38,7 @@ const SOCIAL_AUTH_MUTATION = `
 type SocialIdentity = {
   providerUserId: string;
   email: string;
-  firstName?: string | null;
-  surname?: string | null;
+  displayName?: string | null;
 };
 
 const buildErrorRedirect = (
@@ -133,8 +129,14 @@ const exchangeGoogleCodeForIdentity = async (
   return {
     providerUserId: String(profileBody.sub),
     email: ensureEmail(profileBody.email),
-    firstName: profileBody.given_name ?? null,
-    surname: profileBody.family_name ?? null,
+    displayName:
+      (
+        profileBody.name ??
+        [profileBody.given_name, profileBody.family_name]
+          .filter(Boolean)
+          .join(" ")
+      ) ||
+      null,
   } satisfies SocialIdentity;
 };
 
@@ -173,8 +175,14 @@ const exchangeFacebookCodeForIdentity = async (
   return {
     providerUserId: String(profileBody.id),
     email: ensureEmail(profileBody.email),
-    firstName: profileBody.first_name ?? null,
-    surname: profileBody.last_name ?? null,
+    displayName:
+      (
+        profileBody.name ??
+        [profileBody.first_name, profileBody.last_name]
+          .filter(Boolean)
+          .join(" ")
+      ) ||
+      null,
   } satisfies SocialIdentity;
 };
 
@@ -234,8 +242,7 @@ export async function GET(
           provider,
           providerUserId: identity.providerUserId,
           email: identity.email,
-          firstName: identity.firstName,
-          surname: identity.surname,
+          displayName: identity.displayName,
         },
       }),
     });

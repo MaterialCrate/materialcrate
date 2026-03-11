@@ -3,8 +3,7 @@ import { cookies } from "next/headers";
 
 type CompleteProfileBody = {
   username?: string;
-  firstName?: string;
-  surname?: string;
+  displayName?: string;
   institution?: string;
   program?: string;
   profilePicture?: string | null;
@@ -17,24 +16,21 @@ const GRAPHQL_ENDPOINT =
 const COMPLETE_PROFILE_MUTATION = `
   mutation CompleteProfile(
     $username: String!
-    $firstName: String!
-    $surname: String!
+    $displayName: String!
     $institution: String!
     $program: String
     $profilePicture: String
   ) {
     completeProfile(
       username: $username
-      firstName: $firstName
-      surname: $surname
+      displayName: $displayName
       institution: $institution
       program: $program
       profilePicture: $profilePicture
     ) {
       email
       username
-      firstName
-      surname
+      displayName
       institution
       program
       profilePicture
@@ -51,11 +47,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  if (!body.username || !body.firstName || !body.surname || !body.institution) {
+  if (!body.username || !body.displayName || !body.institution) {
     return NextResponse.json(
       {
         error:
-          "Username, first name, surname, and institution are required",
+          "Username, display name, and institution are required",
       },
       { status: 400 },
     );
@@ -80,8 +76,7 @@ export async function POST(req: Request) {
       query: COMPLETE_PROFILE_MUTATION,
       variables: {
         username: body.username,
-        firstName: body.firstName,
-        surname: body.surname,
+        displayName: body.displayName,
         institution: body.institution,
         program: body.program,
         profilePicture:

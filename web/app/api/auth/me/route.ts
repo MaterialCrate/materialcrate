@@ -10,8 +10,7 @@ const ME_QUERY = `
       id
       email
       username
-      firstName
-      surname
+      displayName
       profilePicture
       linkedSEOs
       subscriptionPlan

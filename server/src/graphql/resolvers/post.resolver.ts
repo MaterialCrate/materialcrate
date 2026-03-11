@@ -96,16 +96,14 @@ const sanitizeAuthorIdentity = (author: any) => {
   if (author.deleted) {
     return {
       ...author,
-      firstName: "Deleted",
-      surname: "User",
+      displayName: "Deleted User",
       username: "deleted",
     };
   }
   if (author.disabled) {
     return {
       ...author,
-      firstName: "Disabled",
-      surname: "User",
+      displayName: "Disabled User",
       username: "disabled",
     };
   }

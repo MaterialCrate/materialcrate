@@ -11,10 +11,7 @@ export default function Header() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const fullName =
-    [user?.firstName, user?.surname].filter(Boolean).join(" ").trim() ||
-    user?.username ||
-    "Unknown User";
+  const fullName = user?.displayName?.trim() || user?.username || "Unknown User";
   const username = user?.username ? `@${user.username}` : "@unknown";
   const followers = user?.followersCount ?? 0;
   const following = user?.followingCount ?? 0;

@@ -8,8 +8,7 @@ const SIGNUP_MUTATION = `
     $email: String!
     $password: String!
     $username: String!
-    $firstName: String!
-    $surname: String!
+    $displayName: String!
     $institution: String
     $program: String
   ) {
@@ -17,8 +16,7 @@ const SIGNUP_MUTATION = `
       email: $email
       password: $password
       username: $username
-      firstName: $firstName
-      surname: $surname
+      displayName: $displayName
       institution: $institution
       program: $program
     ) {
@@ -27,8 +25,7 @@ const SIGNUP_MUTATION = `
         id
         email
         username
-        firstName
-        surname
+        displayName
         institution
         program
       }
@@ -40,8 +37,7 @@ type SignupBody = {
   email?: string;
   password?: string;
   username?: string;
-  firstName?: string;
-  surname?: string;
+  displayName?: string;
   institution?: string;
   program?: string;
 };
@@ -55,13 +51,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { email, password, username, firstName, surname, institution, program } = body;
+  const { email, password, username, displayName, institution, program } = body;
 
-  if (!email || !password || !username || !firstName || !surname) {
+  if (!email || !password || !username || !displayName) {
     return NextResponse.json(
       {
         error:
-          "Email, password, username, first name, and surname are required",
+          "Email, password, username, and display name are required",
       },
       { status: 400 },
     );
@@ -76,8 +72,7 @@ export async function POST(req: Request) {
         email,
         password,
         username,
-        firstName,
-        surname,
+        displayName,
         institution,
         program,
       },

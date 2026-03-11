@@ -38,8 +38,7 @@ const WORKSPACE_QUERY = `
           createdAt
           author {
             id
-            firstName
-            surname
+            displayName
             username
           }
         }
@@ -76,8 +75,7 @@ const SAVE_POST_MUTATION = `
         createdAt
         author {
           id
-          firstName
-          surname
+          displayName
           username
         }
       }

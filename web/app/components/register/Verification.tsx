@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ActionButton from "../ActionButton";
+import Alert from "../Alert";
 
 interface VerificationProps {
   email: string;
@@ -11,7 +12,6 @@ export default function Verification({ email }: VerificationProps) {
   const [code, setCode] = useState<string[]>(["", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const inputs = useRef<(HTMLInputElement | null)[]>([]);
@@ -39,7 +39,10 @@ export default function Verification({ email }: VerificationProps) {
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 4);
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 4);
     if (!pasted) return;
 
     const nextCode = ["", "", "", ""];
@@ -74,8 +77,8 @@ export default function Verification({ email }: VerificationProps) {
         throw new Error(body.error || "Verification failed");
       }
 
-      setIsVerified(true);
-      setStatus("Email verified successfully. You can continue to login.");
+      router.replace("/login");
+      return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || "Verification failed");
@@ -141,8 +144,10 @@ export default function Verification({ email }: VerificationProps) {
             />
           ))}
         </div>
-        {status ? <p className="text-sm text-green-700 mt-4">{status}</p> : null}
-        {error ? <p className="text-sm text-red-600 mt-4">{error}</p> : null}
+        <Alert
+          message={status ? status : error}
+          type={status ? "success" : "error"}
+        /> 
         <button
           type="button"
           onClick={handleResend}
@@ -153,16 +158,16 @@ export default function Verification({ email }: VerificationProps) {
         </button>
       </div>
       <ActionButton
-        type={isVerified ? "button" : "button"}
-        onClick={isVerified ? () => router.push("/login") : handleVerify}
+        type="button"
+        onClick={handleVerify}
         className="fixed bottom-8 left-8 right-8 mx-auto"
         disabled={
-          (!isVerified && code.some((digit) => digit === "")) ||
+          code.some((digit) => digit === "") ||
           isVerifying ||
           isResending
         }
       >
-        {isVerified ? "CONTINUE TO LOGIN" : isVerifying ? "VERIFYING..." : "VERIFY"}
+        {isVerifying ? "VERIFYING..." : "VERIFY"}
       </ActionButton>
     </div>
   );

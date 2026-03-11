@@ -10,6 +10,7 @@ interface passwordTypes {
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const MIN_USERNAME_LENGTH = 3;
+const RESERVED_USERNAMES = new Set(["deleted", "disabled"]);
 
 export default function Username({
   username,
@@ -28,6 +29,9 @@ export default function Username({
   const getValidationError = useCallback((value: string) => {
     if (!USERNAME_REGEX.test(value)) {
       return "Username may only contain letters, numbers, and underscores.";
+    }
+    if (RESERVED_USERNAMES.has(value.toLowerCase())) {
+      return "This username is reserved.";
     }
     return "";
   }, []);

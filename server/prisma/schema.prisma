@@ -10,8 +10,7 @@ datasource db {
 model User {
   id            String   @id @default(cuid())
   username      String
-  firstName     String?
-  surname       String?
+  displayName   String
   profilePicture String?
   email         String
   password      String

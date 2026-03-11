@@ -17,7 +17,7 @@ const libreBaskerville = Libre_Baskerville({
 });
 
 export const metadata: Metadata = {
-  title: "JuMaterials",
+  title: "Material Crate",
   description: "Home to your studies.",
 };
 

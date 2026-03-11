@@ -22,8 +22,7 @@ const COMMENTS_QUERY = `
       createdAt
       author {
         id
-        firstName
-        surname
+        displayName
         username
       }
     }
@@ -43,8 +42,7 @@ const CREATE_COMMENT_MUTATION = `
       createdAt
       author {
         id
-        firstName
-        surname
+        displayName
         username
       }
     }

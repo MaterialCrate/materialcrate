@@ -11,6 +11,7 @@ import FullName from "@/app/components/register/FullName";
 import Institution from "@/app/components/register/Institution";
 import Program from "@/app/components/register/Program";
 import Welcome from "@/app/components/register/Welcome";
+import Alert from "@/app/components/Alert";
 
 export default function Page() {
   const searchParams = useSearchParams();
@@ -19,8 +20,7 @@ export default function Page() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [username, setUsername] = useState<string>("");
-  const [firstName, setFirstName] = useState<string>("");
-  const [surname, setSurname] = useState<string>("");
+  const [displayName, setDisplayName] = useState<string>("");
   const [institution, setInstitution] = useState<string>("");
   const [program, setProgram] = useState<string>("");
   const [toGoPage, setToGoPage] = useState<string>("");
@@ -59,8 +59,7 @@ export default function Page() {
 
         if (!isCancelled) {
           setEmail(user.email ?? "");
-          setFirstName(user.firstName ?? "");
-          setSurname(user.surname ?? "");
+          setDisplayName(user.displayName ?? "");
           setUsername(user.username ?? "");
         }
       } catch (caughtError: unknown) {
@@ -85,11 +84,14 @@ export default function Page() {
     };
   }, [isSocialSignup]);
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (isSocialSignup) {
       if (step === 3 && username) {
+        setStep(4);
+      } else if (step === 4 && displayName.trim()) {
         setStep(5);
       } else if (step === 5 && institution) {
         setStep(6);
@@ -100,12 +102,36 @@ export default function Page() {
     }
 
     if (step === 1 && email) {
+      const trimmedEmail = email.trim();
+      try {
+        const response = await fetch(
+          `/api/auth/email-available?email=${encodeURIComponent(trimmedEmail)}`,
+        );
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(body?.error || "Could not verify this email");
+        }
+
+        if (!body?.available) {
+          setError("Account already exists with this email.");
+          return;
+        }
+      } catch (caughtError: unknown) {
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Could not verify this email",
+        );
+        return;
+      }
+
       setStep(2);
     } else if (step === 2 && password) {
       setStep(3);
     } else if (step === 3 && username) {
       setStep(4);
-    } else if (step === 4 && firstName && surname) {
+    } else if (step === 4 && displayName.trim()) {
       setStep(5);
     } else if (step === 5 && institution) {
       setStep(6);
@@ -126,8 +152,7 @@ export default function Page() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             username,
-            firstName,
-            surname,
+            displayName,
             institution,
             program,
           }),
@@ -149,22 +174,26 @@ export default function Page() {
           email,
           password,
           username,
-          firstName,
-          surname,
+          displayName,
           institution,
           program,
         }),
       });
+      const body = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error || "Signup failed");
+        throw new Error(body?.error || "Oops, something went wrong :-(");
+      }
+
+      if (!body?.ok) {
+        throw new Error("Oops, something went wrong :-(");
       }
 
       setStep(8);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setError(err.message || "Signup failed");
+      console.error("Registration error:", err);
+      setError("Oops, something went wrong :-(");
     } finally {
       setLoading(false);
     }
@@ -177,7 +206,7 @@ export default function Page() {
   const handleUsernameValidated = (validatedUsername: string) => {
     setUsername(validatedUsername);
     if (isSocialSignup) {
-      setStep(5);
+      setStep(4);
       return;
     }
     setStep(4);
@@ -190,6 +219,10 @@ export default function Page() {
     }
 
     if (step === 5) {
+      setStep(4);
+      return;
+    }
+    if (step === 4) {
       setStep(3);
       return;
     }
@@ -219,6 +252,7 @@ export default function Page() {
               : handleNoopSubmit
       }
     >
+      <Alert type="error" message={error} />
       {((!isSocialSignup && step !== 1 && step !== 8) ||
         (isSocialSignup && step !== 3)) && (
         <HiOutlineArrowLeft
@@ -237,7 +271,7 @@ export default function Page() {
               : step === 3
                 ? "Create your username"
                 : step === 4
-                  ? "Enter your full name"
+                  ? "Enter your display name"
                   : step === 5
                     ? "Enter your institution's name"
                     : step === 6
@@ -256,6 +290,8 @@ export default function Page() {
             setUsername={setUsername}
             onValidated={handleUsernameValidated}
           />
+        ) : step === 4 ? (
+          <FullName displayName={displayName} setDisplayName={setDisplayName} />
         ) : step === 5 ? (
           <Institution
             institution={institution}
@@ -277,12 +313,7 @@ export default function Page() {
           onValidated={handleUsernameValidated}
         />
       ) : step === 4 ? (
-        <FullName
-          firstName={firstName}
-          setFirstName={setFirstName}
-          surname={surname}
-          setSurname={setSurname}
-        />
+        <FullName displayName={displayName} setDisplayName={setDisplayName} />
       ) : step === 5 ? (
         <Institution
           institution={institution}
@@ -295,8 +326,6 @@ export default function Page() {
       ) : (
         <Verification email={email} />
       )}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {loading ? <p className="text-sm text-[#444444]">Working...</p> : null}
     </form>
   );
 }

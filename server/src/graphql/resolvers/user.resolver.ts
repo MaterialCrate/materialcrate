@@ -159,18 +159,34 @@ export const UserResolver = {
 
       return !existing;
     },
+    emailAvailable: async (_: unknown, { email }: { email: string }) => {
+      const trimmedEmail = String(email || "").trim().toLowerCase();
+      if (!trimmedEmail) return false;
+
+      const existing = await (prisma as any).user.findFirst({
+        where: {
+          email: {
+            equals: trimmedEmail,
+            mode: "insensitive",
+          },
+          deleted: false,
+        },
+        select: { id: true },
+      });
+
+      return !existing;
+    },
   },
 
   Mutation: {
     signup: async (_: unknown, args: any) => {
-      const { email, password, username, firstName, surname, institution, program } = args;
+      const { email, password, username, displayName, institution, program } = args;
       const normalizedUsername = username?.trim();
-      const normalizedFirstName = firstName?.trim();
-      const normalizedSurname = surname?.trim();
+      const normalizedDisplayName = displayName?.trim();
 
-      if (!email || !password || !normalizedUsername || !normalizedFirstName || !normalizedSurname) {
+      if (!email || !password || !normalizedUsername || !normalizedDisplayName) {
         throw new Error(
-          "Email, password, username, first name, and surname are required",
+          "Email, password, username, and display name are required",
         );
       }
 
@@ -195,8 +211,7 @@ export const UserResolver = {
         email,
         password: hashed,
         username: normalizedUsername,
-        firstName: normalizedFirstName,
-        surname: normalizedSurname,
+        displayName: normalizedDisplayName,
         institution: institution ?? null,
         program: program ?? null,
       };
@@ -284,16 +299,13 @@ export const UserResolver = {
       const provider = normalizeSocialProvider(args.provider);
       const providerUserId = String(args.providerUserId || "").trim();
       const email = String(args.email || "").trim().toLowerCase();
-      const firstName = String(args.firstName || "").trim();
-      const surname = String(args.surname || "").trim();
+      const displayName = String(args.displayName || "").trim();
 
       if (!providerUserId || !email) {
         throw new Error("providerUserId and email are required");
       }
 
-      const derivedFirstName =
-        firstName || email.split("@")[0]?.trim() || "User";
-      const derivedSurname = surname || "User";
+      const derivedDisplayName = displayName || email.split("@")[0]?.trim() || "User";
 
       const existingSeoAccount = await (prisma as any).seoAccount.findUnique({
         where: {
@@ -312,8 +324,7 @@ export const UserResolver = {
         const refreshedUser = await (prisma as any).user.update({
           where: { id: activeUser.id },
           data: {
-            firstName: activeUser.firstName || derivedFirstName,
-            surname: activeUser.surname || derivedSurname,
+            displayName: activeUser.displayName || derivedDisplayName,
             emailVerified: true,
             linkedSEOs: includeProviderInLinkedSeos(
               activeUser.linkedSEOs,
@@ -354,8 +365,7 @@ export const UserResolver = {
         const updatedUser = await (prisma as any).user.update({
           where: { id: activeUser.id },
           data: {
-            firstName: activeUser.firstName || derivedFirstName,
-            surname: activeUser.surname || derivedSurname,
+            displayName: activeUser.displayName || derivedDisplayName,
             emailVerified: true,
             linkedSEOs: includeProviderInLinkedSeos(
               activeUser.linkedSEOs,
@@ -379,8 +389,7 @@ export const UserResolver = {
           email,
           password,
           username,
-          firstName: derivedFirstName,
-          surname: derivedSurname,
+          displayName: derivedDisplayName,
           emailVerified: true,
           linkedSEOs: [provider],
           seoAccounts: {
@@ -509,8 +518,7 @@ export const UserResolver = {
       }
 
       const username = args.username?.trim();
-      const firstName = args.firstName?.trim();
-      const surname = args.surname?.trim();
+      const displayName = args.displayName?.trim();
       const institution = args.institution?.trim();
       const profilePicture = args.profilePicture?.trim();
       const hasProfilePictureArg = Object.prototype.hasOwnProperty.call(
@@ -518,9 +526,9 @@ export const UserResolver = {
         "profilePicture",
       );
 
-      if (!username || !firstName || !surname || !institution) {
+      if (!username || !displayName || !institution) {
         throw new Error(
-          "Username, first name, surname, and institution are required",
+          "Username, display name, and institution are required",
         );
       }
 
@@ -531,8 +539,7 @@ export const UserResolver = {
       try {
         const updateData: Record<string, unknown> = {
           username,
-          firstName,
-          surname,
+          displayName,
           institution,
           program: args.program ?? null,
         };
