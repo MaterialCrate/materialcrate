@@ -11,9 +11,10 @@ export default function Header() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const fullName =
+  const displayName =
     user?.displayName?.trim() || user?.username || "Unknown User";
   const username = user?.username ? `@${user.username}` : "@unknown";
+  const profilePictureUrl = user?.profilePicture;
   const followers = user?.followersCount ?? 0;
   const following = user?.followingCount ?? 0;
   const subscriptionPlan = user?.subscriptionPlan ?? "free";
@@ -22,9 +23,25 @@ export default function Header() {
     <header className="w-full bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200 pt-12 px-6 z-50">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className="w-19 h-19 bg-white rounded-xl"></div>
+          <div className="w-19 h-19">
+            {profilePictureUrl ? (
+              <Image
+                src={profilePictureUrl}
+                alt={displayName}
+                width={76}
+                height={76}
+                className="w-full h-full object-cover rounded-xl"
+              />
+            ) : (
+              <div className="w-full h-full bg-gray-300 rounded-xl flex items-center justify-center">
+                <span className="text-gray-500 text-2xl font-bold">
+                  {displayName.charAt(0)}
+                </span>
+              </div>
+            )}
+          </div>
           <div className="-space-y-1">
-            <p className="text-lg font-medium">{fullName}</p>
+            <p className="text-lg font-medium">{displayName}</p>
             <p className="text-[#333333] text-sm">{username}</p>
           </div>
         </div>

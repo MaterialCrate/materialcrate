@@ -21,6 +21,7 @@ const POSTS_QUERY = `
         id
         displayName
         username
+        profilePicture
       }
     }
   }

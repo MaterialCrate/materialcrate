@@ -24,6 +24,7 @@ const COMMENTS_QUERY = `
         id
         displayName
         username
+        profilePicture
       }
     }
   }
@@ -44,6 +45,7 @@ const CREATE_COMMENT_MUTATION = `
         id
         displayName
         username
+        profilePicture
       }
     }
   }

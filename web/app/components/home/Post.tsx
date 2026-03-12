@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { More, Heart, Messages2, Archive } from "iconsax-reactjs";
+import { More, Heart, Messages2, Archive, User } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import Image from "next/image";
 
 export type HomePost = {
   id: string;
@@ -18,8 +19,10 @@ export type HomePost = {
   createdAt: string;
   author?: {
     id: string;
-    displayName?: string | null;
+    displayName: string;
     username: string;
+    profilePicture?: string | null;
+    profilePictureUrl?: string | null;
   } | null;
 };
 
@@ -71,6 +74,8 @@ export default function Post({
   const authorUsername = post.author?.username
     ? `@${post.author.username}`
     : "@unknown";
+  const authorProfilePicture =
+    post.author?.profilePicture || post.author?.profilePictureUrl;
   const createdLabel = formatTimeAgo(post.createdAt);
   const [likeCount, setLikeCount] = useState<number>(post.likeCount ?? 0);
   const [viewerHasLiked, setViewerHasLiked] = useState<boolean>(
@@ -119,7 +124,20 @@ export default function Post({
     <div className="mt-4 space-y-4">
       <div className="flex justify-between items-center px-6">
         <div className="flex items-center gap-2">
-          <div className="w-12 h-12 bg-[#D3D3D3] rounded-full" />
+          <div className="w-12 h-12 bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+            {authorProfilePicture ? (
+              <Image
+                src={authorProfilePicture}
+                alt={`${authorFullName}'s profile picture`}
+                className="object-cover rounded-full"
+                width={48}
+                height={48}
+                unoptimized
+              />
+            ) : (
+              <User size={24} color="#808080" variant="Bold" />
+            )}
+          </div>
           <div>
             <p className="font-medium text-[#202020]">{authorFullName}</p>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">

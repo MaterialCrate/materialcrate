@@ -6,6 +6,7 @@ import { ArrowLeft } from "iconsax-reactjs";
 import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 import Alert from "@/app/components/Alert";
 import ProfilePictureField from "@/app/components/me/ProfilePictureField";
+import { refreshAuth } from "@/app/lib/auth-client";
 
 type UserProfile = {
   username: string;
@@ -305,6 +306,8 @@ export default function ProfileEdit() {
       if (!response.ok) {
         throw new Error(body?.error || "Failed to save profile");
       }
+
+      await refreshAuth();
 
       const updatedUser = body?.user;
       if (updatedUser) {

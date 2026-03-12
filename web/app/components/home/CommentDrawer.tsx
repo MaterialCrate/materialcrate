@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CloseCircle, Heart, Send } from "iconsax-reactjs";
+import Image from "next/image";
+import { CloseCircle, Heart, Send, User } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 
 interface CommentDrawerProps {
@@ -13,6 +14,8 @@ type CommentAuthor = {
   id: string;
   displayName?: string | null;
   username?: string | null;
+  profilePicture?: string | null;
+  profilePictureUrl?: string | null;
 };
 
 type DrawerComment = {
@@ -65,6 +68,10 @@ function getAuthorMention(author?: CommentAuthor | null) {
 
   const fallback = getAuthorName(author).replace(/\s+/g, "").toLowerCase();
   return `@${fallback || "user"}`;
+}
+
+function getAuthorProfilePicture(author?: CommentAuthor | null) {
+  return author?.profilePicture || author?.profilePictureUrl || "";
 }
 
 export default function CommentDrawer({
@@ -423,7 +430,20 @@ export default function CommentDrawer({
             return (
               <div key={commentId}>
                 <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 aspect-square bg-black/20 rounded-full" />
+                  <div className="h-6 w-6 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+                    {getAuthorProfilePicture(comment.author) ? (
+                      <Image
+                        src={getAuthorProfilePicture(comment.author)}
+                        alt={`${getAuthorName(comment.author)}'s profile picture`}
+                        width={24}
+                        height={24}
+                        className="w-full h-full object-cover rounded-full"
+                        unoptimized
+                      />
+                    ) : (
+                      <User size={14} color="#808080" variant="Bold" />
+                    )}
+                  </div>
                   <div className="space-y-1 w-full">
                     <p className="text-xs text-[#444444] font-semibold">
                       {getAuthorName(comment.author)}
@@ -482,7 +502,20 @@ export default function CommentDrawer({
                   <div className="ml-11 mt-3 space-y-3">
                     {replies.map((reply) => (
                       <div key={reply.id} className="flex items-start gap-3 ">
-                        <div className="h-5 w-5 aspect-square bg-black/20 rounded-full" />
+                        <div className="h-5 w-5 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+                          {getAuthorProfilePicture(reply.author) ? (
+                            <Image
+                              src={getAuthorProfilePicture(reply.author)}
+                              alt={`${getAuthorName(reply.author)}'s profile picture`}
+                              width={20}
+                              height={20}
+                              className="w-full h-full object-cover rounded-full"
+                              unoptimized
+                            />
+                          ) : (
+                            <User size={12} color="#808080" variant="Bold" />
+                          )}
+                        </div>
                         <div className="space-y-1 w-full">
                           <p className="text-xs text-[#444444] font-semibold">
                             {getAuthorName(reply.author)}
