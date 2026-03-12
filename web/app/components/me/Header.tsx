@@ -11,7 +11,8 @@ export default function Header() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const fullName = user?.displayName?.trim() || user?.username || "Unknown User";
+  const fullName =
+    user?.displayName?.trim() || user?.username || "Unknown User";
   const username = user?.username ? `@${user.username}` : "@unknown";
   const followers = user?.followersCount ?? 0;
   const following = user?.followingCount ?? 0;
@@ -47,7 +48,7 @@ export default function Header() {
         ) : (
           <button
             type="button"
-            className="px-3 py-1 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
+            className="px-3 py-2 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
           >
             <Image src={proStar} alt="Pro star" width={16} height={16} />
             <p className="text-white text-sm font-medium">Pro</p>
@@ -68,7 +69,7 @@ export default function Header() {
         {subscriptionPlan === "free" ? (
           <button
             type="button"
-            className="px-3 py-1 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
+            className="px-3 py-2 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
           >
             <Image src={proStar} alt="Pro star" width={16} height={16} />
             <p className="text-white text-sm font-medium">Upgrade to Pro</p>

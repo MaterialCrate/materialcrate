@@ -151,9 +151,7 @@ export default function Post({
         >
           <div className="bg-[#E8E8E8] h-full w-30 rounded-xl"></div>
           <div className="space-y-1">
-            <p className="text-[#202020] font-medium text-sm leading-4">
-              {post.title}
-            </p>
+            <p className="text-[#202020] font-medium text-sm">{post.title}</p>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
               <p>{post.courseCode}</p>
               {post.year && (

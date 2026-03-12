@@ -62,5 +62,8 @@ type Mutation {
     institution: String!
     program: String
     profilePicture: String
+    profilePictureFileBase64: String
+    profilePictureFileName: String
+    profilePictureMimeType: String
   ): User
 }

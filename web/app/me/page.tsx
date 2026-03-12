@@ -1,7 +1,7 @@
 import Acheivement from "../components/me/Acheivement";
 import Header from "../components/me/Header";
 
-export default function MePage() {
+export default function Page() {
   return (
     <div className="space-y-4">
       <Header />

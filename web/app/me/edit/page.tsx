@@ -2,13 +2,15 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Edit } from "iconsax-reactjs";
+import { ArrowLeft } from "iconsax-reactjs";
 import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 import Alert from "@/app/components/Alert";
+import ProfilePictureField from "@/app/components/me/ProfilePictureField";
 
 type UserProfile = {
   username: string;
   displayName: string;
+  profilePictureUrl?: string;
   institution: string;
   program: string;
 };
@@ -22,6 +24,7 @@ export default function ProfileEdit() {
     displayName: "",
     institution: "",
     program: "",
+    profilePictureUrl: "",
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -36,8 +39,19 @@ export default function ProfileEdit() {
   const lastLiveCheckedUsernameRef = useRef<string>("");
   const isChecking = isLiveChecking || isSubmitChecking;
   const [fetchedUsername, setFetchedUsername] = useState<string>("");
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
+    null,
+  );
+  const [profilePicturePreviewUrl, setProfilePicturePreviewUrl] =
+    useState<string>("");
+  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(
+    null,
+  );
 
   const router = useRouter();
+
+  const profilePictureToRender =
+    profilePicturePreviewUrl || profile.profilePictureUrl || "";
 
   const getValidationError = useCallback((value: string) => {
     if (!USERNAME_REGEX.test(value)) {
@@ -92,6 +106,16 @@ export default function ProfileEdit() {
           displayName: body.user.displayName ?? "",
           institution: body.user.institution ?? "",
           program: body.user.program ?? "",
+          profilePictureUrl:
+            body.user.profilePicture ?? body.user.profilePictureUrl ?? "",
+        });
+        setInitialProfile({
+          username: body.user.username ?? "",
+          displayName: body.user.displayName ?? "",
+          institution: body.user.institution ?? "",
+          program: body.user.program ?? "",
+          profilePictureUrl:
+            body.user.profilePicture ?? body.user.profilePictureUrl ?? "",
         });
         setFetchedUsername(body.user.username ?? "");
       } catch (err: unknown) {
@@ -110,6 +134,14 @@ export default function ProfileEdit() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (profilePicturePreviewUrl) {
+        URL.revokeObjectURL(profilePicturePreviewUrl);
+      }
+    };
+  }, [profilePicturePreviewUrl]);
 
   useEffect(() => {
     const trimmedUsername = profile.username.trim();
@@ -197,7 +229,17 @@ export default function ProfileEdit() {
     },
   ];
 
+  const hasTextChanges = initialProfile
+    ? profile.username.trim() !== initialProfile.username.trim() ||
+      profile.displayName.trim() !== initialProfile.displayName.trim() ||
+      profile.institution.trim() !== initialProfile.institution.trim() ||
+      profile.program.trim() !== initialProfile.program.trim()
+    : false;
+  const hasProfilePictureChange = Boolean(profilePictureFile);
+  const hasPendingChanges = hasTextChanges || hasProfilePictureChange;
+
   const isSaveDisabled =
+    !hasPendingChanges ||
     !profile.username.trim() ||
     profile.username.length < MIN_USERNAME_LENGTH ||
     getValidationError(profile.username.trim()) !== "" ||
@@ -206,6 +248,7 @@ export default function ProfileEdit() {
     isLoading ||
     isSaving ||
     isSubmitChecking;
+
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -225,29 +268,37 @@ export default function ProfileEdit() {
         return;
       }
 
-      const usernameResult = await checkUsernameAvailability(trimmedUsername);
-      if (!usernameResult.ok) {
-        setUsernameMessage(usernameResult.error);
-        return;
-      }
+      if (trimmedUsername !== fetchedUsername) {
+        const usernameResult = await checkUsernameAvailability(trimmedUsername);
+        if (!usernameResult.ok) {
+          setUsernameMessage(usernameResult.error);
+          return;
+        }
 
-      if (!usernameResult.available) {
-        setIsUsernameAvailable(false);
-        return;
+        if (!usernameResult.available) {
+          setIsUsernameAvailable(false);
+          return;
+        }
       }
 
       lastLiveCheckedUsernameRef.current = trimmedUsername;
       setUsernameMessage("");
 
+      const formData = new FormData();
+      formData.append("username", trimmedUsername);
+      formData.append("displayName", profile.displayName.trim());
+      formData.append("institution", profile.institution.trim());
+      const trimmedProgram = profile.program.trim();
+      if (trimmedProgram) {
+        formData.append("program", trimmedProgram);
+      }
+      if (profilePictureFile) {
+        formData.append("profilePictureFile", profilePictureFile);
+      }
+
       const response = await fetch("/api/graphql/complete-profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: trimmedUsername,
-          displayName: profile.displayName.trim(),
-          institution: profile.institution.trim(),
-          program: profile.program.trim() || null,
-        }),
+        body: formData,
       });
 
       const body = await response.json().catch(() => ({}));
@@ -255,6 +306,43 @@ export default function ProfileEdit() {
         throw new Error(body?.error || "Failed to save profile");
       }
 
+      const updatedUser = body?.user;
+      if (updatedUser) {
+        const nextProfile = {
+          username: updatedUser.username ?? profile.username,
+          displayName: updatedUser.displayName ?? profile.displayName,
+          institution: updatedUser.institution ?? profile.institution,
+          program: updatedUser.program ?? profile.program,
+          profilePictureUrl:
+            updatedUser.profilePicture ??
+            updatedUser.profilePictureUrl ??
+            profile.profilePictureUrl,
+        };
+        setProfile(nextProfile);
+        setInitialProfile(nextProfile);
+        setFetchedUsername(updatedUser.username ?? trimmedUsername);
+      } else {
+        setInitialProfile((previous) =>
+          previous
+            ? {
+                ...previous,
+                username: profile.username,
+                displayName: profile.displayName,
+                institution: profile.institution,
+                program: profile.program,
+              }
+            : previous,
+        );
+        setFetchedUsername(trimmedUsername);
+      }
+
+      setProfilePictureFile(null);
+      setProfilePicturePreviewUrl((previous) => {
+        if (previous) {
+          URL.revokeObjectURL(previous);
+        }
+        return "";
+      });
       setSuccessMessage("Profile updated successfully.");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save profile");
@@ -289,15 +377,23 @@ export default function ProfileEdit() {
         className="pt-30 px-6 flex flex-col items-center gap-10"
         onSubmit={handleSave}
       >
-        <div className="w-35 h-35 rounded-full bg-[#F1F1F1] relative">
-          <button
-            aria-label="edit pfp"
-            type="button"
-            className="w-10 h-10 bg-white shadow-xl rounded-full absolute bottom-1 right-1 flex items-center justify-center"
-          >
-            <Edit size={24} color="#797979" />
-          </button>
-        </div>
+        <ProfilePictureField
+          imageUrl={profilePictureToRender}
+          onError={setError}
+          onClearStatus={() => {
+            setError("");
+            setSuccessMessage("");
+          }}
+          onImageReady={(file, previewUrl) => {
+            setProfilePictureFile(file);
+            setProfilePicturePreviewUrl((previous) => {
+              if (previous) {
+                URL.revokeObjectURL(previous);
+              }
+              return previewUrl;
+            });
+          }}
+        />
         <div className="w-full">
           <h2 className="text-xl font-semibold">Personal Information</h2>
           <div className="space-y-1 mt-4">

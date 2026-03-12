@@ -1,8 +1,16 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import sharp from "sharp";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { s3 } from "../../config/s3";
 import {
   sendVerificationEmailForUser,
   verifyEmailCode,
@@ -109,6 +117,36 @@ const includeProviderInLinkedSeos = (
     return existing;
   }
   return [...existing, provider];
+};
+
+const sanitizeFileName = (name: string) =>
+  name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_");
+
+const buildS3FileUrl = (bucket: string, region: string, key: string) =>
+  `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+const MAX_PROFILE_PICTURE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PROFILE_PICTURE_MIME_TYPES = new Set(["image/jpeg", "image/png"]);
+const PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
+const PROFILE_PICTURE_MAX_DIMENSION = 512;
+const PROFILE_PICTURE_WEBP_QUALITY = 82;
+
+const extractS3KeyFromUrl = (
+  fileUrl: string,
+  bucket: string,
+  region: string,
+) => {
+  try {
+    const parsed = new URL(fileUrl);
+    const expectedHost = `${bucket}.s3.${region}.amazonaws.com`;
+    if (parsed.hostname !== expectedHost) {
+      return null;
+    }
+
+    const key = parsed.pathname.replace(/^\/+/, "");
+    return key ? decodeURIComponent(key) : null;
+  } catch {
+    return null;
+  }
 };
 
 const toIsoStringOrNull = (value: unknown) => {
@@ -521,10 +559,16 @@ export const UserResolver = {
       const displayName = args.displayName?.trim();
       const institution = args.institution?.trim();
       const profilePicture = args.profilePicture?.trim();
+      const profilePictureFileBase64 = args.profilePictureFileBase64;
+      const profilePictureFileName = args.profilePictureFileName?.trim();
+      const profilePictureMimeType = args.profilePictureMimeType?.trim();
       const hasProfilePictureArg = Object.prototype.hasOwnProperty.call(
         args,
         "profilePicture",
       );
+      const hasProfilePictureFile =
+        typeof profilePictureFileBase64 === "string" &&
+        profilePictureFileBase64.trim().length > 0;
 
       if (!username || !displayName || !institution) {
         throw new Error(
@@ -536,6 +580,16 @@ export const UserResolver = {
         throw new Error("This username is reserved");
       }
 
+      const existingUser = await (prisma as any).user.findUnique({
+        where: { id: ctx.user.sub },
+        select: { profilePicture: true },
+      });
+      if (!existingUser) {
+        throw new Error("User not found");
+      }
+
+      let uploadedProfilePictureUrl: string | null = null;
+
       try {
         const updateData: Record<string, unknown> = {
           username,
@@ -544,15 +598,122 @@ export const UserResolver = {
           program: args.program ?? null,
         };
 
-        if (hasProfilePictureArg) {
+        if (hasProfilePictureFile) {
+          if (!profilePictureFileName || !profilePictureMimeType) {
+            throw new Error(
+              "Profile picture file name and mime type are required",
+            );
+          }
+
+          const normalizedMime = profilePictureMimeType.toLowerCase();
+          if (!ALLOWED_PROFILE_PICTURE_MIME_TYPES.has(normalizedMime)) {
+            throw new Error("Use JPG, JPEG, or PNG only.");
+          }
+
+          const fileBuffer = Buffer.from(profilePictureFileBase64, "base64");
+          if (!fileBuffer.length) {
+            throw new Error("Uploaded profile picture is empty");
+          }
+          if (fileBuffer.length > MAX_PROFILE_PICTURE_BYTES) {
+            throw new Error("Profile picture must be 5MB or smaller");
+          }
+
+          let processedImageBuffer: Buffer;
+          try {
+            processedImageBuffer = await sharp(fileBuffer)
+              .rotate()
+              .resize({
+                width: PROFILE_PICTURE_MAX_DIMENSION,
+                height: PROFILE_PICTURE_MAX_DIMENSION,
+                fit: "inside",
+                withoutEnlargement: true,
+              })
+              .webp({ quality: PROFILE_PICTURE_WEBP_QUALITY })
+              .toBuffer();
+          } catch {
+            throw new Error("Failed to process profile picture");
+          }
+
+          const bucket = process.env.AWS_S3_BUCKET_NAME;
+          const region = process.env.AWS_REGION;
+          if (!bucket || !region) {
+            throw new Error("S3 bucket configuration is missing");
+          }
+
+          const fileNameWithoutExtension = profilePictureFileName.replace(
+            /\.[^.]+$/,
+            "",
+          );
+          const sanitizedBaseName = sanitizeFileName(fileNameWithoutExtension);
+          const key = `profilePictures/${Date.now()}-${randomUUID()}-${sanitizedBaseName || "profile"}.webp`;
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: bucket,
+              Key: key,
+              Body: processedImageBuffer,
+              ContentType: "image/webp",
+            }),
+          );
+
+          uploadedProfilePictureUrl = buildS3FileUrl(bucket, region, key);
+          updateData.profilePicture = uploadedProfilePictureUrl;
+        } else if (hasProfilePictureArg) {
           updateData.profilePicture = profilePicture || null;
         }
 
-        return await (prisma as any).user.update({
+        const updatedUser = await (prisma as any).user.update({
           where: { id: ctx.user.sub },
           data: updateData,
         });
+
+        if (hasProfilePictureFile && existingUser.profilePicture) {
+          const previousPictureKey = extractS3KeyFromUrl(
+            existingUser.profilePicture,
+            process.env.AWS_S3_BUCKET_NAME ?? "",
+            process.env.AWS_REGION ?? "",
+          );
+          const bucket = process.env.AWS_S3_BUCKET_NAME;
+
+          if (
+            previousPictureKey &&
+            bucket &&
+            existingUser.profilePicture !== uploadedProfilePictureUrl
+          ) {
+            void s3
+              .send(
+                new DeleteObjectCommand({
+                  Bucket: bucket,
+                  Key: previousPictureKey,
+                }),
+              )
+              .catch(() => null);
+          }
+        }
+
+        return updatedUser;
       } catch (error) {
+        if (uploadedProfilePictureUrl) {
+          const bucket = process.env.AWS_S3_BUCKET_NAME;
+          const region = process.env.AWS_REGION;
+          if (bucket && region) {
+            const uploadedPictureKey = extractS3KeyFromUrl(
+              uploadedProfilePictureUrl,
+              bucket,
+              region,
+            );
+            if (uploadedPictureKey) {
+              void s3
+                .send(
+                  new DeleteObjectCommand({
+                    Bucket: bucket,
+                    Key: uploadedPictureKey,
+                  }),
+                )
+                .catch(() => null);
+            }
+          }
+        }
+
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002"
@@ -565,6 +726,36 @@ export const UserResolver = {
     },
   },
   User: {
+    profilePicture: async (user: { profilePicture?: string | null }) => {
+      const rawProfilePicture = user.profilePicture?.trim();
+      if (!rawProfilePicture) {
+        return null;
+      }
+
+      const bucket = process.env.AWS_S3_BUCKET_NAME;
+      const region = process.env.AWS_REGION;
+      if (!bucket || !region) {
+        return rawProfilePicture;
+      }
+
+      const key = extractS3KeyFromUrl(rawProfilePicture, bucket, region);
+      if (!key) {
+        return rawProfilePicture;
+      }
+
+      try {
+        return await getSignedUrl(
+          s3,
+          new GetObjectCommand({
+            Bucket: bucket,
+            Key: key,
+          }),
+          { expiresIn: PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS },
+        );
+      } catch {
+        return rawProfilePicture;
+      }
+    },
     followers: async (user: { id: string }) => {
       const follows = await (prisma as any).follow.findMany({
         where: { followingId: user.id },
