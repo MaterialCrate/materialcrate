@@ -195,7 +195,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
-            maxLength={30}
+            maxLength={50}
             className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] focus:outline-none"
           />
         </div>
@@ -238,7 +238,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             placeholder="E.g. 'Notes for the first lecture'"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            maxLength={250}
+            maxLength={500}
             className="w-full rounded-lg px-3 pt-3 h-28 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] resize-none focus:outline-none"
           />
         </div>

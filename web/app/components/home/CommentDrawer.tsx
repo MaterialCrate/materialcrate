@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CloseCircle, Heart, Send } from "iconsax-reactjs";
+import { useAuth } from "@/app/lib/auth-client";
 
 interface CommentDrawerProps {
   isOpen: boolean;
@@ -70,6 +72,8 @@ export default function CommentDrawer({
   onClose,
   postId,
 }: CommentDrawerProps) {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
   const [comments, setComments] = useState<DrawerComment[]>([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [commentsError, setCommentsError] = useState<string | null>(null);
@@ -96,6 +100,14 @@ export default function CommentDrawer({
   }, []);
 
   const mentionRegex = useMemo(() => /(@[A-Za-z0-9._]+)/g, []);
+  const ensureAuthenticated = useCallback(() => {
+    if (isLoading) return false;
+    if (!user) {
+      router.push("/login");
+      return false;
+    }
+    return true;
+  }, [isLoading, router, user]);
 
   const fetchComments = useCallback(async () => {
     if (!postId) {
@@ -224,7 +236,7 @@ export default function CommentDrawer({
   );
 
   const handleLikeComment = async (commentId: string) => {
-    if (isLikingByCommentId[commentId]) return;
+    if (isLikingByCommentId[commentId] || !ensureAuthenticated()) return;
 
     setIsLikingByCommentId((previous) => ({ ...previous, [commentId]: true }));
     try {
@@ -266,6 +278,8 @@ export default function CommentDrawer({
   };
 
   const handleReplyToComment = (target: DrawerComment) => {
+    if (!ensureAuthenticated()) return;
+
     const parentCommentId = target.parentId ?? target.id;
     const mention = getAuthorMention(target.author);
 
@@ -304,7 +318,9 @@ export default function CommentDrawer({
         ? baseContent
         : `${replyTarget.mention} ${baseContent}`.trim()
       : baseContent;
-    if (!postId || !content || isSubmittingComment) return;
+    if (!postId || !content || isSubmittingComment || !ensureAuthenticated()) {
+      return;
+    }
 
     setIsSubmittingComment(true);
     try {
@@ -536,7 +552,7 @@ export default function CommentDrawer({
           <p className="text-xs text-[#B10000]">{commentsError}</p>
         ) : null}
       </div>
-      <div className="absolute bottom-12 left-6 right-6 space-y-2">
+      <div className="absolute bottom-8 left-6 right-6 space-y-2">
         {replyTarget ? (
           <div className="flex items-center justify-between text-[11px] text-[#6A6A6A] px-1">
             <p>

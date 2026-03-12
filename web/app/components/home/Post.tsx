@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { More, Heart, Messages2, Archive } from "iconsax-reactjs";
+import { useAuth } from "@/app/lib/auth-client";
 
 export type HomePost = {
   id: string;
@@ -63,6 +65,8 @@ export default function Post({
   onCommentClick,
   onOptionsClick,
 }: PostProps) {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
   const authorFullName = post.author?.displayName?.trim() || "Unknown user";
   const authorUsername = post.author?.username
     ? `@${post.author.username}`
@@ -74,8 +78,17 @@ export default function Post({
   );
   const [isLiking, setIsLiking] = useState<boolean>(false);
 
+  const ensureAuthenticated = () => {
+    if (isLoading) return false;
+    if (!user) {
+      router.push("/login");
+      return false;
+    }
+    return true;
+  };
+
   const handleLike = async () => {
-    if (isLiking) return;
+    if (isLiking || !ensureAuthenticated()) return;
 
     setIsLiking(true);
     try {
@@ -170,7 +183,10 @@ export default function Post({
         <button
           type="button"
           className="flex items-center gap-1.5"
-          onClick={() => onCommentClick?.(post)}
+          onClick={() => {
+            if (!ensureAuthenticated()) return;
+            onCommentClick?.(post);
+          }}
         >
           <Messages2 size={24} color="#808080" />
           <p className="text-[#808080] text-xs">{post.commentCount ?? 0}</p>
