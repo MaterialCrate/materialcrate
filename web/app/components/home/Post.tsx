@@ -124,7 +124,7 @@ export default function Post({
     <div className="mt-4 space-y-4">
       <div className="flex justify-between items-center px-6">
         <div className="flex items-center gap-2">
-          <div className="w-12 h-12 bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+          <div className="w-12 h-12 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
             {authorProfilePicture ? (
               <Image
                 src={authorProfilePicture}

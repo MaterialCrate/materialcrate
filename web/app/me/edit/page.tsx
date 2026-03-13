@@ -7,6 +7,7 @@ import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 import Alert from "@/app/components/Alert";
 import ProfilePictureField from "@/app/components/me/ProfilePictureField";
 import { refreshAuth } from "@/app/lib/auth-client";
+import LoadingBar from "@/app/components/LoadingBar";
 
 type UserProfile = {
   username: string;
@@ -250,7 +251,6 @@ export default function ProfileEdit() {
     isSaving ||
     isSubmitChecking;
 
-
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSaveDisabled) return;
@@ -359,22 +359,25 @@ export default function ProfileEdit() {
     <div>
       {successMessage && <Alert type="success" message={successMessage} />}
       {error && <Alert type="error" message={error} />}
-      <header className="fixed top-0 left-0 right-0 bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center justify-between z-50">
-        <button aria-label="Back" type="button" onClick={() => router.back()}>
-          <ArrowLeft size={24} />
-        </button>
-        <div className="text-center text-xl font-medium">
-          <h1>Profile</h1>
-        </div>
-        <button
-          type="submit"
-          form="profile-form"
-          disabled={isSaveDisabled}
-          className="text-sm font-semibold text-[#E1761F] disabled:text-[#818181]"
-        >
-          Save
-        </button>
-      </header>
+      <div className="fixed top-0 left-0 right-0">
+        <header className=" bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center justify-between z-50">
+          <button aria-label="Back" type="button" onClick={() => router.back()}>
+            <ArrowLeft size={24} />
+          </button>
+          <div className="text-center text-xl font-medium">
+            <h1>Profile</h1>
+          </div>
+          <button
+            type="submit"
+            form="profile-form"
+            disabled={isSaveDisabled}
+            className="text-sm font-semibold text-[#E1761F] disabled:text-[#818181]"
+          >
+            Save
+          </button>
+        </header>
+        {(isLoading || isSubmitChecking) && <LoadingBar className="" />}
+      </div>
       <form
         id="profile-form"
         className="pt-30 px-6 flex flex-col items-center gap-10"
