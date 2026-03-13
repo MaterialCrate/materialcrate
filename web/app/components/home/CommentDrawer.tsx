@@ -430,7 +430,7 @@ export default function CommentDrawer({
             return (
               <div key={commentId}>
                 <div className="flex items-start gap-3">
-                  <div className="h-6 w-6 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+                  <div className="w-10 bg-[#D3D3D3] aspect-square rounded-full flex items-center justify-center overflow-hidden">
                     {getAuthorProfilePicture(comment.author) ? (
                       <Image
                         src={getAuthorProfilePicture(comment.author)}

@@ -11,9 +11,9 @@ const SIGNUP_MUTATION = `
     $displayName: String!
     $institution: String
     $program: String
-  ) {
-    signup(
-      email: $email
+    ) {
+      signup(
+        email: $email
       password: $password
       username: $username
       displayName: $displayName
@@ -21,6 +21,8 @@ const SIGNUP_MUTATION = `
       program: $program
     ) {
       token
+      verificationEmailSent
+      verificationEmailError
       user {
         id
         email
@@ -95,6 +97,12 @@ export async function POST(req: Request) {
 
   const token = graphqlBody?.data?.signup?.token as string | undefined;
   const user = graphqlBody?.data?.signup?.user;
+  const verificationEmailSent = Boolean(
+    graphqlBody?.data?.signup?.verificationEmailSent,
+  );
+  const verificationEmailError = graphqlBody?.data?.signup?.verificationEmailError as
+    | string
+    | undefined;
 
   if (!token) {
     return NextResponse.json(
@@ -103,7 +111,12 @@ export async function POST(req: Request) {
     );
   }
 
-  const response = NextResponse.json({ ok: true, user });
+  const response = NextResponse.json({
+    ok: true,
+    user,
+    verificationEmailSent,
+    verificationEmailError: verificationEmailError ?? null,
+  });
   response.cookies.set("mc_session", token, {
     httpOnly: true,
     sameSite: "lax",

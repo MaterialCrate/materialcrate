@@ -418,7 +418,9 @@ export default function ProfileEdit() {
                 maxLength={15}
                 className="w-full rounded-lg px-3 py-3 pr-12 bg-[#F3F3F3]/50 shadow text-xs placeholder:text-[#B1B1B1] focus:outline-none"
               />
-              {isChecking && profile.username.length >= MIN_USERNAME_LENGTH ? (
+              {isChecking &&
+              profile.username.length >= MIN_USERNAME_LENGTH &&
+              profile.username !== initialProfile?.username ? (
                 <span
                   aria-hidden="true"
                   className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-[#E1761F] border-t-transparent animate-spin"

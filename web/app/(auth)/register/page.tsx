@@ -10,7 +10,6 @@ import Username from "@/app/components/register/Username";
 import FullName from "@/app/components/register/FullName";
 import Institution from "@/app/components/register/Institution";
 import Program from "@/app/components/register/Program";
-import Welcome from "@/app/components/register/Welcome";
 import Alert from "@/app/components/Alert";
 
 export default function Page() {
@@ -23,7 +22,6 @@ export default function Page() {
   const [displayName, setDisplayName] = useState<string>("");
   const [institution, setInstitution] = useState<string>("");
   const [program, setProgram] = useState<string>("");
-  const [toGoPage, setToGoPage] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [isPrefillingSocial, setIsPrefillingSocial] = useState<boolean>(false);
@@ -95,8 +93,6 @@ export default function Page() {
         setStep(5);
       } else if (step === 5 && institution) {
         setStep(6);
-      } else if (step === 6 && program) {
-        setStep(7);
       }
       return;
     }
@@ -135,8 +131,6 @@ export default function Page() {
       setStep(5);
     } else if (step === 5 && institution) {
       setStep(6);
-    } else if (step === 6 && program) {
-      setStep(7);
     }
   };
 
@@ -189,7 +183,11 @@ export default function Page() {
         throw new Error("Oops, something went wrong :-(");
       }
 
-      setStep(8);
+      if (!body?.verificationEmailSent) {
+        throw new Error("Server error. Try again later.");
+      }
+
+      setStep(7);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("Registration error:", err);
@@ -230,9 +228,6 @@ export default function Page() {
       setStep(5);
       return;
     }
-    if (step === 7) {
-      setStep(6);
-    }
   };
 
   return (
@@ -240,20 +235,20 @@ export default function Page() {
       className="flex flex-col h-dvh items-center px-8 py-12 gap-16 relative"
       onSubmit={
         isSocialSignup
-          ? step < 7
+          ? step < 6
             ? handleNext
-            : step === 7
+            : step === 6
               ? handleSubmit
               : handleNoopSubmit
-          : step < 7
+          : step < 6
             ? handleNext
-            : step === 7
+            : step === 6
               ? handleSubmit
               : handleNoopSubmit
       }
     >
       <Alert type="error" message={error} />
-      {((!isSocialSignup && step !== 1 && step !== 8) ||
+      {((!isSocialSignup && step !== 1 && step !== 7) ||
         (isSocialSignup && step !== 3)) && (
         <HiOutlineArrowLeft
           className="absolute top-5 left-5"
@@ -274,9 +269,7 @@ export default function Page() {
                   ? "Enter your display name"
                   : step === 5
                     ? "Enter your institution's name"
-                    : step === 6
-                      ? "Enter your program of study"
-                      : step === 7 && "Where would you like to start?"}
+                    : step === 6 && "Enter your program of study"}
         </h1>
       </div>
       {isSocialSignup ? (
@@ -298,9 +291,11 @@ export default function Page() {
             setInstitution={setInstitution}
           />
         ) : step === 6 ? (
-          <Program program={program} setProgram={setProgram} />
-        ) : step === 7 ? (
-          <Welcome selectedOption={toGoPage} setSelectedOption={setToGoPage} />
+          <Program
+            program={program}
+            setProgram={setProgram}
+            submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
+          />
         ) : null
       ) : step === 1 ? (
         <Email email={email} setEmail={setEmail} />
@@ -320,9 +315,11 @@ export default function Page() {
           setInstitution={setInstitution}
         />
       ) : step === 6 ? (
-        <Program program={program} setProgram={setProgram} />
-      ) : step === 7 ? (
-        <Welcome selectedOption={toGoPage} setSelectedOption={setToGoPage} />
+        <Program
+          program={program}
+          setProgram={setProgram}
+          submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
+        />
       ) : (
         <Verification email={email} />
       )}

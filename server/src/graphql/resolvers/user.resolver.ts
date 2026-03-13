@@ -274,10 +274,20 @@ export const UserResolver = {
         throw error;
       });
 
-      await sendVerificationEmailForUser(user.id, user.email);
+      let verificationEmailSent = true;
+      let verificationEmailError: string | null = null;
+
+      try {
+        await sendVerificationEmailForUser(user.id, user.email);
+      } catch (error) {
+        verificationEmailSent = false;
+        verificationEmailError =
+          error instanceof Error ? error.message : "Failed to send verification email";
+        console.error("Failed to send verification email during signup:", error);
+      }
 
       const token = createToken(user.id, user.email);
-      return { token, user };
+      return { token, user, verificationEmailSent, verificationEmailError };
     },
 
     login: async (_: unknown, args: any) => {
@@ -331,7 +341,12 @@ export const UserResolver = {
       await ensureWorkspaceForUserId(user.id, user.id);
 
       const token = createToken(user.id, user.email);
-      return { token, user };
+        return {
+          token,
+          user,
+          verificationEmailSent: true,
+          verificationEmailError: null,
+        };
     },
     socialAuth: async (_: unknown, args: any) => {
       const provider = normalizeSocialProvider(args.provider);
@@ -373,7 +388,12 @@ export const UserResolver = {
 
         await ensureWorkspaceForUserId(refreshedUser.id, refreshedUser.id);
         const token = createToken(refreshedUser.id, refreshedUser.email);
-        return { token, user: refreshedUser };
+        return {
+          token,
+          user: refreshedUser,
+          verificationEmailSent: true,
+          verificationEmailError: null,
+        };
       }
 
       const existingUserByEmail = await (prisma as any).user.findFirst({
@@ -414,7 +434,12 @@ export const UserResolver = {
 
         await ensureWorkspaceForUserId(updatedUser.id, updatedUser.id);
         const token = createToken(updatedUser.id, updatedUser.email);
-        return { token, user: updatedUser };
+        return {
+          token,
+          user: updatedUser,
+          verificationEmailSent: true,
+          verificationEmailError: null,
+        };
       }
 
       const emailLocalPart = email.split("@")[0] || "user";
@@ -445,7 +470,12 @@ export const UserResolver = {
       });
 
       const token = createToken(createdUser.id, createdUser.email);
-      return { token, user: createdUser };
+      return {
+        token,
+        user: createdUser,
+        verificationEmailSent: true,
+        verificationEmailError: null,
+      };
     },
 
     verifyEmailCode: async (

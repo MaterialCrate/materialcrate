@@ -26,6 +26,8 @@ type User {
 type AuthPayload {
   token: String!
   user: User!
+  verificationEmailSent: Boolean!
+  verificationEmailError: String
 }
 
 type Query {

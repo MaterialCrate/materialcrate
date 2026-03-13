@@ -4,9 +4,14 @@ import ActionButton from "../ActionButton";
 interface passwordTypes {
   program: string;
   setProgram: React.Dispatch<React.SetStateAction<string>>;
+  submitLabel?: string;
 }
 
-export default function Program({ program, setProgram }: passwordTypes) {
+export default function Program({
+  program,
+  setProgram,
+  submitLabel = "NEXT",
+}: passwordTypes) {
   return (
     <div className="h-full relative w-full">
       <div className="flex flex-col w-full h-full justify-center">
@@ -27,7 +32,7 @@ export default function Program({ program, setProgram }: passwordTypes) {
         disabled={!program}
         className="fixed bottom-8 left-8 right-8 mx-auto"
       >
-        NEXT
+        {submitLabel}
       </ActionButton>
     </div>
   );
