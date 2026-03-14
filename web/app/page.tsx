@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Book, ArrowDown2, Add, DocumentUpload } from "iconsax-reactjs";
+import { Add, DocumentUpload } from "iconsax-reactjs";
 import Post, { type HomePost } from "./components/home/Post";
 import UploadDrawer from "./components/home/UploadDrawer";
 import CommentDrawer from "./components/home/CommentDrawer";
 import OptionsDrawer from "./components/home/OptionsDrawer";
 import PdfViewerModal from "./components/home/PdfViewerModal";
+import Header from "./components/home/Header";
 
 export default function Home() {
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
@@ -52,7 +53,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div>
+    <div className="py-18">
       <UploadDrawer
         isOpen={isUploadDrawerOpen}
         onClose={() => setIsUploadDrawerOpen(false)}
@@ -125,16 +126,7 @@ export default function Home() {
           <Add size={30} />
         </button>
       </div>
-      <header className="flex px-6 py-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)]">
-        <div className="p-2 rounded-lg bg-[#EEEEEE] flex items-center gap-1">
-          <Book size={22} variant="Bold" />
-          <ArrowDown2 size={14} color="#959595" />
-        </div>
-        <input
-          placeholder="What material do you want to find?"
-          className="flex-1 pl-4 placeholder:text-[#B0B0B0] outline-none text-sm"
-        />
-      </header>
+      <Header />
       <main>
         {isLoadingPosts ? (
           <p className="px-6 py-8 text-sm text-[#696969]">Loading posts...</p>
