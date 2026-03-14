@@ -33,6 +33,7 @@ type AuthPayload {
 type Query {
   me: User
   user(id: ID!): User
+  userByUsername(username: String!): User
   usernameAvailable(username: String!): Boolean!
   emailAvailable(email: String!): Boolean!
 }

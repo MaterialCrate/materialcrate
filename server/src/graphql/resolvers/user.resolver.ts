@@ -170,6 +170,24 @@ export const UserResolver = {
       return prisma.user.findUnique({ where: { id } });
     },
 
+    userByUsername: async (_: unknown, { username }: { username: string }) => {
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) {
+        return null;
+      }
+
+      return (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+          deleted: false,
+          disabled: false,
+        },
+      });
+    },
+
     usernameAvailable: async (
       _: unknown,
       { username }: { username: string },

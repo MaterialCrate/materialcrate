@@ -166,7 +166,7 @@ export default function Home() {
               />
               {index < posts.length - 1 ? (
                 <div className="px-6">
-                  <div className="h-px w-full bg-black/40 mt-4" />
+                  <div className="h-px w-full bg-black/20 mt-4" />
                 </div>
               ) : null}
             </div>

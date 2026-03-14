@@ -5,8 +5,8 @@ const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
 const POSTS_QUERY = `
-  query Posts {
-    posts {
+  query Posts($authorUsername: String) {
+    posts(authorUsername: $authorUsername) {
       id
       fileUrl
       title
@@ -27,9 +27,11 @@ const POSTS_QUERY = `
   }
 `;
 
-export async function GET() {
+export async function GET(request: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get("mc_session")?.value;
+  const { searchParams } = new URL(request.url);
+  const authorUsername = searchParams.get("author")?.trim() || null;
 
   const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
     method: "POST",
@@ -37,7 +39,10 @@ export async function GET() {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ query: POSTS_QUERY }),
+    body: JSON.stringify({
+      query: POSTS_QUERY,
+      variables: { authorUsername },
+    }),
   });
 
   const graphqlBody = await graphqlResponse.json().catch(() => ({}));

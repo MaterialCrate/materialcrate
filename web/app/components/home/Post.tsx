@@ -79,6 +79,9 @@ export default function Post({
     : "@unknown";
   const authorProfilePicture =
     post.author?.profilePicture || post.author?.profilePictureUrl;
+  const authorRoute = post.author?.username
+    ? `/user/${encodeURIComponent(post.author.username)}`
+    : null;
   const createdLabel = formatTimeAgo(post.createdAt);
   const [likeCount, setLikeCount] = useState<number>(post.likeCount ?? 0);
   const [viewerHasLiked, setViewerHasLiked] = useState<boolean>(
@@ -126,19 +129,27 @@ export default function Post({
   return (
     <div className="mt-4 space-y-4">
       <div className="flex justify-between items-center px-6">
-        <div className="flex items-center gap-2">
-          <div className="w-12 h-12 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+        <button
+          type="button"
+          className="flex items-center gap-2 text-left"
+          onClick={() => {
+            if (!authorRoute) return;
+            router.push(authorRoute);
+          }}
+          disabled={!authorRoute}
+        >
+          <div className="w-10 h-10 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
             {authorProfilePicture ? (
               <Image
                 src={authorProfilePicture}
                 alt={`${authorFullName}'s profile picture`}
                 className="object-cover rounded-full"
-                width={48}
-                height={48}
+                width={40}
+                height={40}
                 unoptimized
               />
             ) : (
-              <User size={24} color="#808080" variant="Bold" />
+              <User size={18} color="#808080" variant="Bold" />
             )}
           </div>
           <div>
@@ -149,7 +160,7 @@ export default function Post({
               <p>{createdLabel}</p>
             </div>
           </div>
-        </div>
+        </button>
         <button
           type="button"
           aria-label="Post options"

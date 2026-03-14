@@ -133,9 +133,26 @@ const sanitizeAuthorIdentity = (author: any) => {
 
 export const PostResolver = {
   Query: {
-    posts: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
+    posts: async (
+      _: unknown,
+      { authorUsername }: { authorUsername?: string | null },
+      ctx: GraphQLContext,
+    ) => {
       const viewerId = ctx.user?.sub;
+      const normalizedAuthorUsername = String(authorUsername || "").trim();
       const posts = await prisma.post.findMany({
+        where: normalizedAuthorUsername
+          ? {
+              author: {
+                username: {
+                  equals: normalizedAuthorUsername,
+                  mode: "insensitive",
+                },
+                deleted: false,
+                disabled: false,
+              },
+            }
+          : undefined,
         include: buildPostInclude(viewerId),
         orderBy: {
           createdAt: "desc",

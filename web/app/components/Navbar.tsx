@@ -17,23 +17,31 @@ const items: NavItem[] = [
   { label: "Home", href: "/", Icon: Home },
   { label: "Workspace", href: "/workspace", Icon: FolderOpen },
   { label: "Archive", href: "/archive", Icon: Archive },
-  { label: "Me", href: "/me", Icon: Profile },
+  { label: "Profile", href: "/user", Icon: Profile },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const userProfileHref = user?.username
+    ? `/user/${encodeURIComponent(user.username)}`
+    : "/login";
 
   return (
     <ul className="font-semibold text-xs flex w-full justify-between px-12">
       {items.map(({ label, href, Icon }) => {
-        const isActive = pathname === href;
+        const isProfileItem = href === "/user";
+        const resolvedHref = isProfileItem ? userProfileHref : href;
+        const isActive = isProfileItem
+          ? Boolean(user?.username) &&
+            pathname === `/user/${encodeURIComponent(user.username)}`
+          : pathname === href;
         const color = isActive ? "#E1761F" : "#959595";
         return (
           <li key={href} className="flex flex-col items-center">
             <Link
-              href={href}
+              href={resolvedHref}
               className="flex flex-col items-center gap-1"
               aria-current={isActive ? "page" : undefined}
               onClick={(event) => {

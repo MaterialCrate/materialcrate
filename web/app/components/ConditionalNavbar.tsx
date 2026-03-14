@@ -3,12 +3,15 @@
 import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
 
-const NAV_PATHS = new Set(["/", "/workspace", "/archive", "/me"]);
+const NAV_PATHS = new Set(["/", "/workspace", "/archive"]);
 
 export default function ConditionalNavbar() {
   const pathname = usePathname();
 
-  if (!NAV_PATHS.has(pathname)) {
+  const shouldShowNavbar =
+    NAV_PATHS.has(pathname) || pathname.startsWith("/user/");
+
+  if (!shouldShowNavbar) {
     return null;
   }
 

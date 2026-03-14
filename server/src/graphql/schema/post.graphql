@@ -30,7 +30,7 @@ type Comment {
 }
 
 extend type Query {
-  posts: [Post!]!
+  posts(authorUsername: String): [Post!]!
   comments(
     postId: ID!
     parentCommentId: ID

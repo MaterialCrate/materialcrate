@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "iconsax-reactjs";
 import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 import Alert from "@/app/components/Alert";
-import ProfilePictureField from "@/app/components/me/ProfilePictureField";
-import { refreshAuth } from "@/app/lib/auth-client";
+import ProfilePictureField from "@/app/components/profile/ProfilePictureField";
+import { refreshAuth, useAuth } from "@/app/lib/auth-client";
 import LoadingBar from "@/app/components/LoadingBar";
 
 type UserProfile = {
@@ -20,7 +20,8 @@ type UserProfile = {
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const MIN_USERNAME_LENGTH = 3;
 
-export default function ProfileEdit() {
+export default function Page() {
+  const { user, isLoading: isLoadingAuth } = useAuth();
   const [profile, setProfile] = useState<UserProfile>({
     username: "",
     displayName: "",
@@ -33,27 +34,33 @@ export default function ProfileEdit() {
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [usernameMessage, setUsernameMessage] = useState<string>("");
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<
-    boolean | null
-  >(null);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(
+    null,
+  );
   const [isLiveChecking, setIsLiveChecking] = useState<boolean>(false);
   const [isSubmitChecking, setIsSubmitChecking] = useState<boolean>(false);
   const lastLiveCheckedUsernameRef = useRef<string>("");
   const isChecking = isLiveChecking || isSubmitChecking;
   const [fetchedUsername, setFetchedUsername] = useState<string>("");
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
-    null,
-  );
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
   const [profilePicturePreviewUrl, setProfilePicturePreviewUrl] =
     useState<string>("");
-  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(
-    null,
-  );
+  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(null);
 
   const router = useRouter();
 
   const profilePictureToRender =
     profilePicturePreviewUrl || profile.profilePictureUrl || "";
+
+  useEffect(() => {
+    if (isLoadingAuth) {
+      return;
+    }
+
+    if (!user) {
+      router.replace("/login");
+    }
+  }, [isLoadingAuth, router, user]);
 
   const getValidationError = useCallback((value: string) => {
     if (!USERNAME_REGEX.test(value)) {
@@ -75,8 +82,7 @@ export default function ProfileEdit() {
           ok: false,
           available: false,
           error:
-            body?.error ||
-            "Error connecting to server. Please try again later.",
+            body?.error || "Error connecting to server. Please try again later.",
         };
       }
 
@@ -93,6 +99,10 @@ export default function ProfileEdit() {
     let mounted = true;
 
     const loadProfile = async () => {
+      if (isLoadingAuth || !user) {
+        return;
+      }
+
       setIsLoading(true);
       setError("");
       try {
@@ -135,7 +145,7 @@ export default function ProfileEdit() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [isLoadingAuth, user]);
 
   useEffect(() => {
     return () => {
@@ -376,8 +386,11 @@ export default function ProfileEdit() {
             Save
           </button>
         </header>
-        {(isLoading || isSubmitChecking) && <LoadingBar className="" />}
+        {(isLoadingAuth || isLoading || isSubmitChecking) && (
+          <LoadingBar className="" />
+        )}
       </div>
+      {isLoadingAuth ? null : !user ? null : (
       <form
         id="profile-form"
         className="pt-30 px-6 flex flex-col items-center gap-10"
@@ -462,6 +475,7 @@ export default function ProfileEdit() {
           ))}
         </div>
       </form>
+      )}
     </div>
   );
 }

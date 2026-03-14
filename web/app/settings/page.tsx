@@ -12,6 +12,11 @@ const settingPages = [
     title: "Profile & Account",
     buttons: [
       {
+        key: "edit-profile",
+        text: "Edit Profile",
+        href: "/settings/profile",
+      },
+      {
         key: "account-info",
         text: "Account Information",
         href: "/settings/account",
