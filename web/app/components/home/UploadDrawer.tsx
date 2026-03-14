@@ -34,9 +34,9 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
-    if (file && file.size > 5 * 1024 * 1024) {
+    if (file && file.size > 100 * 1024 * 1024) {
       setAlertType("error");
-      setAlertMessage("File size exceeds 5MB limit.");
+      setAlertMessage("File size exceeds 100MB limit.");
       setSelectedFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";

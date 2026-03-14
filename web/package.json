@@ -11,6 +11,7 @@
   "dependencies": {
     "iconsax-reactjs": "^0.0.8",
     "next": "16.1.4",
+    "pdfjs-dist": "^5.5.207",
     "postcss": "^8.5.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

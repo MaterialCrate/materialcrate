@@ -6,6 +6,7 @@ import Post, { type HomePost } from "./components/home/Post";
 import UploadDrawer from "./components/home/UploadDrawer";
 import CommentDrawer from "./components/home/CommentDrawer";
 import OptionsDrawer from "./components/home/OptionsDrawer";
+import PdfViewerModal from "./components/home/PdfViewerModal";
 
 export default function Home() {
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
@@ -18,6 +19,7 @@ export default function Home() {
   const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(
     null,
   );
+  const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
 
@@ -71,6 +73,11 @@ export default function Home() {
         }}
         authorUsername={activeOptionsPost?.author?.username}
       />
+      <PdfViewerModal
+        isOpen={Boolean(activePdfPost)}
+        post={activePdfPost}
+        onClose={() => setActivePdfPost(null)}
+      />
       <button
         aria-label="Close more options"
         type="button"
@@ -78,7 +85,8 @@ export default function Home() {
           moreOptionsOpen ||
           isUploadDrawerOpen ||
           isCommentDrawerOpen ||
-          isPostOptionsDrawerOpen
+          isPostOptionsDrawerOpen ||
+          activePdfPost
             ? "bg-black/25 backdrop-blur-[2px] opacity-100 pointer-events-auto"
             : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
         }`}
@@ -89,6 +97,7 @@ export default function Home() {
           setIsPostOptionsDrawerOpen(false);
           setActiveCommentPostId(null);
           setActiveOptionsPost(null);
+          setActivePdfPost(null);
         }}
       />
       <div className="bottom-28 right-6 fixed z-50 flex flex-col items-end gap-2">
@@ -151,6 +160,16 @@ export default function Home() {
                   setIsUploadDrawerOpen(false);
                   setIsCommentDrawerOpen(false);
                   setActiveCommentPostId(null);
+                  setActivePdfPost(null);
+                }}
+                onFileClick={(selectedPost) => {
+                  setActivePdfPost(selectedPost);
+                  setMoreOptionsOpen(false);
+                  setIsUploadDrawerOpen(false);
+                  setIsCommentDrawerOpen(false);
+                  setActiveCommentPostId(null);
+                  setIsPostOptionsDrawerOpen(false);
+                  setActiveOptionsPost(null);
                 }}
               />
               {index < posts.length - 1 ? (

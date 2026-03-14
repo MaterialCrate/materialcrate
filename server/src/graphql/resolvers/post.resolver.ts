@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { prisma } from "../../config/prisma";
 import { s3 } from "../../config/s3";
 
@@ -24,6 +25,26 @@ const sanitizeFileName = (name: string) =>
 
 const buildS3FileUrl = (bucket: string, region: string, key: string) =>
   `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+const POST_FILE_SIGNED_URL_TTL_SECONDS = 60 * 60;
+
+const extractS3KeyFromUrl = (
+  fileUrl: string,
+  bucket: string,
+  region: string,
+) => {
+  try {
+    const parsed = new URL(fileUrl);
+    const expectedHost = `${bucket}.s3.${region}.amazonaws.com`;
+    if (parsed.hostname !== expectedHost) {
+      return null;
+    }
+
+    const key = parsed.pathname.replace(/^\/+/, "");
+    return key ? decodeURIComponent(key) : null;
+  } catch {
+    return null;
+  }
+};
 
 const buildPostInclude = (viewerId?: string) => {
   const include: any = {
@@ -382,6 +403,36 @@ export const PostResolver = {
   },
   Post: {
     author: (post: any) => sanitizeAuthorIdentity(post.author),
+    fileUrl: async (post: any) => {
+      const rawFileUrl = post.fileUrl?.trim();
+      if (!rawFileUrl) {
+        return rawFileUrl;
+      }
+
+      const bucket = process.env.AWS_S3_BUCKET_NAME;
+      const region = process.env.AWS_REGION;
+      if (!bucket || !region) {
+        return rawFileUrl;
+      }
+
+      const key = extractS3KeyFromUrl(rawFileUrl, bucket, region);
+      if (!key) {
+        return rawFileUrl;
+      }
+
+      try {
+        return await getSignedUrl(
+          s3,
+          new GetObjectCommand({
+            Bucket: bucket,
+            Key: key,
+          }),
+          { expiresIn: POST_FILE_SIGNED_URL_TTL_SECONDS },
+        );
+      } catch {
+        return rawFileUrl;
+      }
+    },
     likeCount: (post: any) => post.likeCount ?? post?._count?.likes ?? 0,
     commentCount: (post: any) => post.commentCount ?? post?._count?.comments ?? 0,
     comments: async (

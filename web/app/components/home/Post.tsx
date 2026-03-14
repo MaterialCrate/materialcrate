@@ -30,6 +30,7 @@ type PostProps = {
   post: HomePost;
   onCommentClick?: (post: HomePost) => void;
   onOptionsClick?: (post: HomePost) => void;
+  onFileClick?: (post: HomePost) => void;
 };
 
 function formatTimeAgo(timestamp: string) {
@@ -67,6 +68,7 @@ export default function Post({
   post,
   onCommentClick,
   onOptionsClick,
+  onFileClick,
 }: PostProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -161,14 +163,14 @@ export default function Post({
         </div>
       )}
       <div className="overflow-y-scroll flex gap-3 px-6">
-        <a
-          href={post.fileUrl}
-          target="_blank"
-          rel="noreferrer"
+        <button
+          type="button"
+          aria-label={`Open ${post.title}`}
+          onClick={() => onFileClick?.(post)}
           className="bg-[#F3F3F3] h-45 w-full rounded-2xl p-3 flex gap-4"
         >
-          <div className="bg-[#E8E8E8] h-full w-30 rounded-xl"></div>
-          <div className="space-y-1">
+          <div className="bg-[#E8E8E8] h-full w-30 aspect-video rounded-xl "></div>
+          <div className="space-y-1 text-left">
             <p className="text-[#202020] font-medium text-sm">{post.title}</p>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
               <p>{post.courseCode}</p>
@@ -180,7 +182,7 @@ export default function Post({
               )}
             </div>
           </div>
-        </a>
+        </button>
       </div>
       <div className="px-6 flex items-center gap-20">
         <button
