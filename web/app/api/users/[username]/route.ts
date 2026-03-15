@@ -6,6 +6,9 @@ const GRAPHQL_ENDPOINT =
 
 const USER_BY_USERNAME_QUERY = `
   query UserByUsername($username: String!) {
+    me {
+      username
+    }
     userByUsername(username: $username) {
       id
       username
@@ -17,6 +20,12 @@ const USER_BY_USERNAME_QUERY = `
       institution
       program
       createdAt
+      followers {
+        username
+      }
+      following {
+        username
+      }
     }
   }
 `;
@@ -66,5 +75,29 @@ export async function GET(_: Request, context: RouteContext) {
     return NextResponse.json({ error: "Profile not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ user });
+  const viewerUsername = String(graphqlBody?.data?.me?.username || "")
+    .trim()
+    .toLowerCase();
+  const followers = Array.isArray(user.followers) ? user.followers : [];
+  const following = Array.isArray(user.following) ? user.following : [];
+  const isFollowedByCurrentUser = viewerUsername
+    ? followers.some(
+        (entry: { username?: string | null }) =>
+          entry.username?.trim().toLowerCase() === viewerUsername,
+      )
+    : false;
+  const isFollowingCurrentUser = viewerUsername
+    ? following.some(
+        (entry: { username?: string | null }) =>
+          entry.username?.trim().toLowerCase() === viewerUsername,
+      )
+    : false;
+
+  return NextResponse.json({
+    user: {
+      ...user,
+      isFollowedByCurrentUser,
+      isFollowingCurrentUser,
+    },
+  });
 }

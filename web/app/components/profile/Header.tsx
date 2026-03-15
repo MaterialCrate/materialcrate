@@ -14,6 +14,9 @@ type ProfileHeaderProps = {
   subscriptionPlan?: string | null;
   isOwner?: boolean;
   postsLabel?: string;
+  followLabel?: "Follow" | "Following" | "Follow back";
+  isFollowLoading?: boolean;
+  onFollowClick?: () => void;
 };
 
 export default function Header({
@@ -25,6 +28,9 @@ export default function Header({
   subscriptionPlan = "free",
   isOwner = false,
   postsLabel = "Posts",
+  followLabel = "Follow",
+  isFollowLoading = false,
+  onFollowClick,
 }: ProfileHeaderProps) {
   const router = useRouter();
 
@@ -55,8 +61,8 @@ export default function Header({
             <p className="text-[#333333] text-sm">{username}</p>
           </div>
         </div>
-        {isOwner ? (
-          subscriptionPlan === "free" ? (
+        {isOwner &&
+          (subscriptionPlan === "free" ? (
             <div className="flex items-center gap-6">
               <button
                 type="button"
@@ -81,8 +87,7 @@ export default function Header({
               <Image src={proStar} alt="Pro star" width={16} height={16} />
               <p className="text-white text-sm font-medium">Pro</p>
             </button>
-          )
-        ) : null}
+          ))}
       </div>
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center gap-4">
@@ -122,7 +127,20 @@ export default function Header({
               </button>
             </div>
           )
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            onClick={onFollowClick}
+            disabled={isFollowLoading}
+            className={`px-5 py-2 rounded-full border text-sm font-medium ${
+              followLabel === "Following"
+                ? "border-[#979797] bg-white text-[#202020]"
+                : "border-black bg-[#131212] text-white"
+            } disabled:opacity-60`}
+          >
+            <p>{isFollowLoading ? "..." : followLabel}</p>
+          </button>
+        )}
       </div>
       <div className="flex items-center justify-between mt-10">
         <button

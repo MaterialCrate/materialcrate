@@ -597,6 +597,95 @@ export const UserResolver = {
 
       return true;
     },
+    followUser: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) {
+        throw new Error("Username is required");
+      }
+
+      const targetUser = await (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+          deleted: false,
+          disabled: false,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        throw new Error("User not found");
+      }
+
+      if (targetUser.id === ctx.user.sub) {
+        throw new Error("You cannot follow yourself");
+      }
+
+      await (prisma as any).follow.upsert({
+        where: {
+          followerId_followingId: {
+            followerId: ctx.user.sub,
+            followingId: targetUser.id,
+          },
+        },
+        update: {},
+        create: {
+          followerId: ctx.user.sub,
+          followingId: targetUser.id,
+        },
+      });
+
+      return true;
+    },
+    unfollowUser: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) {
+        throw new Error("Username is required");
+      }
+
+      const targetUser = await (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+          deleted: false,
+          disabled: false,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        throw new Error("User not found");
+      }
+
+      await (prisma as any).follow.deleteMany({
+        where: {
+          followerId: ctx.user.sub,
+          followingId: targetUser.id,
+        },
+      });
+
+      return true;
+    },
 
     completeProfile: async (_: unknown, args: any, ctx: any) => {
       if (!ctx.user?.sub) {

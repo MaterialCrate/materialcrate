@@ -59,6 +59,8 @@ type Mutation {
   deleteMyAccount: Boolean!
   disableMyAccount(until: String): Boolean!
   reactivateMyAccount: Boolean!
+  followUser(username: String!): Boolean!
+  unfollowUser(username: String!): Boolean!
   completeProfile(
     username: String!
     displayName: String!

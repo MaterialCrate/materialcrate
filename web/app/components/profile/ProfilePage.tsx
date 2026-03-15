@@ -20,13 +20,16 @@ type ProfileUser = {
   subscriptionPlan?: string | null;
   institution?: string | null;
   program?: string | null;
+  isFollowedByCurrentUser?: boolean;
+  isFollowingCurrentUser?: boolean;
 };
 
 type ProfilePageProps = {
   username?: string;
 };
 
-const normalizeUsername = (value?: string | null) => value?.trim().toLowerCase() || "";
+const normalizeUsername = (value?: string | null) =>
+  value?.trim().toLowerCase() || "";
 
 export default function ProfilePage({ username }: ProfilePageProps) {
   const router = useRouter();
@@ -43,8 +46,11 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
   );
-  const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(null);
+  const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(
+    null,
+  );
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
+  const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -74,9 +80,12 @@ export default function ProfilePage({ username }: ProfilePageProps) {
           return;
         }
 
-        const response = await fetch(`/api/users/${encodeURIComponent(routeUsername)}`, {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/users/${encodeURIComponent(routeUsername)}`,
+          {
+            cache: "no-store",
+          },
+        );
         const body = await response.json().catch(() => ({}));
 
         if (!response.ok) {
@@ -90,7 +99,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
       } catch (err) {
         if (!isCancelled) {
           setProfile(null);
-          setError(err instanceof Error ? err.message : "Failed to load profile");
+          setError(
+            err instanceof Error ? err.message : "Failed to load profile",
+          );
           setIsLoadingProfile(false);
         }
       }
@@ -137,8 +148,10 @@ export default function ProfilePage({ username }: ProfilePageProps) {
       } catch (err) {
         if (!controller.signal.aborted) {
           setPosts([]);
-          setError((current) =>
-            current || (err instanceof Error ? err.message : "Failed to load posts"),
+          setError(
+            (current) =>
+              current ||
+              (err instanceof Error ? err.message : "Failed to load posts"),
           );
         }
       } finally {
@@ -158,14 +171,87 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     normalizeUsername(user?.username) === normalizeUsername(profile?.username);
   const displayName =
     profile?.displayName?.trim() || profile?.username?.trim() || "Unknown User";
-  const profileUsername = profile?.username ? `@${profile.username}` : "@unknown";
+  const profileUsername = profile?.username
+    ? `@${profile.username}`
+    : "@unknown";
   const profilePictureUrl = profile?.profilePicture?.trim() || "";
   const followerCount = profile?.followersCount ?? 0;
   const followingCount = profile?.followingCount ?? 0;
   const postsHeading = isOwner ? "My Posts" : "Posts";
+  const followLabel: "Follow" | "Following" | "Follow back" =
+    profile?.isFollowedByCurrentUser
+      ? "Following"
+      : profile?.isFollowingCurrentUser
+        ? "Follow back"
+        : "Follow";
+
+  const handleFollowToggle = async () => {
+    if (!profile?.username) {
+      return;
+    }
+
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    if (isUpdatingFollow) {
+      return;
+    }
+
+    const shouldUnfollow = Boolean(profile.isFollowedByCurrentUser);
+    const previousFollowed = Boolean(profile.isFollowedByCurrentUser);
+    const previousFollowerCount = profile.followersCount ?? 0;
+
+    setIsUpdatingFollow(true);
+    setError("");
+    setProfile((current) =>
+      current
+        ? {
+            ...current,
+            isFollowedByCurrentUser: !shouldUnfollow,
+            followersCount: Math.max(
+              0,
+              previousFollowerCount + (shouldUnfollow ? -1 : 1),
+            ),
+          }
+        : current,
+    );
+
+    try {
+      const response = await fetch(
+        `/api/users/${encodeURIComponent(profile.username)}/follow`,
+        {
+          method: shouldUnfollow ? "DELETE" : "POST",
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to update follow state");
+      }
+    } catch (err) {
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              isFollowedByCurrentUser: previousFollowed,
+              followersCount: previousFollowerCount,
+            }
+          : current,
+      );
+      setError(
+        err instanceof Error ? err.message : "Failed to update follow state",
+      );
+    } finally {
+      setIsUpdatingFollow(false);
+    }
+  };
 
   if (!isPublicProfile && isLoadingAuth) {
-    return <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>;
+    return (
+      <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>
+    );
   }
 
   if (!isPublicProfile && !user) {
@@ -215,6 +301,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         subscriptionPlan={profile?.subscriptionPlan ?? "free"}
         isOwner={isOwner}
         postsLabel={postsHeading}
+        followLabel={followLabel}
+        isFollowLoading={isUpdatingFollow}
+        onFollowClick={handleFollowToggle}
       />
 
       {isLoadingProfile ? (
@@ -234,7 +323,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
             {error && posts.length === 0 && !isLoadingPosts ? (
               <p className="px-6 py-8 text-sm text-[#696969]">{error}</p>
             ) : isLoadingPosts ? (
-              <p className="px-6 py-8 text-sm text-[#696969]">Loading posts...</p>
+              <p className="px-6 py-8 text-sm text-[#696969]">
+                Loading posts...
+              </p>
             ) : posts.length === 0 ? (
               <p className="px-6 py-8 text-sm text-[#696969]">No posts yet.</p>
             ) : (
@@ -266,7 +357,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                   />
                   {index < posts.length - 1 ? (
                     <div className="px-6">
-                      <div className="mt-4 h-px w-full bg-black/40" />
+                      <div className="mt-4 h-px w-full bg-black/20" />
                     </div>
                   ) : null}
                 </div>
