@@ -148,18 +148,18 @@ export default function PdfViewerModal({
           </div>
         </div>
         <div className="flex-1 overflow-y-auto bg-[#E7E1D8] p-4">
-          {pdfState.isLoading ? (
+          {pdfState.isLoading && (
             <div className="flex h-full items-center justify-center text-sm text-[#5D5D5D]">
               Rendering PDF...
             </div>
-          ) : null}
-          {pdfState.error ? (
+          )}
+          {pdfState.error && (
             <div className="flex h-full items-center justify-center">
               <p className="max-w-sm text-center text-sm text-[#8A3A25]">
                 {pdfState.error}
               </p>
             </div>
-          ) : null}
+          )}
           <div
             ref={canvasContainerRef}
             className={`mx-auto flex max-w-3xl flex-col gap-4 ${

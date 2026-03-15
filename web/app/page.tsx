@@ -164,11 +164,11 @@ export default function Home() {
                   setActiveOptionsPost(null);
                 }}
               />
-              {index < posts.length - 1 ? (
+              {index < posts.length - 1 && (
                 <div className="px-6">
                   <div className="h-px w-full bg-black/20 mt-4" />
                 </div>
-              ) : null}
+              )}
             </div>
           ))
         )}
