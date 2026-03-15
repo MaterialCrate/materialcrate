@@ -138,7 +138,7 @@ export default function Post({
           }}
           disabled={!authorRoute}
         >
-          <div className="w-10 h-10 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+          <div className="w-10 h-10 aspect-square bg-[#F3F3F3] rounded-full flex items-center justify-center overflow-hidden">
             {authorProfilePicture ? (
               <Image
                 src={authorProfilePicture}
@@ -179,10 +179,10 @@ export default function Post({
           type="button"
           aria-label={`Open ${post.title}`}
           onClick={() => onFileClick?.(post)}
-          className="bg-[#F3F3F3] h-45 w-full rounded-2xl p-3 flex gap-4"
+          className="bg-[#F3F3F3] h-45 w-full rounded p-2 flex items-center gap-4"
         >
           <PdfThumbnail fileUrl={post.fileUrl} title={post.title} />
-          <div className="space-y-1 text-left">
+          <div className="space-y-1 text-left h-full">
             <p className="text-[#202020] font-medium text-sm">{post.title}</p>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
               <p>{post.courseCode}</p>

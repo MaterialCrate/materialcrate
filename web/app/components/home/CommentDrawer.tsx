@@ -390,7 +390,7 @@ export default function CommentDrawer({
 
   return (
     <div
-      className={`fixed inset-x-0 top-40 bottom-0 bg-white z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out ${
+      className={`fixed inset-x-0 top-[15%] bottom-0 bg-white z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out ${
         isOpen
           ? "translate-y-0 opacity-100 pointer-events-auto"
           : "translate-y-[110%] opacity-0 pointer-events-none"
@@ -608,7 +608,7 @@ export default function CommentDrawer({
             value={draftComment}
             onChange={(event) => setDraftComment(event.target.value)}
             placeholder="Share your thoughts... "
-            className="placeholder:text-[#828282] text-xs py-3 px-3 w-full bg-[#EBEBEB] rounded-3xl drop-shadow-xs focus:outline-0"
+            className="placeholder:text-[#828282] placeholder:text-xs text-xs py-3 px-3 w-full bg-[#EBEBEB] rounded-3xl drop-shadow-xs focus:outline-0"
           />
           <button
             type="button"
