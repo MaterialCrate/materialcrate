@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Edit2, Setting2 } from "iconsax-reactjs";
+import { Edit2, Setting2, Verify } from "iconsax-reactjs";
 import proStar from "@/assets/svg/pro-star.svg";
+
+export type ProfileTab = "posts" | "achievements";
 
 type ProfileHeaderProps = {
   displayName: string;
@@ -17,6 +19,8 @@ type ProfileHeaderProps = {
   followLabel?: "Follow" | "Following" | "Follow back";
   isFollowLoading?: boolean;
   onFollowClick?: () => void;
+  selectedTab: ProfileTab;
+  onTabChange: (tab: ProfileTab) => void;
 };
 
 export default function Header({
@@ -31,6 +35,8 @@ export default function Header({
   followLabel = "Follow",
   isFollowLoading = false,
   onFollowClick,
+  selectedTab,
+  onTabChange,
 }: ProfileHeaderProps) {
   const router = useRouter();
 
@@ -57,7 +63,12 @@ export default function Header({
             )}
           </div>
           <div className="-space-y-1">
-            <p className="text-lg font-medium">{displayName}</p>
+            <div className="flex items-center gap-0.5">
+              <p className="text-lg font-medium">{displayName}</p>
+              {subscriptionPlan?.trim().toLowerCase() === "pro" ? (
+                <Verify size={18} color="#E1761F" variant="Bold" />
+              ) : null}
+            </div>
             <p className="text-[#333333] text-sm">{username}</p>
           </div>
         </div>
@@ -142,15 +153,30 @@ export default function Header({
           </button>
         )}
       </div>
-      <div className="flex items-center justify-between mt-10">
+      <div className="relative mt-10 -mx-6 grid grid-cols-2 px-6">
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute bottom-0 left-6 h-0.75 w-[calc(50%-1.5rem)] bg-[#404040] transition-transform duration-300 ease-out ${
+            selectedTab === "posts" ? "translate-x-0" : "translate-x-full"
+          }`}
+        />
         <button
           type="button"
-          className="text-[#1E1E1E] font-medium border-b-3 border-[#404040] pb-3 w-40"
+          className={`font-medium pb-3 text-center transition-colors duration-300 ${
+            selectedTab === "posts" ? "text-[#1E1E1E]" : "text-[#787777]"
+          }`}
+          onClick={() => onTabChange("posts")}
+        >
+          {postsLabel}
+        </button>
+        <button
+          type="button"
+          className={`font-medium pb-3 text-center transition-colors duration-300 ${
+            selectedTab === "achievements" ? "text-[#1E1E1E]" : "text-[#787777]"
+          }`}
+          onClick={() => onTabChange("achievements")}
         >
           Achievements
-        </button>
-        <button type="button" className="text-[#787777] font-medium pb-3 w-40">
-          {postsLabel}
         </button>
       </div>
     </header>

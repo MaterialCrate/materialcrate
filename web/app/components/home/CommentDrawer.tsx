@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { CloseCircle, Heart, Send, User } from "iconsax-reactjs";
+import { CloseCircle, Heart, Send, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 
 interface CommentDrawerProps {
@@ -16,6 +16,7 @@ type CommentAuthor = {
   username?: string | null;
   profilePicture?: string | null;
   profilePictureUrl?: string | null;
+  subscriptionPlan?: string | null;
 };
 
 type DrawerComment = {
@@ -72,6 +73,10 @@ function getAuthorMention(author?: CommentAuthor | null) {
 
 function getAuthorProfilePicture(author?: CommentAuthor | null) {
   return author?.profilePicture || author?.profilePictureUrl || "";
+}
+
+function getAuthorSubscriptionPlan(author?: CommentAuthor | null) {
+  return author?.subscriptionPlan?.trim().toLowerCase() || "";
 }
 
 export default function CommentDrawer({
@@ -445,9 +450,14 @@ export default function CommentDrawer({
                     )}
                   </div>
                   <div className="space-y-1 w-full">
-                    <p className="text-xs text-[#444444] font-semibold">
-                      {getAuthorName(comment.author)}
-                    </p>
+                    <div className="flex items-center gap-0.5">
+                      <p className="text-xs text-[#444444] font-semibold">
+                        {getAuthorName(comment.author)}
+                      </p>
+                      {getAuthorSubscriptionPlan(comment.author) === "pro" ? (
+                        <Verify size={14} color="#E1761F" variant="Bold" />
+                      ) : null}
+                    </div>
                     <p className="text-xs text-[#202020]">
                       {renderContentWithMentions(comment.content)}
                     </p>
@@ -517,9 +527,19 @@ export default function CommentDrawer({
                           )}
                         </div>
                         <div className="space-y-1 w-full">
-                          <p className="text-xs text-[#444444] font-semibold">
-                            {getAuthorName(reply.author)}
-                          </p>
+                          <div className="flex items-center gap-0.5">
+                            <p className="text-xs text-[#444444] font-semibold">
+                              {getAuthorName(reply.author)}
+                            </p>
+                            {getAuthorSubscriptionPlan(reply.author) ===
+                            "pro" ? (
+                              <Verify
+                                size={14}
+                                color="#E1761F"
+                                variant="Bold"
+                              />
+                            ) : null}
+                          </div>
                           <p className="text-xs text-[#202020]">
                             {renderContentWithMentions(reply.content)}
                           </p>

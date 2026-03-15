@@ -25,6 +25,7 @@ const COMMENTS_QUERY = `
         displayName
         username
         profilePicture
+        subscriptionPlan
       }
     }
   }
@@ -46,6 +47,7 @@ const CREATE_COMMENT_MUTATION = `
         displayName
         username
         profilePicture
+        subscriptionPlan
       }
     }
   }

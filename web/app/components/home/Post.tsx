@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { More, Heart, Messages2, Archive, User } from "iconsax-reactjs";
+import { More, Heart, Messages2, Archive, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import Image from "next/image";
 import PdfThumbnail from "./PdfThumbnail";
@@ -24,6 +24,7 @@ export type HomePost = {
     username: string;
     profilePicture?: string | null;
     profilePictureUrl?: string | null;
+    subscriptionPlan?: string | null;
   } | null;
 };
 
@@ -77,8 +78,8 @@ export default function Post({
   const authorUsername = post.author?.username
     ? `@${post.author.username}`
     : "@unknown";
-  const authorProfilePicture =
-    post.author?.profilePicture || post.author?.profilePictureUrl;
+  const authorProfilePicture = post.author?.profilePicture;
+  const subscriptionPlan = post.author?.subscriptionPlan?.trim().toLowerCase();
   const authorRoute = post.author?.username
     ? `/user/${encodeURIComponent(post.author.username)}`
     : null;
@@ -153,7 +154,12 @@ export default function Post({
             )}
           </div>
           <div>
-            <p className="font-medium text-[#202020]">{authorFullName}</p>
+            <div className="flex items-center gap-0.5">
+              <p className="font-medium text-[#202020]">{authorFullName}</p>
+              {subscriptionPlan === "pro" && (
+                <Verify size={18} color="#E1761F" variant="Bold" />
+              )}
+            </div>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
               <p>{authorUsername}</p>
               <p>&bull;</p>

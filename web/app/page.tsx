@@ -53,7 +53,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="pt-18 pb-20">
+    <div className="py-18">
       <UploadDrawer
         isOpen={isUploadDrawerOpen}
         onClose={() => setIsUploadDrawerOpen(false)}

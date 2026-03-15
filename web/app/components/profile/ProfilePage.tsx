@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
 import Acheivement from "@/app/components/profile/Acheivement";
-import Header from "@/app/components/profile/Header";
+import Header, { type ProfileTab } from "@/app/components/profile/Header";
 import Post, { type HomePost } from "@/app/components/home/Post";
 import CommentDrawer from "@/app/components/home/CommentDrawer";
 import OptionsDrawer from "@/app/components/home/OptionsDrawer";
@@ -51,6 +51,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   );
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<ProfileTab>("posts");
 
   useEffect(() => {
     let isCancelled = false;
@@ -304,6 +305,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         followLabel={followLabel}
         isFollowLoading={isUpdatingFollow}
         onFollowClick={handleFollowToggle}
+        selectedTab={selectedTab}
+        onTabChange={setSelectedTab}
       />
 
       {isLoadingProfile ? (
@@ -314,56 +317,60 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         </p>
       ) : (
         <>
-          <div className="flex justify-between gap-3 px-6">
-            <Acheivement />
-            <Acheivement />
-          </div>
-
-          <section>
-            {error && posts.length === 0 && !isLoadingPosts ? (
-              <p className="px-6 py-8 text-sm text-[#696969]">{error}</p>
-            ) : isLoadingPosts ? (
-              <p className="px-6 py-8 text-sm text-[#696969]">
-                Loading posts...
-              </p>
-            ) : posts.length === 0 ? (
-              <p className="px-6 py-8 text-sm text-[#696969]">No posts yet.</p>
-            ) : (
-              posts.map((post, index) => (
-                <div key={post.id}>
-                  <Post
-                    post={post}
-                    onCommentClick={(selectedPost) => {
-                      setActiveCommentPostId(selectedPost.id);
-                      setIsCommentDrawerOpen(true);
-                      setIsPostOptionsDrawerOpen(false);
-                      setActiveOptionsPost(null);
-                      setActivePdfPost(null);
-                    }}
-                    onOptionsClick={(selectedPost) => {
-                      setActiveOptionsPost(selectedPost);
-                      setIsPostOptionsDrawerOpen(true);
-                      setIsCommentDrawerOpen(false);
-                      setActiveCommentPostId(null);
-                      setActivePdfPost(null);
-                    }}
-                    onFileClick={(selectedPost) => {
-                      setActivePdfPost(selectedPost);
-                      setIsCommentDrawerOpen(false);
-                      setActiveCommentPostId(null);
-                      setIsPostOptionsDrawerOpen(false);
-                      setActiveOptionsPost(null);
-                    }}
-                  />
-                  {index < posts.length - 1 ? (
-                    <div className="px-6">
-                      <div className="mt-4 h-px w-full bg-black/20" />
-                    </div>
-                  ) : null}
-                </div>
-              ))
-            )}
-          </section>
+          {selectedTab === "achievements" ? (
+            <section className="px-6">
+              <div className="flex justify-between gap-3">
+                <Acheivement />
+                <Acheivement />
+              </div>
+            </section>
+          ) : (
+            <section>
+              {error && posts.length === 0 && !isLoadingPosts ? (
+                <p className="px-6 py-8 text-sm text-[#696969]">{error}</p>
+              ) : isLoadingPosts ? (
+                <p className="px-6 py-8 text-sm text-[#696969]">
+                  Loading posts...
+                </p>
+              ) : posts.length === 0 ? (
+                <p className="px-6 py-8 text-sm text-[#696969]">No posts yet.</p>
+              ) : (
+                posts.map((post, index) => (
+                  <div key={post.id}>
+                    <Post
+                      post={post}
+                      onCommentClick={(selectedPost) => {
+                        setActiveCommentPostId(selectedPost.id);
+                        setIsCommentDrawerOpen(true);
+                        setIsPostOptionsDrawerOpen(false);
+                        setActiveOptionsPost(null);
+                        setActivePdfPost(null);
+                      }}
+                      onOptionsClick={(selectedPost) => {
+                        setActiveOptionsPost(selectedPost);
+                        setIsPostOptionsDrawerOpen(true);
+                        setIsCommentDrawerOpen(false);
+                        setActiveCommentPostId(null);
+                        setActivePdfPost(null);
+                      }}
+                      onFileClick={(selectedPost) => {
+                        setActivePdfPost(selectedPost);
+                        setIsCommentDrawerOpen(false);
+                        setActiveCommentPostId(null);
+                        setIsPostOptionsDrawerOpen(false);
+                        setActiveOptionsPost(null);
+                      }}
+                    />
+                    {index < posts.length - 1 ? (
+                      <div className="px-6">
+                        <div className="mt-4 h-px w-full bg-black/20" />
+                      </div>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </section>
+          )}
         </>
       )}
     </div>

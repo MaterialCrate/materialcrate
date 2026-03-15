@@ -22,6 +22,7 @@ const POSTS_QUERY = `
         displayName
         username
         profilePicture
+        subscriptionPlan
       }
     }
   }
