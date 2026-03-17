@@ -30,6 +30,7 @@ type Comment {
 }
 
 extend type Query {
+  post(id: ID!): Post
   posts(authorUsername: String): [Post!]!
   comments(
     postId: ID!

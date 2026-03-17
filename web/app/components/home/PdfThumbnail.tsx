@@ -3,16 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 
 type PdfThumbnailProps = {
+  postId: string;
   fileUrl: string;
   title: string;
 };
 
 type ThumbnailState = "idle" | "loading" | "ready" | "error";
 
-export default function PdfThumbnail({ fileUrl, title }: PdfThumbnailProps) {
+export default function PdfThumbnail({
+  postId,
+  fileUrl,
+  title,
+}: PdfThumbnailProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [thumbnailState, setThumbnailState] = useState<ThumbnailState>("idle");
-  const proxiedFileUrl = `/api/posts/file?url=${encodeURIComponent(fileUrl)}`;
+  const proxiedFileUrl = postId
+    ? `/api/posts/file?postId=${encodeURIComponent(postId)}`
+    : `/api/posts/file?url=${encodeURIComponent(fileUrl)}`;
 
   useEffect(() => {
     const canvas = canvasRef.current;

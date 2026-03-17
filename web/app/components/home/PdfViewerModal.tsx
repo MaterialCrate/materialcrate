@@ -29,8 +29,8 @@ export default function PdfViewerModal({
 }: PdfViewerModalProps) {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [pdfState, setPdfState] = useState<PdfState>(INITIAL_STATE);
-  const proxiedFileUrl = post?.fileUrl
-    ? `/api/posts/file?url=${encodeURIComponent(post.fileUrl)}`
+  const proxiedFileUrl = post?.id
+    ? `/api/posts/file?postId=${encodeURIComponent(post.id)}`
     : "";
 
   useEffect(() => {
@@ -130,7 +130,7 @@ export default function PdfViewerModal({
             </p>
             <p className="mt-1 text-sm text-[#707070]">
               {post.courseCode}
-              {pdfState.pageCount > 0 ? ` • ${pdfState.pageCount} pages` : ""}
+              {pdfState.pageCount > 0 && ` • ${pdfState.pageCount} pages`}
             </p>
           </div>
           <div className="flex items-center gap-2">

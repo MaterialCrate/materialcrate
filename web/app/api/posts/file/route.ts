@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 
 const ALLOWED_HOST_SUFFIX = ".amazonaws.com";
+const GRAPHQL_ENDPOINT =
+  process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
+const FILE_URL_QUERY = `
+  query PostFileUrl($id: ID!) {
+    post(id: $id) {
+      id
+      fileUrl
+    }
+  }
+`;
 
 const isAllowedFileUrl = (value: string) => {
   try {
@@ -19,7 +30,29 @@ const isAllowedFileUrl = (value: string) => {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const fileUrl = searchParams.get("url")?.trim() ?? "";
+  const postId = searchParams.get("postId")?.trim() ?? "";
+  let fileUrl = searchParams.get("url")?.trim() ?? "";
+
+  if (postId) {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("mc_session")?.value;
+
+    const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        query: FILE_URL_QUERY,
+        variables: { id: postId },
+      }),
+    });
+
+    const graphqlBody = await graphqlResponse.json().catch(() => ({}));
+    fileUrl = graphqlBody?.data?.post?.fileUrl?.trim?.() ?? fileUrl;
+  }
 
   if (!fileUrl || !isAllowedFileUrl(fileUrl)) {
     return NextResponse.json({ error: "Invalid file URL" }, { status: 400 });

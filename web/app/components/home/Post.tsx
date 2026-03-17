@@ -187,7 +187,11 @@ export default function Post({
           onClick={() => onFileClick?.(post)}
           className="bg-[#F3F3F3] h-45 w-full rounded p-2 flex items-center gap-4"
         >
-          <PdfThumbnail fileUrl={post.fileUrl} title={post.title} />
+          <PdfThumbnail
+            postId={post.id}
+            fileUrl={post.fileUrl}
+            title={post.title}
+          />
           <div className="space-y-1 text-left h-full">
             <p className="text-[#202020] font-medium text-sm">{post.title}</p>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">

@@ -133,6 +133,24 @@ const sanitizeAuthorIdentity = (author: any) => {
 
 export const PostResolver = {
   Query: {
+    post: async (
+      _: unknown,
+      { id }: { id: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      const normalizedId = id?.trim();
+      if (!normalizedId) {
+        throw new Error("Post id is required");
+      }
+
+      const post = await prisma.post.findUnique({
+        where: { id: normalizedId },
+        include: buildPostInclude(viewerId),
+      });
+
+      return post ? mapPostForGraphQL(post, viewerId) : null;
+    },
     posts: async (
       _: unknown,
       { authorUsername }: { authorUsername?: string | null },
