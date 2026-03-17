@@ -7,7 +7,7 @@ import Acheivement from "@/app/components/profile/Acheivement";
 import Header, { type ProfileTab } from "@/app/components/profile/Header";
 import Post, { type HomePost } from "@/app/components/home/Post";
 import CommentDrawer from "@/app/components/home/CommentDrawer";
-import OptionsDrawer from "@/app/components/home/OptionsDrawer";
+import OptionsDrawer from "@/app/components/home/PostMenuDrawer";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
 
 type ProfileUser = {
@@ -333,7 +333,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                   Loading posts...
                 </p>
               ) : posts.length === 0 ? (
-                <p className="px-6 py-8 text-sm text-[#696969]">No posts yet.</p>
+                <p className="px-6 py-8 text-sm text-[#696969]">
+                  No posts yet.
+                </p>
               ) : (
                 posts.map((post, index) => (
                   <div key={post.id}>

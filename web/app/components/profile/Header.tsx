@@ -103,7 +103,7 @@ export default function Header({
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center gap-4">
           <div className="text-center">
-            <p className="text-xs text-[#343434]">Follo wers</p>
+            <p className="text-xs text-[#343434]">Followers</p>
             <p className="text-xl font-semibold">{followers}</p>
           </div>
           <div className="text-center">

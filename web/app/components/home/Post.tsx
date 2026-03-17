@@ -33,6 +33,7 @@ type PostProps = {
   onCommentClick?: (post: HomePost) => void;
   onOptionsClick?: (post: HomePost) => void;
   onFileClick?: (post: HomePost) => void;
+  onArchiveClick?: (post: HomePost) => void;
 };
 
 function formatTimeAgo(timestamp: string) {
@@ -71,6 +72,7 @@ export default function Post({
   onCommentClick,
   onOptionsClick,
   onFileClick,
+  onArchiveClick,
 }: PostProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -231,7 +233,17 @@ export default function Post({
           <Messages2 size={24} color="#808080" />
           <p className="text-[#808080] text-xs">{post.commentCount ?? 0}</p>
         </button>
-        <Archive size={24} color="#808080" />
+        <button
+          aria-label="Archive"
+          type="button"
+          className="flex items-center gap-1.5"
+          onClick={() => {
+            if (!ensureAuthenticated()) return;
+            onArchiveClick?.(post);
+          }}
+        >
+          <Archive size={24} color="#808080" />
+        </button>
       </div>
     </div>
   );

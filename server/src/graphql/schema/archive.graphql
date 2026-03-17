@@ -1,0 +1,42 @@
+type Archive {
+  id: ID!
+  userId: ID!
+  name: String!
+  folders: [ArchiveFolder!]!
+  savedPosts: [ArchiveSavedPost!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type ArchiveFolder {
+  id: ID!
+  archiveId: ID!
+  name: String!
+  savedPosts: [ArchiveSavedPost!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+type ArchiveSavedPost {
+  id: ID!
+  archiveId: ID!
+  folderId: ID
+  postId: ID!
+  post: Post!
+  folder: ArchiveFolder
+  createdAt: String!
+}
+
+extend type User {
+  archive: Archive!
+}
+
+extend type Query {
+  myArchive: Archive!
+}
+
+extend type Mutation {
+  createArchiveFolder(name: String!): ArchiveFolder!
+  savePostToArchive(postId: ID!, folderId: ID): ArchiveSavedPost!
+  removeArchivedPost(savedPostId: ID!): Boolean!
+}

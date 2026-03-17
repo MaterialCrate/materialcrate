@@ -34,6 +34,7 @@ model User {
   commentLikes  CommentLike[]
   seoAccounts   SeoAccount[]
   workspace     Workspace?
+  archive       Archive?
   followerRelations Follow[] @relation("UserFollowers")
   followingRelations Follow[] @relation("UserFollowing")
   createdAt     DateTime @default(now())
@@ -75,6 +76,7 @@ model Post {
   likes      Like[]
   comments   Comment[]
   savedInWorkspaces WorkspaceSavedPost[]
+  savedInArchives ArchiveSavedPost[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -118,6 +120,45 @@ model WorkspaceSavedPost {
 
   @@unique([workspaceId, postId])
   @@index([workspaceId, folderId])
+  @@index([postId])
+}
+
+model Archive {
+  id         String            @id @default(cuid())
+  userId     String            @unique
+  name       String            @default("My Archive")
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folders    ArchiveFolder[]
+  savedPosts ArchiveSavedPost[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+model ArchiveFolder {
+  id        String             @id @default(cuid())
+  archiveId String
+  name      String
+  archive   Archive            @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  savedPosts ArchiveSavedPost[]
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@unique([archiveId, name])
+  @@index([archiveId])
+}
+
+model ArchiveSavedPost {
+  id        String         @id @default(cuid())
+  archiveId String
+  folderId  String?
+  postId    String
+  archive   Archive        @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  folder    ArchiveFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  post      Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@unique([archiveId, postId])
+  @@index([archiveId, folderId])
   @@index([postId])
 }
 

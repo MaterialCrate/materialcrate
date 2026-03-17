@@ -5,15 +5,18 @@ import { Add, DocumentUpload } from "iconsax-reactjs";
 import Post, { type HomePost } from "./components/home/Post";
 import UploadDrawer from "./components/home/UploadDrawer";
 import CommentDrawer from "./components/home/CommentDrawer";
-import OptionsDrawer from "./components/home/OptionsDrawer";
+import OptionsDrawer from "./components/home/PostMenuDrawer";
 import PdfViewerModal from "./components/home/PdfViewerModal";
 import Header from "./components/home/Header";
+import ArchiveDrawer from "./components/home/ArchiveDrawer";
 
 export default function Home() {
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
   const [isPostOptionsDrawerOpen, setIsPostOptionsDrawerOpen] = useState(false);
+  const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
+  const [archiveCloseRequestKey, setArchiveCloseRequestKey] = useState(0);
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
   );
@@ -21,6 +24,9 @@ export default function Home() {
     null,
   );
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
+  const [activeArchivePost, setActiveArchivePost] = useState<HomePost | null>(
+    null,
+  );
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
 
@@ -48,12 +54,21 @@ export default function Home() {
       }
     }
 
-    loadPosts();
+    void loadPosts();
     return () => controller.abort();
   }, []);
 
   return (
     <div className="py-18">
+      <ArchiveDrawer
+        isOpen={isArchiveDrawerOpen}
+        post={activeArchivePost}
+        closeRequestKey={archiveCloseRequestKey}
+        onClose={() => {
+          setIsArchiveDrawerOpen(false);
+          setActiveArchivePost(null);
+        }}
+      />
       <UploadDrawer
         isOpen={isUploadDrawerOpen}
         onClose={() => setIsUploadDrawerOpen(false)}
@@ -87,11 +102,16 @@ export default function Home() {
           isUploadDrawerOpen ||
           isCommentDrawerOpen ||
           isPostOptionsDrawerOpen ||
+          isArchiveDrawerOpen ||
           activePdfPost
             ? "bg-black/25 backdrop-blur-[2px] opacity-100 pointer-events-auto"
             : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
         }`}
         onClick={() => {
+          if (isArchiveDrawerOpen) {
+            setArchiveCloseRequestKey((previous) => previous + 1);
+            return;
+          }
           setMoreOptionsOpen(false);
           setIsUploadDrawerOpen(false);
           setIsCommentDrawerOpen(false);
@@ -143,7 +163,9 @@ export default function Home() {
                   setMoreOptionsOpen(false);
                   setIsUploadDrawerOpen(false);
                   setIsPostOptionsDrawerOpen(false);
+                  setIsArchiveDrawerOpen(false);
                   setActiveOptionsPost(null);
+                  setActiveArchivePost(null);
                 }}
                 onOptionsClick={(selectedPost) => {
                   setActiveOptionsPost(selectedPost);
@@ -151,8 +173,10 @@ export default function Home() {
                   setMoreOptionsOpen(false);
                   setIsUploadDrawerOpen(false);
                   setIsCommentDrawerOpen(false);
+                  setIsArchiveDrawerOpen(false);
                   setActiveCommentPostId(null);
                   setActivePdfPost(null);
+                  setActiveArchivePost(null);
                 }}
                 onFileClick={(selectedPost) => {
                   setActivePdfPost(selectedPost);
@@ -162,6 +186,19 @@ export default function Home() {
                   setActiveCommentPostId(null);
                   setIsPostOptionsDrawerOpen(false);
                   setActiveOptionsPost(null);
+                  setIsArchiveDrawerOpen(false);
+                  setActiveArchivePost(null);
+                }}
+                onArchiveClick={(selectedPost) => {
+                  setActiveArchivePost(selectedPost);
+                  setIsArchiveDrawerOpen(true);
+                  setMoreOptionsOpen(false);
+                  setIsUploadDrawerOpen(false);
+                  setIsCommentDrawerOpen(false);
+                  setActiveCommentPostId(null);
+                  setIsPostOptionsDrawerOpen(false);
+                  setActiveOptionsPost(null);
+                  setActivePdfPost(null);
                 }}
               />
               {index < posts.length - 1 && (

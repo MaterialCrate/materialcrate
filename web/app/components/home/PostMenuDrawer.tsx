@@ -59,7 +59,7 @@ export default function OptionsDrawer({
             <Slash size={24} color="black" />
             <p>Block {username}</p>
           </button>
-          <div className="h-0.5 w-full bg-[#7D7D7D]"></div>
+          <div className="h-px w-full bg-[#7D7D7D]/20"></div>
           <button
             type="button"
             aria-label="report"
