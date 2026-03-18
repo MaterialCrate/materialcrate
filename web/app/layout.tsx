@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
+import AuthSplashGate from "./components/AuthSplashGate";
 import ConditionalNavbar from "./components/ConditionalNavbar";
 
 const inter = Inter({
@@ -32,8 +33,10 @@ export default function RootLayout({
       className={`${inter.variable} ${libreBaskerville.variable} antialiased`}
     >
       <body className="font-sans relative">
-        {children}
-        <ConditionalNavbar />
+        <AuthSplashGate>
+          {children}
+          <ConditionalNavbar />
+        </AuthSplashGate>
       </body>
     </html>
   );

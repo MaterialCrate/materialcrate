@@ -1,5 +1,5 @@
 import Image from "next/image";
-import emptyWorkspace from "@/assets/svg/empty-workspace.svg";
+import emptyWorkspace from "@/assets/icons/empty-workspace.svg";
 import { Add } from "iconsax-reactjs";
 
 export default function WorkspacePage() {

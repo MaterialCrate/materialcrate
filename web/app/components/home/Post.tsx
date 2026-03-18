@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { More, Heart, Messages2, Archive, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
@@ -34,7 +34,12 @@ type PostProps = {
   onOptionsClick?: (post: HomePost) => void;
   onFileClick?: (post: HomePost) => void;
   onArchiveClick?: (post: HomePost) => void;
+  onArchiveRemoveClick?: (post: HomePost) => void;
+  isArchived?: boolean;
+  isArchiveBusy?: boolean;
 };
+
+type PendingProtectedAction = "like" | "comment" | "archive-add" | "archive-remove" | null;
 
 function formatTimeAgo(timestamp: string) {
   const trimmed = timestamp?.trim();
@@ -73,6 +78,9 @@ export default function Post({
   onOptionsClick,
   onFileClick,
   onArchiveClick,
+  onArchiveRemoveClick,
+  isArchived = false,
+  isArchiveBusy = false,
 }: PostProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -91,18 +99,26 @@ export default function Post({
     Boolean(post.viewerHasLiked),
   );
   const [isLiking, setIsLiking] = useState<boolean>(false);
+  const [pendingProtectedAction, setPendingProtectedAction] =
+    useState<PendingProtectedAction>(null);
 
-  const ensureAuthenticated = () => {
-    if (isLoading) return false;
+  const ensureAuthenticated = useCallback((pendingAction?: PendingProtectedAction) => {
+    if (isLoading) {
+      if (pendingAction) {
+        setPendingProtectedAction(pendingAction);
+      }
+      return false;
+    }
     if (!user) {
       router.push("/login");
       return false;
     }
     return true;
-  };
+  }, [isLoading, router, user]);
 
-  const handleLike = async () => {
-    if (isLiking || !ensureAuthenticated()) return;
+  const handleLike = useCallback(async (skipAuthCheck = false) => {
+    if (isLiking) return;
+    if (!skipAuthCheck && !ensureAuthenticated("like")) return;
 
     setIsLiking(true);
     try {
@@ -127,7 +143,49 @@ export default function Post({
     } finally {
       setIsLiking(false);
     }
-  };
+  }, [ensureAuthenticated, isLiking, post.id]);
+
+  useEffect(() => {
+    if (isLoading || !pendingProtectedAction) return;
+
+    if (!user) {
+      router.push("/login");
+      setPendingProtectedAction(null);
+      return;
+    }
+
+    const action = pendingProtectedAction;
+    setPendingProtectedAction(null);
+
+    if (action === "like") {
+      void handleLike(true);
+      return;
+    }
+
+    if (action === "comment") {
+      onCommentClick?.(post);
+      return;
+    }
+
+    if (action === "archive-add") {
+      onArchiveClick?.(post);
+      return;
+    }
+
+    if (action === "archive-remove") {
+      onArchiveRemoveClick?.(post);
+    }
+  }, [
+    handleLike,
+    isLoading,
+    onArchiveClick,
+    onArchiveRemoveClick,
+    onCommentClick,
+    pendingProtectedAction,
+    post,
+    router,
+    user,
+  ]);
 
   return (
     <div className="mt-4 space-y-4">
@@ -212,7 +270,9 @@ export default function Post({
         <button
           type="button"
           className="flex items-center gap-1.5 disabled:opacity-60"
-          onClick={handleLike}
+          onClick={() => {
+            void handleLike();
+          }}
           disabled={isLiking}
         >
           <Heart
@@ -226,7 +286,7 @@ export default function Post({
           type="button"
           className="flex items-center gap-1.5"
           onClick={() => {
-            if (!ensureAuthenticated()) return;
+            if (!ensureAuthenticated("comment")) return;
             onCommentClick?.(post);
           }}
         >
@@ -236,13 +296,25 @@ export default function Post({
         <button
           aria-label="Archive"
           type="button"
-          className="flex items-center gap-1.5"
+          className={`flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors 
+           ${isArchiveBusy && "opacity-60"}`}
+          disabled={isArchiveBusy}
           onClick={() => {
-            if (!ensureAuthenticated()) return;
+            if (!ensureAuthenticated(isArchived ? "archive-remove" : "archive-add")) {
+              return;
+            }
+            if (isArchived) {
+              onArchiveRemoveClick?.(post);
+              return;
+            }
             onArchiveClick?.(post);
           }}
         >
-          <Archive size={24} color="#808080" />
+          <Archive
+            size={24}
+            color={isArchived ? "#E1761F" : "#808080"}
+            variant={isArchived ? "Bold" : "Linear"}
+          />
         </button>
       </div>
     </div>

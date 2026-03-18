@@ -5,15 +5,21 @@ import { useEffect, useState } from "react";
 type AuthState = {
   user: any | null;
   loading: boolean;
+  hasResolvedInitialAuth: boolean;
 };
 
 let cachedUser: any | null = null;
 let cachedLoading = true;
+let cachedHasResolvedInitialAuth = false;
 let inFlight: Promise<any | null> | null = null;
 const listeners = new Set<(state: AuthState) => void>();
 
 const notify = () => {
-  const state = { user: cachedUser, loading: cachedLoading };
+  const state = {
+    user: cachedUser,
+    loading: cachedLoading,
+    hasResolvedInitialAuth: cachedHasResolvedInitialAuth,
+  };
   listeners.forEach((listener) => listener(state));
 };
 
@@ -31,6 +37,7 @@ const fetchMe = async () => {
     .catch(() => null)
     .finally(() => {
       cachedLoading = false;
+      cachedHasResolvedInitialAuth = true;
     })
     .then((user) => {
       cachedUser = user;
@@ -48,6 +55,7 @@ export const useAuth = () => {
   const [state, setState] = useState<AuthState>({
     user: cachedUser,
     loading: cachedLoading,
+    hasResolvedInitialAuth: cachedHasResolvedInitialAuth,
   });
 
   useEffect(() => {
@@ -63,6 +71,7 @@ export const useAuth = () => {
   return {
     user: state.user,
     isLoading: state.loading,
+    hasResolvedInitialAuth: state.hasResolvedInitialAuth,
     refresh: refreshAuth,
   };
 };

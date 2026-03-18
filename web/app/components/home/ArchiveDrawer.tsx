@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { AddCircle, CloseCircle, TickCircle } from "iconsax-reactjs";
 import Alert from "../Alert";
-import folderIcon from "@/assets/svg/folder.svg";
+import folderIcon from "@/assets/icons/folder.svg";
 import type { HomePost } from "./Post";
 
 type ArchiveFolder = {
@@ -36,9 +36,9 @@ export default function ArchiveDrawer({
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
-  const [feedbackType, setFeedbackType] = useState<"success" | "error" | "info">(
-    "info",
-  );
+  const [feedbackType, setFeedbackType] = useState<
+    "success" | "error" | "info"
+  >("info");
   const [hasSavedCurrentPost, setHasSavedCurrentPost] = useState(false);
 
   useEffect(() => {
@@ -64,7 +64,9 @@ export default function ArchiveDrawer({
         }
 
         if (!isCancelled) {
-          setFolders(Array.isArray(body?.archive?.folders) ? body.archive.folders : []);
+          setFolders(
+            Array.isArray(body?.archive?.folders) ? body.archive.folders : [],
+          );
         }
       } catch (error) {
         if (!isCancelled) {
@@ -88,11 +90,6 @@ export default function ArchiveDrawer({
     };
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen || closeRequestKey === 0) return;
-    void handleClose();
-  }, [closeRequestKey, isOpen]);
-
   const sortedFolders = useMemo(
     () =>
       [...folders].sort((left, right) =>
@@ -101,7 +98,7 @@ export default function ArchiveDrawer({
     [folders],
   );
 
-  const savePost = async (folderId?: string | null) => {
+  const savePost = useCallback(async (folderId?: string | null) => {
     if (!post?.id || isSaving || hasSavedCurrentPost) return true;
 
     setIsSaving(true);
@@ -131,23 +128,25 @@ export default function ArchiveDrawer({
     } catch (error) {
       setFeedbackType("error");
       setFeedbackMessage(
-        error instanceof Error ? error.message : "Failed to save file to archive",
+        error instanceof Error
+          ? error.message
+          : "Failed to save file to archive",
       );
       return false;
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [hasSavedCurrentPost, isSaving, onSaved, post?.id]);
 
-  const handleClose = async () => {
+  const handleClose = useCallback(async () => {
     if (post && !hasSavedCurrentPost) {
       const saved = await savePost(null);
       if (!saved) return;
     }
     onClose();
-  };
+  }, [hasSavedCurrentPost, onClose, post, savePost]);
 
-  const handleCreateFolder = async () => {
+  const handleCreateFolder = useCallback(async () => {
     const normalizedName = folderName.trim();
     if (!normalizedName || isCreatingFolder) return;
 
@@ -174,12 +173,19 @@ export default function ArchiveDrawer({
     } catch (error) {
       setFeedbackType("error");
       setFeedbackMessage(
-        error instanceof Error ? error.message : "Failed to create archive folder",
+        error instanceof Error
+          ? error.message
+          : "Failed to create archive folder",
       );
     } finally {
       setIsCreatingFolder(false);
     }
-  };
+  }, [folderName, isCreatingFolder]);
+
+  useEffect(() => {
+    if (!isOpen || closeRequestKey === 0) return;
+    void handleClose();
+  }, [closeRequestKey, handleClose, isOpen]);
 
   return (
     <>
@@ -208,8 +214,8 @@ export default function ArchiveDrawer({
           <div>
             <h1 className="text-lg font-medium text-[#202020]">Archive file</h1>
             <p className="mt-1 text-sm text-[#696969]">
-              Save this attachment inside a folder or close to save it at the top
-              level.
+              Save this attachment inside a folder or close to save it at the
+              top level.
             </p>
           </div>
 
@@ -217,7 +223,9 @@ export default function ArchiveDrawer({
             <p className="truncate text-sm font-medium text-[#202020]">
               {post?.title ?? "No file selected"}
             </p>
-            <p className="mt-1 text-xs text-[#767676]">{post?.courseCode ?? ""}</p>
+            <p className="mt-1 text-xs text-[#767676]">
+              {post?.courseCode ?? ""}
+            </p>
           </div>
 
           <div className="space-y-3">
@@ -271,7 +279,9 @@ export default function ArchiveDrawer({
                         <p className="text-sm font-medium text-[#202020]">
                           {folder.name}
                         </p>
-                        <p className="text-xs text-[#767676]">Save attachment here</p>
+                        <p className="text-xs text-[#767676]">
+                          Save attachment here
+                        </p>
                       </div>
                     </div>
                     <TickCircle size={20} color="#B0B0B0" />

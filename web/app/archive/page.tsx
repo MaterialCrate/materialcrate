@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Add, ArrowRight, FolderOpen } from "iconsax-reactjs";
-import emptyWorkspace from "@/assets/svg/empty-workspace.svg";
-import folderIcon from "@/assets/svg/folder.svg";
+import emptyWorkspace from "@/assets/icons/empty-workspace.svg";
+import folderIcon from "@/assets/icons/folder.svg";
 import PdfThumbnail from "@/app/components/home/PdfThumbnail";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
 import type { HomePost } from "@/app/components/home/Post";
@@ -93,7 +93,8 @@ export default function ArchivePage() {
       (archive?.folders ?? []).map((folder) => ({
         ...folder,
         savedPosts:
-          archive?.savedPosts?.filter((item) => item.folderId === folder.id) ?? [],
+          archive?.savedPosts?.filter((item) => item.folderId === folder.id) ??
+          [],
       })),
     [archive],
   );
@@ -175,7 +176,8 @@ export default function ArchivePage() {
 
         {isLoading ? (
           <p className="text-sm text-[#696969]">Loading archive...</p>
-        ) : !archive || (!archive.folders.length && !archive.savedPosts.length) ? (
+        ) : !archive ||
+          (!archive.folders.length && !archive.savedPosts.length) ? (
           <div className="flex flex-col items-center justify-center gap-4 px-12 py-16 text-center">
             <Image
               src={emptyWorkspace}
@@ -193,14 +195,21 @@ export default function ArchivePage() {
             <section className="space-y-3">
               <div className="flex items-center gap-2">
                 <FolderOpen size={20} color="#202020" />
-                <h2 className="text-base font-medium text-[#202020]">Folders</h2>
+                <h2 className="text-base font-medium text-[#202020]">
+                  Folders
+                </h2>
               </div>
               {foldersWithSavedPosts.length === 0 ? (
-                <p className="text-sm text-[#696969]">No archive folders yet.</p>
+                <p className="text-sm text-[#696969]">
+                  No archive folders yet.
+                </p>
               ) : (
                 <div className="space-y-4">
                   {foldersWithSavedPosts.map((folder) => (
-                    <div key={folder.id} className="rounded-[28px] bg-white px-5 py-5 shadow-sm">
+                    <div
+                      key={folder.id}
+                      className="rounded-[28px] bg-white px-5 py-5 shadow-sm"
+                    >
                       <div className="flex items-center gap-3">
                         <Image src={folderIcon} alt="" width={24} height={24} />
                         <div>
@@ -223,9 +232,13 @@ export default function ArchivePage() {
                             <ArchivedFileCard
                               key={savedPost.id}
                               savedPost={savedPost}
-                              onOpenFile={(selectedPost) => setActivePdfPost(selectedPost)}
+                              onOpenFile={(selectedPost) =>
+                                setActivePdfPost(selectedPost)
+                              }
                               onOpenPost={(postId) =>
-                                router.push(`/post/${encodeURIComponent(postId)}`)
+                                router.push(
+                                  `/post/${encodeURIComponent(postId)}`,
+                                )
                               }
                             />
                           ))}
@@ -238,7 +251,9 @@ export default function ArchivePage() {
             </section>
 
             <section className="space-y-3">
-              <h2 className="text-base font-medium text-[#202020]">Loose Files</h2>
+              <h2 className="text-base font-medium text-[#202020]">
+                Loose Files
+              </h2>
               {rootSavedPosts.length === 0 ? (
                 <p className="text-sm text-[#696969]">
                   No top-level archived files yet.
@@ -249,7 +264,9 @@ export default function ArchivePage() {
                     <ArchivedFileCard
                       key={savedPost.id}
                       savedPost={savedPost}
-                      onOpenFile={(selectedPost) => setActivePdfPost(selectedPost)}
+                      onOpenFile={(selectedPost) =>
+                        setActivePdfPost(selectedPost)
+                      }
                       onOpenPost={(postId) =>
                         router.push(`/post/${encodeURIComponent(postId)}`)
                       }

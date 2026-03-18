@@ -10,6 +10,11 @@ import PdfViewerModal from "./components/home/PdfViewerModal";
 import Header from "./components/home/Header";
 import ArchiveDrawer from "./components/home/ArchiveDrawer";
 
+type ArchiveSavedPost = {
+  id: string;
+  postId: string;
+};
+
 export default function Home() {
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
@@ -29,6 +34,11 @@ export default function Home() {
   );
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [archiveSavedPostIdsByPostId, setArchiveSavedPostIdsByPostId] =
+    useState<Record<string, string>>({});
+  const [archiveBusyPostIds, setArchiveBusyPostIds] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     const controller = new AbortController();
@@ -58,6 +68,85 @@ export default function Home() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadArchiveState = async () => {
+      try {
+        const response = await fetch("/api/archive", {
+          method: "GET",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          return;
+        }
+
+        const nextArchiveMap = Object.fromEntries(
+          (Array.isArray(body?.archive?.savedPosts) ? body.archive.savedPosts : [])
+            .map((savedPost: ArchiveSavedPost) => [savedPost.postId, savedPost.id]),
+        );
+
+        setArchiveSavedPostIdsByPostId(nextArchiveMap);
+      } catch {
+        if (!controller.signal.aborted) {
+          setArchiveSavedPostIdsByPostId({});
+        }
+      }
+    };
+
+    void loadArchiveState();
+    return () => controller.abort();
+  }, []);
+
+  const refreshArchiveState = async () => {
+    try {
+      const response = await fetch("/api/archive", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) return;
+
+      const nextArchiveMap = Object.fromEntries(
+        (Array.isArray(body?.archive?.savedPosts) ? body.archive.savedPosts : [])
+          .map((savedPost: ArchiveSavedPost) => [savedPost.postId, savedPost.id]),
+      );
+
+      setArchiveSavedPostIdsByPostId(nextArchiveMap);
+    } catch {}
+  };
+
+  const handleArchiveRemove = async (post: HomePost) => {
+    const savedPostId = archiveSavedPostIdsByPostId[post.id];
+    if (!savedPostId) return;
+
+    setArchiveBusyPostIds((previous) => ({ ...previous, [post.id]: true }));
+
+    try {
+      const response = await fetch("/api/archive", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ savedPostId }),
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to remove archived file");
+      }
+
+      setArchiveSavedPostIdsByPostId((previous) => {
+        const next = { ...previous };
+        delete next[post.id];
+        return next;
+      });
+    } finally {
+      setArchiveBusyPostIds((previous) => ({ ...previous, [post.id]: false }));
+    }
+  };
+
   return (
     <div className="py-18">
       <ArchiveDrawer
@@ -67,6 +156,7 @@ export default function Home() {
         onClose={() => {
           setIsArchiveDrawerOpen(false);
           setActiveArchivePost(null);
+          void refreshArchiveState();
         }}
       />
       <UploadDrawer
@@ -157,6 +247,8 @@ export default function Home() {
             <div key={post.id}>
               <Post
                 post={post}
+                isArchived={Boolean(archiveSavedPostIdsByPostId[post.id])}
+                isArchiveBusy={Boolean(archiveBusyPostIds[post.id])}
                 onCommentClick={(selectedPost) => {
                   setActiveCommentPostId(selectedPost.id);
                   setIsCommentDrawerOpen(true);
@@ -199,6 +291,9 @@ export default function Home() {
                   setIsPostOptionsDrawerOpen(false);
                   setActiveOptionsPost(null);
                   setActivePdfPost(null);
+                }}
+                onArchiveRemoveClick={(selectedPost) => {
+                  void handleArchiveRemove(selectedPost);
                 }}
               />
               {index < posts.length - 1 && (
