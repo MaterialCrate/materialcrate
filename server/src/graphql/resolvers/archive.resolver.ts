@@ -186,6 +186,53 @@ export const ArchiveResolver = {
         throw error;
       }
     },
+    deleteArchiveFolder: async (
+      _: unknown,
+      { folderId }: { folderId: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedFolderId = folderId?.trim();
+      if (!normalizedFolderId) {
+        throw new Error("folderId is required");
+      }
+
+      const archive = await ensureArchiveForUserId(viewerId, viewerId);
+
+      const folder = await (prisma as any).archiveFolder.findFirst({
+        where: {
+          id: normalizedFolderId,
+          archiveId: archive.id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!folder) {
+        throw new Error("Folder not found");
+      }
+
+      await prisma.$transaction([
+        (prisma as any).archiveSavedPost.deleteMany({
+          where: {
+            archiveId: archive.id,
+            folderId: normalizedFolderId,
+          },
+        }),
+        (prisma as any).archiveFolder.delete({
+          where: {
+            id: normalizedFolderId,
+          },
+        }),
+      ]);
+
+      return true;
+    },
     savePostToArchive: async (
       _: unknown,
       { postId, folderId }: { postId: string; folderId?: string | null },

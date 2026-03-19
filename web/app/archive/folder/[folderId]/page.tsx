@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ArchivedFileCard from "@/app/components/archive/ArchivedFileCard";
-import { ArrowLeft, DocumentText } from "iconsax-reactjs";
+import { ArrowLeft, DocumentText, Trash } from "iconsax-reactjs";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
 import type { HomePost } from "@/app/components/home/Post";
 import type {
@@ -32,6 +32,7 @@ export default function ArchiveFolderPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [folderNameDraft, setFolderNameDraft] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -151,18 +152,58 @@ export default function ArchiveFolderPage() {
       setFolderNameDraft(trimmedName);
       setIsEditingTitle(false);
     } catch (renameError) {
-      setError(
-        renameError instanceof Error
-          ? renameError.message
-          : "Failed to rename archive folder",
-      );
+      setError("Failed to rename archive folder");
+      console.error("Error renaming archive folder:", renameError);
     } finally {
       setIsRenaming(false);
     }
   };
 
+  const handleDeleteFolder = async () => {
+    if (!folder || isDeleting) {
+      return;
+    }
+
+    if (folderSavedPosts.length > 0) {
+      const confirmed = window.confirm(
+        "Deleting this folder will unarchive all files inside it. Continue?",
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    try {
+      setIsDeleting(true);
+      setError("");
+
+      const response = await fetch("/api/archive/folders", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          folderId: folder.id,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to delete archive folder");
+      }
+
+      router.push("/archive");
+    } catch (deleteError) {
+      setError("Failed to delete archive folder");
+      console.error("Error deleting archive folder:", deleteError);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-32 pt-20">
+    <div className="min-h-screen bg-[#ffffff] pb-32 pt-22">
       <PdfViewerModal
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
@@ -172,56 +213,67 @@ export default function ArchiveFolderPage() {
       {error && <Alert type="error" message={error} />}
 
       <div className="fixed top-0 left-0 right-0 z-40">
-        <header className=" bg-[#F7F7F7] px-6 pt-6 pb-3">
-          <div className="grid grid-cols-[40px_1fr_40px] items-center">
+        <header className="bg-[#F7F7F7] px-6 pt-6 pb-3">
+          <div className="relative flex items-center justify-center min-h-10">
             <button
               type="button"
               aria-label="Back to archive"
               onClick={() => router.push("/archive")}
+              className="absolute left-0 top-1/2 -translate-y-1/2"
             >
-              <ArrowLeft size={18} color="#202020" />
+              <ArrowLeft size={22} color="#202020" />
             </button>
-            {folder && isEditingTitle ? (
-              <input
-                ref={titleInputRef}
-                type="text"
-                value={folderNameDraft}
-                onChange={(event) => setFolderNameDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void submitFolderRename();
-                  }
+            <div className="flex w-full justify-center px-12">
+              {folder && isEditingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  type="text"
+                  value={folderNameDraft}
+                  onChange={(event) => setFolderNameDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      void submitFolderRename();
+                    }
 
-                  if (event.key === "Escape") {
-                    setFolderNameDraft(folder.name);
-                    setIsEditingTitle(false);
+                    if (event.key === "Escape") {
+                      setFolderNameDraft(folder.name);
+                      setIsEditingTitle(false);
+                      setError("");
+                    }
+                  }}
+                  disabled={isRenaming}
+                  maxLength={30}
+                  aria-label="Rename archive folder"
+                  className="w-full max-w-55 bg-transparent text-center text-xl font-medium outline-none"
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!folder) {
+                      return;
+                    }
+
                     setError("");
-                  }
-                }}
-                disabled={isRenaming}
-                maxLength={80}
-                aria-label="Rename archive folder"
-                className="w-full bg-transparent text-center text-xl font-medium outline-none"
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!folder) {
-                    return;
-                  }
-
-                  setError("");
-                  setFolderNameDraft(folder.name);
-                  setIsEditingTitle(true);
-                }}
-                className="truncate text-center text-xl font-medium"
-              >
-                {folder?.name || "Archive Folder"}
-              </button>
-            )}
-            <div />
+                    setFolderNameDraft(folder.name);
+                    setIsEditingTitle(true);
+                  }}
+                  className="max-w-55 truncate text-center text-xl font-medium"
+                >
+                  {folder?.name || "Archive Folder"}
+                </button>
+              )}
+            </div>
+            <button
+              aria-label="Delete folder"
+              type="button"
+              className="absolute right-0 top-1/2 -translate-y-1/2"
+              onClick={() => void handleDeleteFolder()}
+              disabled={isDeleting}
+            >
+              <Trash size={22} color="#202020" />
+            </button>
           </div>
         </header>
         {isLoading && <LoadingBar />}

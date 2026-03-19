@@ -28,6 +28,12 @@ const UPDATE_ARCHIVE_FOLDER_MUTATION = `
   }
 `;
 
+const DELETE_ARCHIVE_FOLDER_MUTATION = `
+  mutation DeleteArchiveFolder($folderId: ID!) {
+    deleteArchiveFolder(folderId: $folderId)
+  }
+`;
+
 type CreateArchiveFolderBody = {
   name?: string;
 };
@@ -35,6 +41,10 @@ type CreateArchiveFolderBody = {
 type UpdateArchiveFolderBody = {
   folderId?: string;
   name?: string;
+};
+
+type DeleteArchiveFolderBody = {
+  folderId?: string;
 };
 
 export async function POST(req: Request) {
@@ -136,5 +146,54 @@ export async function PATCH(req: Request) {
   return NextResponse.json({
     ok: true,
     folder: graphqlBody?.data?.updateArchiveFolder ?? null,
+  });
+}
+
+export async function DELETE(req: Request) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("mc_session")?.value;
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  let body: DeleteArchiveFolderBody;
+  try {
+    body = (await req.json()) as DeleteArchiveFolderBody;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const folderId = body.folderId?.trim();
+  if (!folderId) {
+    return NextResponse.json({ error: "folderId is required" }, { status: 400 });
+  }
+
+  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      query: DELETE_ARCHIVE_FOLDER_MUTATION,
+      variables: { folderId },
+    }),
+  });
+  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
+
+  if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+    return NextResponse.json(
+      {
+        error:
+          graphqlBody?.errors?.[0]?.message || "Failed to delete archive folder",
+        details: graphqlBody?.errors ?? null,
+      },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json({
+    ok: true,
+    deleted: Boolean(graphqlBody?.data?.deleteArchiveFolder),
   });
 }

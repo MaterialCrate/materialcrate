@@ -38,6 +38,7 @@ extend type Query {
 extend type Mutation {
   createArchiveFolder(name: String!): ArchiveFolder!
   updateArchiveFolder(folderId: ID!, name: String!): ArchiveFolder!
+  deleteArchiveFolder(folderId: ID!): Boolean!
   savePostToArchive(postId: ID!, folderId: ID): ArchiveSavedPost!
   removeArchivedPost(savedPostId: ID!): Boolean!
 }
