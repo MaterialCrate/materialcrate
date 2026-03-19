@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { AddCircle, CloseCircle, TickCircle } from "iconsax-reactjs";
+import { AddCircle, CloseCircle, TickCircle, Folder2 } from "iconsax-reactjs";
 import Alert from "../Alert";
 import folderIcon from "@/assets/icons/folder.svg";
 import type { HomePost } from "./Post";
@@ -98,45 +98,48 @@ export default function ArchiveDrawer({
     [folders],
   );
 
-  const savePost = useCallback(async (folderId?: string | null) => {
-    if (!post?.id || isSaving || hasSavedCurrentPost) return true;
+  const savePost = useCallback(
+    async (folderId?: string | null) => {
+      if (!post?.id || isSaving || hasSavedCurrentPost) return true;
 
-    setIsSaving(true);
+      setIsSaving(true);
 
-    try {
-      const response = await fetch("/api/archive", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          postId: post.id,
-          folderId: folderId ?? null,
-        }),
-      });
-      const body = await response.json().catch(() => ({}));
+      try {
+        const response = await fetch("/api/archive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postId: post.id,
+            folderId: folderId ?? null,
+          }),
+        });
+        const body = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
-        throw new Error(body?.error || "Failed to save file to archive");
+        if (!response.ok) {
+          throw new Error(body?.error || "Failed to save file to archive");
+        }
+
+        setHasSavedCurrentPost(true);
+        setFeedbackType("success");
+        setFeedbackMessage(
+          folderId ? "File saved to archive folder." : "File saved to archive.",
+        );
+        onSaved?.();
+        return true;
+      } catch (error) {
+        setFeedbackType("error");
+        setFeedbackMessage(
+          error instanceof Error
+            ? error.message
+            : "Failed to save file to archive",
+        );
+        return false;
+      } finally {
+        setIsSaving(false);
       }
-
-      setHasSavedCurrentPost(true);
-      setFeedbackType("success");
-      setFeedbackMessage(
-        folderId ? "File saved to archive folder." : "File saved to archive.",
-      );
-      onSaved?.();
-      return true;
-    } catch (error) {
-      setFeedbackType("error");
-      setFeedbackMessage(
-        error instanceof Error
-          ? error.message
-          : "Failed to save file to archive",
-      );
-      return false;
-    } finally {
-      setIsSaving(false);
-    }
-  }, [hasSavedCurrentPost, isSaving, onSaved, post?.id]);
+    },
+    [hasSavedCurrentPost, isSaving, onSaved, post?.id],
+  );
 
   const handleClose = useCallback(async () => {
     if (post && !hasSavedCurrentPost) {
@@ -236,7 +239,7 @@ export default function ArchiveDrawer({
                 onChange={(event) => setFolderName(event.target.value)}
                 placeholder="Create a new folder"
                 className="h-11 flex-1 rounded-full border border-black/10 px-4 text-sm outline-none"
-                maxLength={80}
+                maxLength={30}
               />
               <button
                 type="button"
@@ -274,7 +277,7 @@ export default function ArchiveDrawer({
                     }}
                   >
                     <div className="flex items-center gap-3">
-                      <Image src={folderIcon} alt="" width={24} height={24} />
+                      <Folder2 size={32} color="#202020" variant="Bold" />
                       <div>
                         <p className="text-sm font-medium text-[#202020]">
                           {folder.name}

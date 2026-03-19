@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowRight, FolderOpen, Folder2 } from "iconsax-reactjs";
-import emptyWorkspace from "@/assets/icons/empty-workspace.svg";
+import { ArrowLeft, ArrowRight } from "iconsax-reactjs";
+import folderIcon from "@/assets/icons/folder.svg";
 import PdfThumbnail from "@/app/components/home/PdfThumbnail";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
 import type { HomePost } from "@/app/components/home/Post";
@@ -34,8 +34,11 @@ type ArchiveData = {
   savedPosts: ArchiveSavedPost[];
 };
 
-export default function ArchivePage() {
+export default function ArchiveFolderPage() {
   const router = useRouter();
+  const params = useParams<{ folderId: string }>();
+  const folderId = typeof params?.folderId === "string" ? params.folderId : "";
+
   const [archive, setArchive] = useState<ArchiveData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -80,27 +83,18 @@ export default function ArchivePage() {
     return () => controller.abort();
   }, []);
 
-  const rootSavedPosts = useMemo(
-    () => archive?.savedPosts?.filter((item) => !item.folderId) ?? [],
-    [archive],
+  const folder = useMemo(
+    () => archive?.folders.find((item) => item.id === folderId) ?? null,
+    [archive, folderId],
   );
 
-  const totalFileCount = archive?.savedPosts.length ?? 0;
-  const totalFolderCount = archive?.folders.length ?? 0;
-
-  const foldersWithSavedPosts = useMemo(
-    () =>
-      (archive?.folders ?? []).map((folder) => ({
-        ...folder,
-        savedPosts:
-          archive?.savedPosts?.filter((item) => item.folderId === folder.id) ??
-          [],
-      })),
-    [archive],
+  const folderSavedPosts = useMemo(
+    () => archive?.savedPosts.filter((item) => item.folderId === folderId) ?? [],
+    [archive, folderId],
   );
 
   return (
-    <div className="min-h-dvh bg-[#FFFFFF] pb-32 pt-18">
+    <div className="min-h-screen bg-[#F7F7F7] pb-32 pt-18">
       <PdfViewerModal
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
@@ -108,92 +102,63 @@ export default function ArchivePage() {
       />
 
       <header className="fixed top-0 left-0 right-0 z-40 bg-[#F7F7F7] px-6 pt-6 pb-3">
-        <h1 className="text-center text-xl font-medium">My Archive</h1>
+        <div className="grid grid-cols-[40px_1fr_40px] items-center">
+          <button
+            type="button"
+            aria-label="Back to archive"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/8 bg-white"
+            onClick={() => router.push("/archive")}
+          >
+            <ArrowLeft size={18} color="#202020" />
+          </button>
+          <h1 className="text-center text-xl font-medium">Archive Folder</h1>
+          <div />
+        </div>
       </header>
 
       <main className="space-y-6 px-6">
         {isLoading ? (
-          <p className="text-sm text-[#696969]">Loading archive...</p>
-        ) : !archive ||
-          (!archive.folders.length && !archive.savedPosts.length) ? (
-          <div className="flex flex-col items-center justify-center gap-4 px-12 py-16 text-center">
-            <Image
-              src={emptyWorkspace}
-              alt="Empty archive"
-              width={80}
-              height={80}
-            />
-            <p className="text-sm text-[#696969]">
-              You haven&apos;t archived any files yet. Save attachments from the
-              feed and they&apos;ll appear here.
+          <p className="text-sm text-[#696969]">Loading folder...</p>
+        ) : error ? (
+          <p className="text-sm text-[#8A3A25]">{error}</p>
+        ) : !folder ? (
+          <div className="rounded-[28px] bg-white px-5 py-6 shadow-sm">
+            <p className="text-base font-medium text-[#202020]">
+              Folder not found.
+            </p>
+            <p className="mt-2 text-sm text-[#696969]">
+              This archive folder may have been removed.
             </p>
           </div>
         ) : (
           <>
-            <section className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <FolderOpen size={20} color="#202020" />
-                  <h2 className="text-base font-medium text-[#202020]">
-                    Folders
+            <section className="rounded-[28px] bg-white px-5 py-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <Image src={folderIcon} alt="" width={28} height={28} />
+                <div>
+                  <h2 className="text-lg font-medium text-[#202020]">
+                    {folder.name}
                   </h2>
+                  <p className="text-sm text-[#767676]">
+                    {folderSavedPosts.length} file
+                    {folderSavedPosts.length === 1 ? "" : "s"}
+                  </p>
                 </div>
-                <span className="text-sm text-[#767676]">
-                  {totalFolderCount}
-                </span>
               </div>
-              {foldersWithSavedPosts.length === 0 ? (
-                <p className="text-sm text-[#696969]">
-                  No archive folders yet.
-                </p>
-              ) : (
-                <div className="grid grid-cols-3 gap-y-5">
-                  {foldersWithSavedPosts.map((folder) => (
-                    <button
-                      type="button"
-                      key={folder.id}
-                      className="flex flex-col items-center gap-2 text-center"
-                      onClick={() =>
-                        router.push(
-                          `/archive/folder/${encodeURIComponent(folder.id)}`,
-                        )
-                      }
-                    >
-                      <Folder2 size={48} color="#4e4e4e" variant="Bold" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-[#323232]">
-                          {folder.name}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
             </section>
 
             <section className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <FolderOpen size={20} color="#202020" />
-                  <h2 className="text-base font-medium text-[#202020]">
-                    Loose files
-                  </h2>
-                </div>
-                <span className="text-sm text-[#767676]">{totalFileCount}</span>
-              </div>
-              {rootSavedPosts.length === 0 ? (
+              {folderSavedPosts.length === 0 ? (
                 <p className="text-sm text-[#696969]">
-                  No top-level archived files yet.
+                  No files saved in this folder yet.
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {rootSavedPosts.map((savedPost) => (
+                  {folderSavedPosts.map((savedPost) => (
                     <ArchivedFileCard
                       key={savedPost.id}
                       savedPost={savedPost}
-                      onOpenFile={(selectedPost) =>
-                        setActivePdfPost(selectedPost)
-                      }
+                      onOpenFile={(selectedPost) => setActivePdfPost(selectedPost)}
                       onOpenPost={(postId) =>
                         router.push(`/post/${encodeURIComponent(postId)}`)
                       }
@@ -237,7 +202,7 @@ function ArchivedFileCard({
             </p>
             <p className="mt-1 text-xs text-[#767676]">
               {savedPost.post.courseCode}
-              {savedPost.post.year && ` • ${savedPost.post.year}`}
+              {savedPost.post.year ? ` • ${savedPost.post.year}` : ""}
             </p>
           </div>
           <div className="flex justify-end">

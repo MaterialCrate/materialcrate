@@ -16,7 +16,7 @@ export default function AuthSplashScreen() {
         />
       </div>
       <p className="absolute bottom-10 font-serif text-[0.7rem] uppercase tracking-[0.5em] text-[#e1761f]">
-        Material Crate
+        MaterialCrate
       </p>
     </div>
   );

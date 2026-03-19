@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, FolderOpen, Archive, Profile } from "iconsax-reactjs";
+import { Home, Clipboard, Archive, Profile } from "iconsax-reactjs";
 import type { Icon as IconsaxIcon } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 
@@ -15,7 +15,7 @@ type NavItem = {
 
 const items: NavItem[] = [
   { label: "Home", href: "/", Icon: Home },
-  { label: "Workspace", href: "/workspace", Icon: FolderOpen },
+  { label: "Hub", href: "/hub", Icon: Clipboard },
   { label: "Archive", href: "/archive", Icon: Archive },
   { label: "Profile", href: "/user", Icon: Profile },
 ];
@@ -51,7 +51,11 @@ export default function Navbar() {
                 router.push("/login");
               }}
             >
-              <Icon size={28} color={color} variant={isActive ? "Bold" : "Linear"} />
+              <Icon
+                size={28}
+                color={color}
+                variant={isActive ? "Bold" : "Linear"}
+              />
               <p className={isActive ? "text-[#E1761F]" : "text-[#959595]"}>
                 {label}
               </p>
