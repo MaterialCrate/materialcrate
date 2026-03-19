@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Edit2, Setting2, Verify } from "iconsax-reactjs";
-import proStar from "@/assets/svg/pro-star.svg";
+import proStar from "@/assets/icons/pro-star.svg";
 
 export type ProfileTab = "posts" | "achievements";
 

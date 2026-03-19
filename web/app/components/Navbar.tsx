@@ -32,11 +32,14 @@ export default function Navbar() {
     <ul className="font-semibold text-xs flex w-full justify-between px-12">
       {items.map(({ label, href, Icon }) => {
         const isProfileItem = href === "/user";
+        const isArchiveItem = href === "/archive";
         const resolvedHref = isProfileItem ? userProfileHref : href;
         const isActive = isProfileItem
           ? Boolean(user?.username) &&
             pathname === `/user/${encodeURIComponent(user.username)}`
-          : pathname === href;
+          : isArchiveItem
+            ? pathname === href || pathname.startsWith("/archive/folder/")
+            : pathname === href;
         const color = isActive ? "#E1761F" : "#959595";
         return (
           <li key={href} className="flex flex-col items-center">

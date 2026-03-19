@@ -85,7 +85,7 @@ export default function ArchivePage() {
   );
 
   return (
-    <div className="min-h-dvh bg-[#FFFFFF] pb-32 pt-18">
+    <div className="min-h-dvh bg-[#FFFFFF] pb-32 pt-20">
       <PdfViewerModal
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}

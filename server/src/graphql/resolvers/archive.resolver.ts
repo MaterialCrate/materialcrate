@@ -131,6 +131,61 @@ export const ArchiveResolver = {
         throw error;
       }
     },
+    updateArchiveFolder: async (
+      _: unknown,
+      { folderId, name }: { folderId: string; name: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedFolderId = folderId?.trim();
+      if (!normalizedFolderId) {
+        throw new Error("folderId is required");
+      }
+
+      const normalizedName = name?.trim();
+      if (!normalizedName) {
+        throw new Error("Folder name is required");
+      }
+      if (normalizedName.length > 80) {
+        throw new Error("Folder name cannot exceed 80 characters");
+      }
+
+      const archive = await ensureArchiveForUserId(viewerId, viewerId);
+
+      const folder = await (prisma as any).archiveFolder.findFirst({
+        where: {
+          id: normalizedFolderId,
+          archiveId: archive.id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!folder) {
+        throw new Error("Folder not found");
+      }
+
+      try {
+        return await (prisma as any).archiveFolder.update({
+          where: { id: normalizedFolderId },
+          data: { name: normalizedName },
+        });
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          throw new Error("Folder name already exists");
+        }
+
+        throw error;
+      }
+    },
     savePostToArchive: async (
       _: unknown,
       { postId, folderId }: { postId: string; folderId?: string | null },
