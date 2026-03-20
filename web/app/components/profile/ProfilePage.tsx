@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
 import Acheivement from "@/app/components/profile/Acheivement";
@@ -9,6 +9,7 @@ import Post, { type HomePost } from "@/app/components/home/Post";
 import CommentDrawer from "@/app/components/home/CommentDrawer";
 import OptionsDrawer from "@/app/components/home/PostMenuDrawer";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
+import FollowersnFollowingList from "./FollowersnFollowingList";
 
 type ProfileUser = {
   id: string;
@@ -52,6 +53,30 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
   const [selectedTab, setSelectedTab] = useState<ProfileTab>("posts");
+  const [selectedFollowList, setSelectedFollowList] = useState<
+    "followers" | "following" | null
+  >(null);
+
+  const handleFollowCountsChange = useCallback(
+    ({
+      followersCount,
+      followingCount,
+    }: {
+      followersCount: number;
+      followingCount: number;
+    }) => {
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              followersCount,
+              followingCount,
+            }
+          : current,
+      );
+    },
+    [],
+  );
 
   useEffect(() => {
     let isCancelled = false;
@@ -241,9 +266,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
             }
           : current,
       );
-      setError(
-        err instanceof Error ? err.message : "Failed to update follow state",
-      );
+      setError("Failed to update follow state");
+      console.error("Error updating follow state:", err);
     } finally {
       setIsUpdatingFollow(false);
     }
@@ -305,6 +329,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         followLabel={followLabel}
         isFollowLoading={isUpdatingFollow}
         onFollowClick={handleFollowToggle}
+        onFollowListOpen={(tab) => setSelectedFollowList(tab)}
         selectedTab={selectedTab}
         onTabChange={setSelectedTab}
       />
@@ -363,11 +388,11 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                         setActiveOptionsPost(null);
                       }}
                     />
-                    {index < posts.length - 1 ? (
+                    {index < posts.length - 1 && (
                       <div className="px-6">
                         <div className="mt-4 h-px w-full bg-black/20" />
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 ))
               )}
@@ -375,6 +400,14 @@ export default function ProfilePage({ username }: ProfilePageProps) {
           )}
         </>
       )}
+      <FollowersnFollowingList
+        isOpen={selectedFollowList !== null}
+        username={profile?.username}
+        subscriptionPlan={profile?.subscriptionPlan}
+        initialTab={selectedFollowList ?? "followers"}
+        onClose={() => setSelectedFollowList(null)}
+        onCountsChange={handleFollowCountsChange}
+      />
     </div>
   );
 }

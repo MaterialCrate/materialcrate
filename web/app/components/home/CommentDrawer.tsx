@@ -440,8 +440,8 @@ export default function CommentDrawer({
                       <Image
                         src={getAuthorProfilePicture(comment.author)}
                         alt={`${getAuthorName(comment.author)}'s profile picture`}
-                        width={24}
-                        height={24}
+                        width={28}
+                        height={28}
                         className="w-full h-full object-cover rounded-full"
                         unoptimized
                       />
@@ -458,20 +458,12 @@ export default function CommentDrawer({
                         <Verify size={14} color="#E1761F" variant="Bold" />
                       ) : null}
                     </div>
-                    <p className="text-xs text-[#202020]">
+                    <p className="text-sm text-[#202020]">
                       {renderContentWithMentions(comment.content)}
                     </p>
-                    <div className="flex items-center justify-between">
-                      <div className="text-[10px] text-[#5B5B5B] font-medium flex items-center gap-5">
+                    <div className="flex items-center font-medium justify-between text-xs text-[#5B5B5B] ">
+                      <div className="flex items-center gap-5">
                         <p>{formatTimeAgo(comment.createdAt)}</p>
-                        <button
-                          type="button"
-                          onClick={() => void handleLikeComment(comment.id)}
-                          disabled={Boolean(isLikingByCommentId[comment.id])}
-                          className="disabled:opacity-60"
-                        >
-                          Like
-                        </button>
                         <button
                           type="button"
                           onClick={() => handleReplyToComment(comment)}
@@ -480,14 +472,22 @@ export default function CommentDrawer({
                         </button>
                       </div>
                       <div className="flex items-center gap-1">
-                        <p className="text-[10px] text-[#5B5B5B] font-medium">
-                          {comment.likeCount ?? 0}
-                        </p>
-                        <Heart
-                          size={14}
-                          color={comment.viewerHasLiked ? "#E00505" : "#808080"}
-                          variant={comment.viewerHasLiked ? "Bold" : "Linear"}
-                        />
+                        <p className="">{comment.likeCount ?? 0}</p>
+                        <button
+                          type="button"
+                          aria-label="like button"
+                          onClick={() => void handleLikeComment(comment.id)}
+                          disabled={Boolean(isLikingByCommentId[comment.id])}
+                          className="disabled:opacity-60"
+                        >
+                          <Heart
+                            size={18}
+                            color={
+                              comment.viewerHasLiked ? "#E00505" : "#808080"
+                            }
+                            variant={comment.viewerHasLiked ? "Bold" : "Linear"}
+                          />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -540,22 +540,12 @@ export default function CommentDrawer({
                               />
                             ) : null}
                           </div>
-                          <p className="text-xs text-[#202020]">
+                          <p className="text-sm text-[#202020]">
                             {renderContentWithMentions(reply.content)}
                           </p>
-                          <div className="flex items-center justify-between">
-                            <div className="text-[10px] text-[#5B5B5B] font-medium flex items-center gap-5">
+                          <div className="flex items-center justify-between text-xs text-[#5B5B5B] font-medium ">
+                            <div className="flex items-center gap-5">
                               <p>{formatTimeAgo(reply.createdAt)}</p>
-                              <button
-                                type="button"
-                                onClick={() => void handleLikeComment(reply.id)}
-                                disabled={Boolean(
-                                  isLikingByCommentId[reply.id],
-                                )}
-                                className="disabled:opacity-60"
-                              >
-                                Like
-                              </button>
                               <button
                                 type="button"
                                 onClick={() => handleReplyToComment(reply)}
@@ -564,18 +554,26 @@ export default function CommentDrawer({
                               </button>
                             </div>
                             <div className="flex items-center gap-1">
-                              <p className="text-[10px] text-[#5B5B5B] font-medium">
-                                {reply.likeCount ?? 0}
-                              </p>
-                              <Heart
-                                size={14}
-                                color={
-                                  reply.viewerHasLiked ? "#E00505" : "#808080"
-                                }
-                                variant={
-                                  reply.viewerHasLiked ? "Bold" : "Linear"
-                                }
-                              />
+                              <p>{reply.likeCount ?? 0}</p>
+                              <button
+                                type="button"
+                                aria-label="like comment"
+                                onClick={() => void handleLikeComment(reply.id)}
+                                disabled={Boolean(
+                                  isLikingByCommentId[reply.id],
+                                )}
+                                className="disabled:opacity-60"
+                              >
+                                <Heart
+                                  size={18}
+                                  color={
+                                    reply.viewerHasLiked ? "#E00505" : "#808080"
+                                  }
+                                  variant={
+                                    reply.viewerHasLiked ? "Bold" : "Linear"
+                                  }
+                                />
+                              </button>
                             </div>
                           </div>
                         </div>

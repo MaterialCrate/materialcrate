@@ -19,6 +19,7 @@ type ProfileHeaderProps = {
   followLabel?: "Follow" | "Following" | "Follow back";
   isFollowLoading?: boolean;
   onFollowClick?: () => void;
+  onFollowListOpen?: (tab: "followers" | "following") => void;
   selectedTab: ProfileTab;
   onTabChange: (tab: ProfileTab) => void;
 };
@@ -35,6 +36,7 @@ export default function Header({
   followLabel = "Follow",
   isFollowLoading = false,
   onFollowClick,
+  onFollowListOpen,
   selectedTab,
   onTabChange,
 }: ProfileHeaderProps) {
@@ -44,18 +46,18 @@ export default function Header({
     <header className="w-full bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200 pt-12 px-6 z-50">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className="w-19 h-19">
+          <div className="w-19 h-19 rounded-xl overflow-hidden bg-gray-300">
             {profilePictureUrl ? (
               <Image
                 src={profilePictureUrl}
                 alt={displayName}
                 width={76}
                 height={76}
-                className="w-full h-full object-cover rounded-xl"
+                className="w-full h-full object-cover"
                 unoptimized
               />
             ) : (
-              <div className="w-full h-full bg-gray-300 rounded-xl flex items-center justify-center">
+              <div className="w-full h-full flex items-center justify-center">
                 <span className="text-gray-500 text-2xl font-bold">
                   {displayName.charAt(0)}
                 </span>
@@ -102,14 +104,22 @@ export default function Header({
       </div>
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center gap-4">
-          <div className="text-center">
+          <button
+            type="button"
+            className="text-center"
+            onClick={() => onFollowListOpen?.("followers")}
+          >
             <p className="text-xs text-[#343434]">Followers</p>
             <p className="text-xl font-semibold">{followers}</p>
-          </div>
-          <div className="text-center">
+          </button>
+          <button
+            type="button"
+            className="text-center"
+            onClick={() => onFollowListOpen?.("following")}
+          >
             <p className="text-xs text-[#343434]">Following</p>
             <p className="text-xl font-semibold">{following}</p>
-          </div>
+          </button>
         </div>
         {isOwner ? (
           subscriptionPlan === "free" ? (
