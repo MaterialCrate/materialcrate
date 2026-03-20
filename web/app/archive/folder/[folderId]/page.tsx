@@ -33,6 +33,9 @@ export default function ArchiveFolderPage() {
   const [folderNameDraft, setFolderNameDraft] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [removingSavedPostIds, setRemovingSavedPostIds] = useState<
+    Record<string, boolean>
+  >({});
   const titleInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -202,6 +205,58 @@ export default function ArchiveFolderPage() {
     }
   };
 
+  const handleRemoveFromArchive = async (savedPost: ArchiveSavedPost) => {
+    if (removingSavedPostIds[savedPost.id]) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Remove this file from your archive?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setRemovingSavedPostIds((current) => ({ ...current, [savedPost.id]: true }));
+      setError("");
+
+      const response = await fetch("/api/archive", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          savedPostId: savedPost.id,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to remove archived file");
+      }
+
+      setArchive((currentArchive) => {
+        if (!currentArchive) {
+          return currentArchive;
+        }
+
+        return {
+          ...currentArchive,
+          savedPosts: currentArchive.savedPosts.filter(
+            (item) => item.id !== savedPost.id,
+          ),
+        };
+      });
+    } catch (removeError) {
+      setError("Failed to remove archived file");
+      console.error("Error removing archived file:", removeError);
+    } finally {
+      setRemovingSavedPostIds((current) => ({ ...current, [savedPost.id]: false }));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#ffffff] pb-32 pt-22">
       <PdfViewerModal
@@ -321,6 +376,10 @@ export default function ArchiveFolderPage() {
                         onOpenPost={(postId) =>
                           router.push(`/post/${encodeURIComponent(postId)}`)
                         }
+                        onRemove={(selectedSavedPost) =>
+                          void handleRemoveFromArchive(selectedSavedPost)
+                        }
+                        isRemoving={Boolean(removingSavedPostIds[savedPost.id])}
                       />
                     ))}
                   </div>

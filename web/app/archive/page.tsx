@@ -28,6 +28,9 @@ export default function ArchivePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
+  const [removingSavedPostIds, setRemovingSavedPostIds] = useState<
+    Record<string, boolean>
+  >({});
 
   useEffect(() => {
     const controller = new AbortController();
@@ -70,7 +73,7 @@ export default function ArchivePage() {
     [archive],
   );
 
-  const totalFileCount = archive?.savedPosts.length ?? 0;
+  const totalFileCount = rootSavedPosts.length;
   const totalFolderCount = archive?.folders.length ?? 0;
 
   const foldersWithSavedPosts = useMemo(
@@ -83,6 +86,58 @@ export default function ArchivePage() {
       })),
     [archive],
   );
+
+  const handleRemoveFromArchive = async (savedPost: ArchiveSavedPost) => {
+    if (removingSavedPostIds[savedPost.id]) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Remove this file from your archive?",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setRemovingSavedPostIds((current) => ({ ...current, [savedPost.id]: true }));
+      setError("");
+
+      const response = await fetch("/api/archive", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          savedPostId: savedPost.id,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to remove archived file");
+      }
+
+      setArchive((currentArchive) => {
+        if (!currentArchive) {
+          return currentArchive;
+        }
+
+        return {
+          ...currentArchive,
+          savedPosts: currentArchive.savedPosts.filter(
+            (item) => item.id !== savedPost.id,
+          ),
+        };
+      });
+    } catch (removeError) {
+      setError("Failed to remove archived file");
+      console.error("Error removing archived file:", removeError);
+    } finally {
+      setRemovingSavedPostIds((current) => ({ ...current, [savedPost.id]: false }));
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-[#FFFFFF] pb-32 pt-20">
@@ -119,23 +174,19 @@ export default function ArchivePage() {
             </div>
           ) : (
             <>
-              <section className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <FolderOpen size={20} color="#202020" />
-                    <h2 className="text-base font-medium text-[#202020]">
-                      Folders
-                    </h2>
+              {foldersWithSavedPosts.length > 0 && (
+                <section className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen size={20} color="#202020" />
+                      <h2 className="text-base font-medium text-[#202020]">
+                        Folders
+                      </h2>
+                    </div>
+                    <span className="text-sm text-[#767676]">
+                      {totalFolderCount}
+                    </span>
                   </div>
-                  <span className="text-sm text-[#767676]">
-                    {totalFolderCount}
-                  </span>
-                </div>
-                {foldersWithSavedPosts.length === 0 ? (
-                  <p className="text-sm text-[#696969]">
-                    No archive folders yet.
-                  </p>
-                ) : (
                   <div className="grid grid-cols-3 gap-y-5">
                     {foldersWithSavedPosts.map((folder) => (
                       <button
@@ -157,26 +208,22 @@ export default function ArchivePage() {
                       </button>
                     ))}
                   </div>
-                )}
-              </section>
+                </section>
+              )}
 
-              <section className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <DocumentText size={20} color="#202020" />
-                    <h2 className="text-base font-medium text-[#202020]">
-                      Files
-                    </h2>
+              {rootSavedPosts.length > 0 && (
+                <section className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <DocumentText size={20} color="#202020" />
+                      <h2 className="text-base font-medium text-[#202020]">
+                        Files
+                      </h2>
+                    </div>
+                    <span className="text-sm text-[#767676]">
+                      {totalFileCount}
+                    </span>
                   </div>
-                  <span className="text-sm text-[#767676]">
-                    {totalFileCount}
-                  </span>
-                </div>
-                {rootSavedPosts.length === 0 ? (
-                  <p className="text-sm text-[#696969]">
-                    No top-level archived files yet.
-                  </p>
-                ) : (
                   <div className="space-y-3">
                     {rootSavedPosts.map((savedPost) => (
                       <ArchivedFileCard
@@ -188,11 +235,15 @@ export default function ArchivePage() {
                         onOpenPost={(postId) =>
                           router.push(`/post/${encodeURIComponent(postId)}`)
                         }
+                        onRemove={(selectedSavedPost) =>
+                          void handleRemoveFromArchive(selectedSavedPost)
+                        }
+                        isRemoving={Boolean(removingSavedPostIds[savedPost.id])}
                       />
                     ))}
                   </div>
-                )}
-              </section>
+                </section>
+              )}
             </>
           )}
         </main>
