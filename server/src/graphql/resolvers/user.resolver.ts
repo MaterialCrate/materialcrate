@@ -188,6 +188,53 @@ export const UserResolver = {
       });
     },
 
+    searchUsers: async (
+      _: unknown,
+      { query, limit = 12 }: { query: string; limit?: number },
+    ) => {
+      const normalizedQuery = String(query || "").trim();
+      if (!normalizedQuery) {
+        return [];
+      }
+
+      const safeLimit = Math.max(1, Math.min(limit, 25));
+
+      return (prisma as any).user.findMany({
+        where: {
+          deleted: false,
+          disabled: false,
+          OR: [
+            {
+              username: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              displayName: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              institution: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              program: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+        orderBy: [{ createdAt: "desc" }],
+        take: safeLimit,
+      });
+    },
+
     usernameAvailable: async (
       _: unknown,
       { username }: { username: string },

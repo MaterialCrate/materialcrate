@@ -32,6 +32,7 @@ type Comment {
 extend type Query {
   post(id: ID!): Post
   posts(authorUsername: String): [Post!]!
+  searchPosts(query: String!, limit: Int = 12): [Post!]!
   comments(
     postId: ID!
     parentCommentId: ID

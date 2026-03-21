@@ -179,6 +179,82 @@ export const PostResolver = {
 
       return posts.map((post) => mapPostForGraphQL(post, viewerId));
     },
+    searchPosts: async (
+      _: unknown,
+      { query, limit = 12 }: { query: string; limit?: number },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      const normalizedQuery = String(query || "").trim();
+
+      if (!normalizedQuery) {
+        return [];
+      }
+
+      const safeLimit = Math.max(1, Math.min(limit, 25));
+      const numericYear = Number.parseInt(normalizedQuery, 10);
+
+      const posts = await prisma.post.findMany({
+        where: {
+          OR: [
+            {
+              title: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              courseCode: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              description: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            ...(Number.isFinite(numericYear)
+              ? [
+                  {
+                    year: numericYear,
+                  },
+                ]
+              : []),
+            {
+              author: {
+                is: {
+                  deleted: false,
+                  disabled: false,
+                  OR: [
+                    {
+                      username: {
+                        contains: normalizedQuery,
+                        mode: "insensitive",
+                      },
+                    },
+                    {
+                      displayName: {
+                        contains: normalizedQuery,
+                        mode: "insensitive",
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+        include: buildPostInclude(viewerId),
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: safeLimit,
+      });
+
+      return posts.map((post) => mapPostForGraphQL(post, viewerId));
+    },
     comments: async (
       _: unknown,
       {

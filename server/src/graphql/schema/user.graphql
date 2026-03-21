@@ -34,6 +34,7 @@ type Query {
   me: User
   user(id: ID!): User
   userByUsername(username: String!): User
+  searchUsers(query: String!, limit: Int = 12): [User!]!
   usernameAvailable(username: String!): Boolean!
   emailAvailable(email: String!): Boolean!
 }
