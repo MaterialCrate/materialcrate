@@ -39,7 +39,12 @@ type PostProps = {
   isArchiveBusy?: boolean;
 };
 
-type PendingProtectedAction = "like" | "comment" | "archive-add" | "archive-remove" | null;
+type PendingProtectedAction =
+  | "like"
+  | "comment"
+  | "archive-add"
+  | "archive-remove"
+  | null;
 
 function formatTimeAgo(timestamp: string) {
   const trimmed = timestamp?.trim();
@@ -102,48 +107,54 @@ export default function Post({
   const [pendingProtectedAction, setPendingProtectedAction] =
     useState<PendingProtectedAction>(null);
 
-  const ensureAuthenticated = useCallback((pendingAction?: PendingProtectedAction) => {
-    if (isLoading) {
-      if (pendingAction) {
-        setPendingProtectedAction(pendingAction);
+  const ensureAuthenticated = useCallback(
+    (pendingAction?: PendingProtectedAction) => {
+      if (isLoading) {
+        if (pendingAction) {
+          setPendingProtectedAction(pendingAction);
+        }
+        return false;
       }
-      return false;
-    }
-    if (!user) {
-      router.push("/login");
-      return false;
-    }
-    return true;
-  }, [isLoading, router, user]);
-
-  const handleLike = useCallback(async (skipAuthCheck = false) => {
-    if (isLiking) return;
-    if (!skipAuthCheck && !ensureAuthenticated("like")) return;
-
-    setIsLiking(true);
-    try {
-      const response = await fetch("/api/posts/like", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postId: post.id }),
-      });
-
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(body?.error || "Failed to toggle like");
+      if (!user) {
+        router.push("/login");
+        return false;
       }
+      return true;
+    },
+    [isLoading, router, user],
+  );
 
-      const nextLikeCount = body?.post?.likeCount;
-      const nextViewerHasLiked = body?.post?.viewerHasLiked;
+  const handleLike = useCallback(
+    async (skipAuthCheck = false) => {
+      if (isLiking) return;
+      if (!skipAuthCheck && !ensureAuthenticated("like")) return;
 
-      setLikeCount((previous) =>
-        Number.isFinite(nextLikeCount) ? nextLikeCount : previous,
-      );
-      setViewerHasLiked(Boolean(nextViewerHasLiked));
-    } finally {
-      setIsLiking(false);
-    }
-  }, [ensureAuthenticated, isLiking, post.id]);
+      setIsLiking(true);
+      try {
+        const response = await fetch("/api/posts/like", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ postId: post.id }),
+        });
+
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body?.error || "Failed to toggle like");
+        }
+
+        const nextLikeCount = body?.post?.likeCount;
+        const nextViewerHasLiked = body?.post?.viewerHasLiked;
+
+        setLikeCount((previous) =>
+          Number.isFinite(nextLikeCount) ? nextLikeCount : previous,
+        );
+        setViewerHasLiked(Boolean(nextViewerHasLiked));
+      } finally {
+        setIsLiking(false);
+      }
+    },
+    [ensureAuthenticated, isLiking, post.id],
+  );
 
   useEffect(() => {
     if (isLoading || !pendingProtectedAction) return;
@@ -245,7 +256,7 @@ export default function Post({
           type="button"
           aria-label={`Open ${post.title}`}
           onClick={() => onFileClick?.(post)}
-          className="bg-[#F3F3F3] h-45 w-full rounded p-2 flex items-center gap-4"
+          className="bg-[#F3F3F3] h-45 w-full rounded-2xl p-2 flex items-center gap-4"
         >
           <PdfThumbnail
             postId={post.id}
@@ -300,7 +311,11 @@ export default function Post({
            ${isArchiveBusy && "opacity-60"}`}
           disabled={isArchiveBusy}
           onClick={() => {
-            if (!ensureAuthenticated(isArchived ? "archive-remove" : "archive-add")) {
+            if (
+              !ensureAuthenticated(
+                isArchived ? "archive-remove" : "archive-add",
+              )
+            ) {
               return;
             }
             if (isArchived) {

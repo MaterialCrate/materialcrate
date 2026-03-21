@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { CloseCircle, Heart, Send, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import Alert from "../Alert";
 
 interface CommentDrawerProps {
   isOpen: boolean;
@@ -144,9 +145,8 @@ export default function CommentDrawer({
       setComments(Array.isArray(body?.comments) ? body.comments : []);
     } catch (error) {
       setComments([]);
-      setCommentsError(
-        error instanceof Error ? error.message : "Failed to load comments",
-      );
+      setCommentsError("Failed to load comments");
+      console.error("Failed to load comments for post", error);
     } finally {
       setIsLoadingComments(false);
     }
@@ -188,9 +188,8 @@ export default function CommentDrawer({
       }));
       setCommentsError(null);
     } catch (error) {
-      setCommentsError(
-        error instanceof Error ? error.message : "Failed to load replies",
-      );
+      setCommentsError("Failed to load replies");
+      console.error("Failed to load replies for comment", commentId, error);
     } finally {
       setIsLoadingRepliesByCommentId((previous) => ({
         ...previous,
@@ -276,11 +275,8 @@ export default function CommentDrawer({
       }
       setCommentsError(null);
     } catch (error) {
-      setCommentsError(
-        error instanceof Error
-          ? error.message
-          : "Failed to toggle comment like",
-      );
+      setCommentsError("Failed to toggle comment like");
+      console.error("Failed to toggle like for comment", commentId, error);
     } finally {
       setIsLikingByCommentId((previous) => ({
         ...previous,
@@ -380,9 +376,8 @@ export default function CommentDrawer({
       setReplyTarget(null);
       setCommentsError(null);
     } catch (error) {
-      setCommentsError(
-        error instanceof Error ? error.message : "Failed to post comment",
-      );
+      setCommentsError("Failed to post comment");
+      console.error("Failed to post comment", error);
     } finally {
       setIsSubmittingComment(false);
     }
@@ -394,251 +389,257 @@ export default function CommentDrawer({
   };
 
   return (
-    <div
-      className={`fixed inset-x-0 top-[15%] bottom-0 bg-white z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out ${
-        isOpen
-          ? "translate-y-0 opacity-100 pointer-events-auto"
-          : "translate-y-[110%] opacity-0 pointer-events-none"
-      }`}
-    >
-      <div className="flex justify-center items-center relative">
-        <h1 className="text-lg text-[#202020] font-medium">Comments</h1>
-        <button
-          type="button"
-          aria-label="Close comments"
-          onClick={handleClose}
-          className="absolute right-0"
-        >
-          <CloseCircle size={24} color="#959595" />
-        </button>
-      </div>
-      <div className="relative space-y-4 pb-18">
-        {!postId ? (
-          <p className="text-xs text-[#6D6D6D]">
-            Select a post to view comments.
-          </p>
-        ) : isLoadingComments ? (
-          <p className="text-xs text-[#6D6D6D]">Loading comments...</p>
-        ) : comments.length === 0 ? null : (
-          comments.map((comment) => {
-            const commentId = comment.id;
-            const isRepliesOpen = Boolean(
-              expandedRepliesByCommentId[commentId],
-            );
-            const replies = repliesByCommentId[commentId] ?? [];
-            const hasMoreReplies = replies.length < comment.replyCount;
-            const hiddenRepliesCount = comment.replyCount - replies.length;
-            const isLoadingReplies = Boolean(
-              isLoadingRepliesByCommentId[commentId],
-            );
-
-            return (
-              <div key={commentId}>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 bg-[#D3D3D3] aspect-square rounded-full flex items-center justify-center overflow-hidden">
-                    {getAuthorProfilePicture(comment.author) ? (
-                      <Image
-                        src={getAuthorProfilePicture(comment.author)}
-                        alt={`${getAuthorName(comment.author)}'s profile picture`}
-                        width={28}
-                        height={28}
-                        className="w-full h-full object-cover rounded-full"
-                        unoptimized
-                      />
-                    ) : (
-                      <User size={14} color="#808080" variant="Bold" />
-                    )}
-                  </div>
-                  <div className="space-y-1 w-full">
-                    <div className="flex items-center gap-0.5">
-                      <p className="text-xs text-[#444444] font-semibold">
-                        {getAuthorName(comment.author)}
-                      </p>
-                      {getAuthorSubscriptionPlan(comment.author) === "pro" ? (
-                        <Verify size={14} color="#E1761F" variant="Bold" />
-                      ) : null}
-                    </div>
-                    <p className="text-sm text-[#202020]">
-                      {renderContentWithMentions(comment.content)}
-                    </p>
-                    <div className="flex items-center font-medium justify-between text-xs text-[#5B5B5B] ">
-                      <div className="flex items-center gap-5">
-                        <p>{formatTimeAgo(comment.createdAt)}</p>
-                        <button
-                          type="button"
-                          onClick={() => handleReplyToComment(comment)}
-                        >
-                          Reply
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <p className="">{comment.likeCount ?? 0}</p>
-                        <button
-                          type="button"
-                          aria-label="like button"
-                          onClick={() => void handleLikeComment(comment.id)}
-                          disabled={Boolean(isLikingByCommentId[comment.id])}
-                          className="disabled:opacity-60"
-                        >
-                          <Heart
-                            size={18}
-                            color={
-                              comment.viewerHasLiked ? "#E00505" : "#808080"
-                            }
-                            variant={comment.viewerHasLiked ? "Bold" : "Linear"}
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {comment.replyCount > 0 ? (
-                  <div className="flex items-center gap-2 ml-9 mt-3 ">
-                    <div className="pointer-events-none h-px w-4 border border-[#A8A8A8]/20 " />
-                    <button
-                      type="button"
-                      onClick={() => void handleToggleReplies(comment)}
-                      className="text-xs text-[#7C7C7C] font-medium"
-                    >
-                      {isRepliesOpen
-                        ? "Close replies"
-                        : `View all ${comment.replyCount} replies`}
-                    </button>
-                  </div>
-                ) : null}
-
-                {isRepliesOpen ? (
-                  <div className="ml-11 mt-3 space-y-3">
-                    {replies.map((reply) => (
-                      <div key={reply.id} className="flex items-start gap-3 ">
-                        <div className="h-5 w-5 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
-                          {getAuthorProfilePicture(reply.author) ? (
-                            <Image
-                              src={getAuthorProfilePicture(reply.author)}
-                              alt={`${getAuthorName(reply.author)}'s profile picture`}
-                              width={20}
-                              height={20}
-                              className="w-full h-full object-cover rounded-full"
-                              unoptimized
-                            />
-                          ) : (
-                            <User size={12} color="#808080" variant="Bold" />
-                          )}
-                        </div>
-                        <div className="space-y-1 w-full">
-                          <div className="flex items-center gap-0.5">
-                            <p className="text-xs text-[#444444] font-semibold">
-                              {getAuthorName(reply.author)}
-                            </p>
-                            {getAuthorSubscriptionPlan(reply.author) ===
-                            "pro" ? (
-                              <Verify
-                                size={14}
-                                color="#E1761F"
-                                variant="Bold"
-                              />
-                            ) : null}
-                          </div>
-                          <p className="text-sm text-[#202020]">
-                            {renderContentWithMentions(reply.content)}
-                          </p>
-                          <div className="flex items-center justify-between text-xs text-[#5B5B5B] font-medium ">
-                            <div className="flex items-center gap-5">
-                              <p>{formatTimeAgo(reply.createdAt)}</p>
-                              <button
-                                type="button"
-                                onClick={() => handleReplyToComment(reply)}
-                              >
-                                Reply
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <p>{reply.likeCount ?? 0}</p>
-                              <button
-                                type="button"
-                                aria-label="like comment"
-                                onClick={() => void handleLikeComment(reply.id)}
-                                disabled={Boolean(
-                                  isLikingByCommentId[reply.id],
-                                )}
-                                className="disabled:opacity-60"
-                              >
-                                <Heart
-                                  size={18}
-                                  color={
-                                    reply.viewerHasLiked ? "#E00505" : "#808080"
-                                  }
-                                  variant={
-                                    reply.viewerHasLiked ? "Bold" : "Linear"
-                                  }
-                                />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {isLoadingReplies ? (
-                      <p className="text-xs text-[#7C7C7C]">
-                        Loading replies...
-                      </p>
-                    ) : null}
-                    {hasMoreReplies && !isLoadingReplies ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleShowMoreReplies(comment)}
-                        className="text-xs text-[#7C7C7C] font-medium"
-                      >
-                        Show 10 more replies ({hiddenRepliesCount} left)
-                      </button>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })
-        )}
-        {commentsError ? (
-          <p className="text-xs text-[#B10000]">{commentsError}</p>
-        ) : null}
-      </div>
-      <div className="absolute bottom-8 left-6 right-6 space-y-2">
-        {replyTarget ? (
-          <div className="flex items-center justify-between text-[11px] text-[#6A6A6A] px-1">
-            <p>
-              Replying to{" "}
-              <span className="text-[#1A66FF] font-semibold">
-                {replyTarget.mention}
-              </span>
-            </p>
-            <button
-              type="button"
-              onClick={() => setReplyTarget(null)}
-              className="text-[#6A6A6A]"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : null}
-        <div className="flex items-center justify-between gap-7">
-          <input
-            value={draftComment}
-            onChange={(event) => setDraftComment(event.target.value)}
-            placeholder="Share your thoughts... "
-            className="placeholder:text-[#828282] placeholder:text-xs text-xs py-3 px-3 w-full bg-[#EBEBEB] rounded-3xl drop-shadow-xs focus:outline-0"
-          />
+    <>
+      {commentsError && <Alert type="error" message={commentsError} />}
+      <div
+        className={`fixed inset-x-0 top-[15%] bottom-0 bg-white z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out ${
+          isOpen
+            ? "translate-y-0 opacity-100 pointer-events-auto"
+            : "translate-y-[110%] opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="flex justify-center items-center relative">
+          <h1 className="text-lg text-[#202020] font-medium">Comments</h1>
           <button
             type="button"
-            aria-label="submit comment"
-            onClick={() => void handleSubmitComment()}
-            disabled={!postId || !draftComment.trim() || isSubmittingComment}
-            className="disabled:opacity-50"
+            aria-label="Close comments"
+            onClick={handleClose}
+            className="absolute right-0"
           >
-            <Send size={32} color="#5B5B5B" />
+            <CloseCircle size={24} color="#959595" />
           </button>
         </div>
+        <div className="relative space-y-4 pb-18">
+          {!postId ? (
+            <p className="text-xs text-[#6D6D6D]">
+              Select a post to view comments.
+            </p>
+          ) : isLoadingComments ? (
+            <p className="text-xs text-[#6D6D6D]">Loading comments...</p>
+          ) : comments.length === 0 ? null : (
+            comments.map((comment) => {
+              const commentId = comment.id;
+              const isRepliesOpen = Boolean(
+                expandedRepliesByCommentId[commentId],
+              );
+              const replies = repliesByCommentId[commentId] ?? [];
+              const hasMoreReplies = replies.length < comment.replyCount;
+              const hiddenRepliesCount = comment.replyCount - replies.length;
+              const isLoadingReplies = Boolean(
+                isLoadingRepliesByCommentId[commentId],
+              );
+
+              return (
+                <div key={commentId}>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 bg-[#D3D3D3] aspect-square rounded-full flex items-center justify-center overflow-hidden">
+                      {getAuthorProfilePicture(comment.author) ? (
+                        <Image
+                          src={getAuthorProfilePicture(comment.author)}
+                          alt={`${getAuthorName(comment.author)}'s profile picture`}
+                          width={28}
+                          height={28}
+                          className="w-full h-full object-cover rounded-full"
+                          unoptimized
+                        />
+                      ) : (
+                        <User size={14} color="#808080" variant="Bold" />
+                      )}
+                    </div>
+                    <div className="space-y-1 w-full">
+                      <div className="flex items-center gap-0.5">
+                        <p className="text-xs text-[#444444] font-semibold">
+                          {getAuthorName(comment.author)}
+                        </p>
+                        {getAuthorSubscriptionPlan(comment.author) === "pro" ? (
+                          <Verify size={14} color="#E1761F" variant="Bold" />
+                        ) : null}
+                      </div>
+                      <p className="text-sm text-[#202020]">
+                        {renderContentWithMentions(comment.content)}
+                      </p>
+                      <div className="flex items-center font-medium justify-between text-xs text-[#5B5B5B] ">
+                        <div className="flex items-center gap-5">
+                          <p>{formatTimeAgo(comment.createdAt)}</p>
+                          <button
+                            type="button"
+                            onClick={() => handleReplyToComment(comment)}
+                          >
+                            Reply
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <p className="">{comment.likeCount ?? 0}</p>
+                          <button
+                            type="button"
+                            aria-label="like button"
+                            onClick={() => void handleLikeComment(comment.id)}
+                            disabled={Boolean(isLikingByCommentId[comment.id])}
+                            className="disabled:opacity-60"
+                          >
+                            <Heart
+                              size={18}
+                              color={
+                                comment.viewerHasLiked ? "#E00505" : "#808080"
+                              }
+                              variant={
+                                comment.viewerHasLiked ? "Bold" : "Linear"
+                              }
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {comment.replyCount > 0 ? (
+                    <div className="flex items-center gap-2 ml-9 mt-3 ">
+                      <div className="pointer-events-none h-px w-4 border border-[#A8A8A8]/20 " />
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleReplies(comment)}
+                        className="text-xs text-[#7C7C7C] font-medium"
+                      >
+                        {isRepliesOpen
+                          ? "Close replies"
+                          : `View all ${comment.replyCount} replies`}
+                      </button>
+                    </div>
+                  ) : null}
+
+                  {isRepliesOpen ? (
+                    <div className="ml-11 mt-3 space-y-3">
+                      {replies.map((reply) => (
+                        <div key={reply.id} className="flex items-start gap-3 ">
+                          <div className="h-5 w-5 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+                            {getAuthorProfilePicture(reply.author) ? (
+                              <Image
+                                src={getAuthorProfilePicture(reply.author)}
+                                alt={`${getAuthorName(reply.author)}'s profile picture`}
+                                width={20}
+                                height={20}
+                                className="w-full h-full object-cover rounded-full"
+                                unoptimized
+                              />
+                            ) : (
+                              <User size={12} color="#808080" variant="Bold" />
+                            )}
+                          </div>
+                          <div className="space-y-1 w-full">
+                            <div className="flex items-center gap-0.5">
+                              <p className="text-xs text-[#444444] font-semibold">
+                                {getAuthorName(reply.author)}
+                              </p>
+                              {getAuthorSubscriptionPlan(reply.author) ===
+                              "pro" ? (
+                                <Verify
+                                  size={14}
+                                  color="#E1761F"
+                                  variant="Bold"
+                                />
+                              ) : null}
+                            </div>
+                            <p className="text-sm text-[#202020]">
+                              {renderContentWithMentions(reply.content)}
+                            </p>
+                            <div className="flex items-center justify-between text-xs text-[#5B5B5B] font-medium ">
+                              <div className="flex items-center gap-5">
+                                <p>{formatTimeAgo(reply.createdAt)}</p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleReplyToComment(reply)}
+                                >
+                                  Reply
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <p>{reply.likeCount ?? 0}</p>
+                                <button
+                                  type="button"
+                                  aria-label="like comment"
+                                  onClick={() =>
+                                    void handleLikeComment(reply.id)
+                                  }
+                                  disabled={Boolean(
+                                    isLikingByCommentId[reply.id],
+                                  )}
+                                  className="disabled:opacity-60"
+                                >
+                                  <Heart
+                                    size={18}
+                                    color={
+                                      reply.viewerHasLiked
+                                        ? "#E00505"
+                                        : "#808080"
+                                    }
+                                    variant={
+                                      reply.viewerHasLiked ? "Bold" : "Linear"
+                                    }
+                                  />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {isLoadingReplies ? (
+                        <p className="text-xs text-[#7C7C7C]">
+                          Loading replies...
+                        </p>
+                      ) : null}
+                      {hasMoreReplies && !isLoadingReplies ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleShowMoreReplies(comment)}
+                          className="text-xs text-[#7C7C7C] font-medium"
+                        >
+                          Show 10 more replies ({hiddenRepliesCount} left)
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="absolute bottom-8 left-6 right-6 space-y-2">
+          {replyTarget ? (
+            <div className="flex items-center justify-between text-[11px] text-[#6A6A6A] px-1">
+              <p>
+                Replying to{" "}
+                <span className="text-[#1A66FF] font-semibold">
+                  {replyTarget.mention}
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setReplyTarget(null)}
+                className="text-[#6A6A6A]"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between gap-7">
+            <input
+              value={draftComment}
+              onChange={(event) => setDraftComment(event.target.value)}
+              placeholder="Share your thoughts... "
+              className="placeholder:text-[#828282] placeholder:text-xs text-xs py-3 px-3 w-full bg-[#EBEBEB] rounded-3xl drop-shadow-xs focus:outline-0"
+            />
+            <button
+              type="button"
+              aria-label="submit comment"
+              onClick={() => void handleSubmitComment()}
+              disabled={!postId || !draftComment.trim() || isSubmittingComment}
+              className="disabled:opacity-50"
+            >
+              <Send size={32} color="#5B5B5B" />
+            </button>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

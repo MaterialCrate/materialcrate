@@ -15,9 +15,15 @@ export default function AuthSplashScreen() {
           className="h-28 w-auto object-contain"
         />
       </div>
-      <p className="absolute bottom-10 font-serif text-[0.7rem] uppercase tracking-[0.5em] text-[#e1761f]">
-        MaterialCrate
-      </p>
+      <div className="absolute bottom-10">
+        <Image
+          src="/mc-wordmark.svg"
+          alt="MaterialCrate Logo"
+          width={120}
+          height={120}
+          priority
+        />
+      </div>
     </div>
   );
 }
