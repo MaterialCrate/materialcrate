@@ -22,40 +22,38 @@ type UserCardProps = {
 
 export default function UserCard({ user, onClick }: UserCardProps) {
   const isPro = user.subscriptionPlan?.trim().toLowerCase() === "pro";
-  const meta = [user.institution, user.program].filter(Boolean).join(" • ");
 
   return (
     <button
       type="button"
       onClick={() => onClick(user)}
-      className="flex w-full items-start gap-4 rounded-[30px] border border-[#eadccb] bg-white px-4 py-4 text-left shadow-[0_24px_60px_rgba(92,57,16,0.06)] transition hover:-translate-y-0.5"
+      className="flex w-full items-center gap-3 px-4 text-left transition hover:-translate-y-0.5"
     >
-      <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#f4f1eb]">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f4f1eb]">
         {user.profilePicture ? (
           <Image
             src={user.profilePicture}
             alt={`${user.displayName}'s profile picture`}
-            width={56}
-            height={56}
-            className="h-full w-full object-cover"
+            width={44}
+            height={44}
+            className="rounded-xl object-cover"
             unoptimized
           />
         ) : (
-          <User size={24} color="#8d7a67" variant="Bold" />
+          <User size={20} color="#8d7a67" variant="Bold" />
         )}
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <p className="truncate text-base font-semibold text-[#20160b]">
+        <div className="flex items-center gap-0.5">
+          <p className="truncate text-sm font-semibold text-[#000000]">
             {user.displayName}
           </p>
-          {isPro && <Verify size={18} color="#E1761F" variant="Bold" />}
+          {isPro && <Verify size={16} color="#E1761F" variant="Bold" />}
         </div>
-        <p className="mt-0.5 text-sm font-medium text-[#8d7a67]">
+        <p className="truncate text-xs font-medium text-[#585858]">
           @{user.username}
         </p>
-        {meta && <p className="mt-3 text-sm leading-5 text-[#5f5144]">{meta}</p>}
       </div>
     </button>
   );
