@@ -28,6 +28,7 @@ const UPDATE_POST_MUTATION = `
       courseCode
       description
       year
+      pinned
       createdAt
       likeCount
       commentCount

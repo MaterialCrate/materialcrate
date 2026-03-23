@@ -14,6 +14,7 @@ const POSTS_QUERY = `
       courseCode
       description
       year
+      pinned
       likeCount
       commentCount
       viewerHasLiked

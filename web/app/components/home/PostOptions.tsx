@@ -12,6 +12,8 @@ import {
   Trash,
   UserCirlceAdd,
   VolumeMute,
+  Location,
+  LocationSlash,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import type { HomePost, PostOptionsAnchor } from "./Post";
@@ -22,16 +24,20 @@ interface OptionsDrawerProps {
   post?: HomePost | null;
   anchor?: PostOptionsAnchor | null;
   onEditPost?: (post: HomePost) => void;
+  onPostPinned?: (post: HomePost) => void;
 }
 
 export default function OptionsOptions({
   isOpen,
+  onClose,
   post,
   anchor,
   onEditPost,
+  onPostPinned,
 }: OptionsDrawerProps) {
   const drawerRef = React.useRef<HTMLDivElement | null>(null);
   const { user } = useAuth();
+  const [isPinning, setIsPinning] = React.useState(false);
   const author = post?.author;
   const username = author?.username?.trim()
     ? `@${author.username}`
@@ -40,6 +46,12 @@ export default function OptionsOptions({
     Boolean(user?.username?.trim()) &&
     user?.username?.trim().toLowerCase() ===
       author?.username?.trim().toLowerCase();
+  const pinActionLabel = post?.pinned ? "Unpin for profile" : "Pin to profile";
+  const pinActionIcon = post?.pinned ? (
+    <LocationSlash size={20} color="#111111" variant="Bold" />
+  ) : (
+    <Location size={20} color="#111111" variant="Bold" />
+  );
 
   const primaryActions = isOwner
     ? [
@@ -48,8 +60,8 @@ export default function OptionsOptions({
           icon: <Edit2 size={20} color="#111111" variant="Bold" />,
         },
         {
-          label: "Pin to profile",
-          icon: <UserCirlceAdd size={20} color="#111111" variant="Bold" />,
+          label: pinActionLabel,
+          icon: pinActionIcon,
         },
         {
           label: "Disable comments",
@@ -167,15 +179,45 @@ export default function OptionsOptions({
               <button
                 key={action.label}
                 type="button"
-                onClick={() => {
-                  if (action.label === "Edit post" && post) {
+                disabled={isPinning}
+                onClick={async () => {
+                  if (!post) return;
+
+                  if (action.label === "Edit post") {
                     onEditPost?.(post);
+                    return;
+                  }
+
+                  if (
+                    action.label !== "Pin to profile" &&
+                    action.label !== "Unpin for profile"
+                  ) {
+                    return;
+                  }
+
+                  try {
+                    setIsPinning(true);
+                    const response = await fetch("/api/posts/pin", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ postId: post.id }),
+                    });
+                    const body = await response.json().catch(() => ({}));
+
+                    if (!response.ok || !body?.post) {
+                      throw new Error(body?.error || "Failed to pin post");
+                    }
+
+                    onPostPinned?.(body.post);
+                    onClose();
+                  } catch (error) {
+                    console.error("Failed to pin post:", error);
+                  } finally {
+                    setIsPinning(false);
                   }
                 }}
-                className={`flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 ${
-                  index < primaryActions.length - 1
-                    ? "border-b border-black/6"
-                    : ""
+                className={`flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 disabled:opacity-60 ${
+                  index < primaryActions.length - 1 && "border-b border-black/6"
                 }`}
               >
                 <span>{action.icon}</span>

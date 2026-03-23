@@ -68,6 +68,7 @@ model Post {
   id         String   @id @default(cuid())
   fileUrl    String
   thumbnailUrl String?
+  pinned     Boolean  @default(false)
   title      String
   courseCode String
   description String?

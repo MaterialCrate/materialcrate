@@ -281,6 +281,39 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     }
   };
 
+  const handlePostPinned = (pinnedPost: HomePost) => {
+    setPosts((current) => {
+      const nextPosts = current.map((post) => {
+        if (post.id === pinnedPost.id) {
+          return { ...post, ...pinnedPost, pinned: Boolean(pinnedPost.pinned) };
+        }
+
+        if (
+          post.author?.id &&
+          pinnedPost.author?.id &&
+          post.author.id === pinnedPost.author.id
+        ) {
+          return { ...post, pinned: false };
+        }
+
+        return post;
+      });
+
+      nextPosts.sort((left, right) => {
+        if (Boolean(left.pinned) === Boolean(right.pinned)) return 0;
+        return left.pinned ? -1 : 1;
+      });
+
+      return nextPosts;
+    });
+
+    setActiveOptionsPost((current) =>
+      current?.id === pinnedPost.id
+        ? { ...current, ...pinnedPost, pinned: Boolean(pinnedPost.pinned) }
+        : current,
+    );
+  };
+
   if (!isPublicProfile && isLoadingAuth) {
     return (
       <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>
@@ -334,6 +367,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         }}
         post={activeOptionsPost}
         anchor={activeOptionsAnchor}
+        onPostPinned={handlePostPinned}
         onEditPost={(selectedPost) => {
           setEditingPost(selectedPost);
           setIsUploadDrawerOpen(true);
@@ -399,6 +433,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                   <div key={post.id}>
                     <Post
                       post={post}
+                      showPinnedIndicator
                       onCommentClick={(selectedPost) => {
                         setActiveCommentPostId(selectedPost.id);
                         setIsCommentDrawerOpen(true);

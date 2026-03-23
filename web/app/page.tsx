@@ -163,6 +163,34 @@ export default function Home() {
     }
   };
 
+  const handlePostPinned = (pinnedPost: HomePost) => {
+    setPosts((current) => {
+      const nextPosts = current.map((post) => {
+        if (post.id === pinnedPost.id) {
+          return { ...post, ...pinnedPost, pinned: Boolean(pinnedPost.pinned) };
+        }
+
+        if (
+          post.author?.id &&
+          pinnedPost.author?.id &&
+          post.author.id === pinnedPost.author.id
+        ) {
+          return { ...post, pinned: false };
+        }
+
+        return post;
+      });
+
+      return nextPosts;
+    });
+
+    setActiveOptionsPost((current) =>
+      current?.id === pinnedPost.id
+        ? { ...current, ...pinnedPost, pinned: Boolean(pinnedPost.pinned) }
+        : current,
+    );
+  };
+
   return (
     <div className="py-18">
       <ArchiveDrawer
@@ -210,6 +238,7 @@ export default function Home() {
         }}
         post={activeOptionsPost}
         anchor={activeOptionsAnchor}
+        onPostPinned={handlePostPinned}
         onEditPost={(selectedPost) => {
           setEditingPost(selectedPost);
           setIsUploadDrawerOpen(true);

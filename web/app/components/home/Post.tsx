@@ -2,7 +2,15 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { More, Heart, Messages2, Archive, User, Verify } from "iconsax-reactjs";
+import {
+  More,
+  Heart,
+  Messages2,
+  Archive,
+  User,
+  Verify,
+  Location,
+} from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import Image from "next/image";
 import PdfThumbnail from "./PdfThumbnail";
@@ -15,6 +23,7 @@ export type HomePost = {
   courseCode: string;
   description?: string | null;
   year?: number | null;
+  pinned?: boolean;
   likeCount?: number;
   commentCount?: number;
   viewerHasLiked?: boolean;
@@ -47,6 +56,7 @@ type PostProps = {
   onArchiveRemoveClick?: (post: HomePost) => void;
   isArchived?: boolean;
   isArchiveBusy?: boolean;
+  showPinnedIndicator?: boolean;
 };
 
 type PendingProtectedAction =
@@ -96,6 +106,7 @@ export default function Post({
   onArchiveRemoveClick,
   isArchived = false,
   isArchiveBusy = false,
+  showPinnedIndicator = false,
 }: PostProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -246,6 +257,15 @@ export default function Post({
               <p>{authorUsername}</p>
               <p>&bull;</p>
               <p>{createdLabel}</p>
+              {showPinnedIndicator && post.pinned && (
+                <>
+                  <p>&bull;</p>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF3E7] px-2 py-0.5 text-[#E1761F]">
+                    <Location size={12} color="#E1761F" variant="Bold" />
+                    <span>Pinned</span>
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </button>

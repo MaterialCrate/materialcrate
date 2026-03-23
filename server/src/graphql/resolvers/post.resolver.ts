@@ -23,6 +23,10 @@ type UpdatePostArgs = {
   year?: number;
 };
 
+type PinPostArgs = {
+  postId: string;
+};
+
 type GraphQLContext = {
   user?: {
     sub?: string;
@@ -183,9 +187,9 @@ export const PostResolver = {
             }
           : undefined,
         include: buildPostInclude(viewerId),
-        orderBy: {
-          createdAt: "desc",
-        },
+        orderBy: (normalizedAuthorUsername
+          ? [{ pinned: "desc" }, { createdAt: "desc" }]
+          : { createdAt: "desc" }) as any,
       });
 
       return posts.map((post) => mapPostForGraphQL(post, viewerId));
@@ -412,9 +416,9 @@ export const PostResolver = {
         throw new Error("Title and course code are required");
       }
 
-      const existingPost = await prisma.post.findUnique({
+      const existingPost = await (prisma as any).post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true, authorId: true },
+        select: { id: true, authorId: true, pinned: true },
       });
 
       if (!existingPost) {
@@ -437,6 +441,67 @@ export const PostResolver = {
       });
 
       return mapPostForGraphQL(updatedPost, viewerId);
+    },
+    pinPostToProfile: async (
+      _: unknown,
+      { postId }: PinPostArgs,
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedPostId = postId?.trim();
+      if (!normalizedPostId) {
+        throw new Error("Post id is required");
+      }
+
+      const existingPost = await (prisma as any).post.findUnique({
+        where: { id: normalizedPostId },
+        select: { id: true, authorId: true, pinned: true },
+      });
+
+      if (!existingPost) {
+        throw new Error("Post not found");
+      }
+
+      if (existingPost.authorId !== viewerId) {
+        throw new Error("You can only pin your own posts");
+      }
+
+      if (existingPost.pinned) {
+        await (prisma as any).post.update({
+          where: { id: normalizedPostId },
+          data: { pinned: false },
+        });
+      } else {
+        await prisma.$transaction([
+          (prisma as any).post.updateMany({
+            where: {
+              authorId: viewerId,
+              pinned: true,
+              NOT: { id: normalizedPostId },
+            },
+            data: { pinned: false },
+          }),
+          (prisma as any).post.update({
+            where: { id: normalizedPostId },
+            data: { pinned: true },
+          }),
+        ]);
+      }
+
+      const pinnedPost = await prisma.post.findUnique({
+        where: { id: normalizedPostId },
+        include: buildPostInclude(viewerId),
+      });
+
+      if (!pinnedPost) {
+        throw new Error("Post not found");
+      }
+
+      return mapPostForGraphQL(pinnedPost, viewerId);
     },
     togglePostLike: async (
       _: unknown,
@@ -693,6 +758,7 @@ export const PostResolver = {
       return comments.map((comment: any) => mapCommentForGraphQL(comment, viewerId));
     },
     viewerHasLiked: (post: any) => Boolean(post.viewerHasLiked),
+    pinned: (post: any) => Boolean(post.pinned),
   },
   Comment: {
     post: async (comment: any) => {

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+export const runtime = "nodejs";
+
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
-const POST_QUERY = `
-  query PostById($id: ID!) {
-    post(id: $id) {
+const PIN_POST_MUTATION = `
+  mutation PinPostToProfile($postId: ID!) {
+    pinPostToProfile(postId: $postId) {
       id
       fileUrl
       thumbnailUrl
@@ -15,10 +17,10 @@ const POST_QUERY = `
       description
       year
       pinned
+      createdAt
       likeCount
       commentCount
       viewerHasLiked
-      createdAt
       author {
         id
         displayName
@@ -30,41 +32,46 @@ const POST_QUERY = `
   }
 `;
 
-export async function GET(
-  _: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  const { id } = await params;
-  const postId = id?.trim();
-  if (!postId) {
-    return NextResponse.json({ error: "Invalid post id" }, { status: 400 });
-  }
-
+export async function POST(req: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get("mc_session")?.value;
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null);
+  const postId = typeof body?.postId === "string" ? body.postId.trim() : "";
+
+  if (!postId) {
+    return NextResponse.json({ error: "Post id is required" }, { status: 400 });
+  }
 
   const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      query: POST_QUERY,
-      variables: { id: postId },
+      query: PIN_POST_MUTATION,
+      variables: { postId },
     }),
-    cache: "no-store",
   });
+
   const graphqlBody = await graphqlResponse.json().catch(() => ({}));
 
   if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
     return NextResponse.json(
       {
-        error: graphqlBody?.errors?.[0]?.message || "Failed to fetch post",
+        error: graphqlBody?.errors?.[0]?.message || "Failed to pin post",
+        details: graphqlBody?.errors ?? null,
       },
       { status: 400 },
     );
   }
 
-  return NextResponse.json({ post: graphqlBody?.data?.post ?? null });
+  return NextResponse.json({
+    ok: true,
+    post: graphqlBody?.data?.pinPostToProfile ?? null,
+  });
 }
