@@ -9,6 +9,7 @@ const POST_QUERY = `
     post(id: $id) {
       id
       fileUrl
+      thumbnailUrl
       title
       courseCode
       description

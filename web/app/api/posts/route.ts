@@ -9,6 +9,7 @@ const POSTS_QUERY = `
     posts(authorUsername: $authorUsername) {
       id
       fileUrl
+      thumbnailUrl
       title
       courseCode
       description

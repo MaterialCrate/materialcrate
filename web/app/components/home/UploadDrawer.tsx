@@ -8,6 +8,7 @@ import {
   Trash,
   DocumentText,
 } from "iconsax-reactjs";
+import { createPdfThumbnailBase64 } from "@/app/lib/pdf-thumbnail";
 import ActionButton from "../ActionButton";
 import Alert from "../Alert";
 
@@ -28,29 +29,56 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
     "error",
   );
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const [thumbnailBase64, setThumbnailBase64] = useState<string | null>(null);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] =
+    useState<boolean>(false);
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 60 }, (_, index) =>
     String(currentYear - index),
   );
 
-  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     if (file && file.size > 100 * 1024 * 1024) {
       setAlertType("error");
       setAlertMessage("File size exceeds 100MB limit.");
       setSelectedFile(null);
+      setThumbnailBase64(null);
+      setIsGeneratingThumbnail(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
       return;
     }
+
     setAlertMessage("");
     setSelectedFile(file);
+    setThumbnailBase64(null);
     event.target.value = "";
+
+    if (!file) {
+      setIsGeneratingThumbnail(false);
+      return;
+    }
+
+    setIsGeneratingThumbnail(true);
+
+    try {
+      const nextThumbnailBase64 = await createPdfThumbnailBase64(file);
+      setThumbnailBase64(nextThumbnailBase64);
+    } catch {
+      setThumbnailBase64(null);
+    } finally {
+      setIsGeneratingThumbnail(false);
+    }
   }
 
   const disabled =
-    !selectedFile || title.length < 3 || courseCode.length < 3 || isPublishing;
+    !selectedFile ||
+    title.length < 3 ||
+    courseCode.length < 3 ||
+    isPublishing ||
+    isGeneratingThumbnail;
 
   async function handlePublish() {
     if (!selectedFile || disabled) return;
@@ -61,6 +89,9 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
     try {
       const formData = new FormData();
       formData.append("file", selectedFile);
+      if (thumbnailBase64) {
+        formData.append("thumbnailBase64", thumbnailBase64);
+      }
       formData.append("title", title.trim());
       formData.append("courseCode", courseCode.trim());
       formData.append("description", description.trim());
@@ -81,6 +112,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
       setAlertType("success");
       setAlertMessage("Document uploaded successfully.");
       setSelectedFile(null);
+      setThumbnailBase64(null);
       setTitle("");
       setCourseCode("");
       setYear("");
@@ -174,6 +206,11 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
                       <p className="text-[#B0B0B0] text-xs font-medium">
                         {(selectedFile.size / (1024 * 1024)).toFixed(2)}MB
                       </p>
+                      {isGeneratingThumbnail && (
+                        <p className="text-[#B0B0B0] text-[10px] font-medium">
+                          Generating preview...
+                        </p>
+                      )}
                     </div>
                   </div>
                   <button
@@ -181,6 +218,8 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedFile(null);
+                      setThumbnailBase64(null);
+                      setIsGeneratingThumbnail(false);
                       if (fileInputRef.current) {
                         fileInputRef.current.value = "";
                       }
@@ -264,7 +303,11 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             onClick={handlePublish}
             disabled={disabled}
           >
-            {isPublishing ? "Publishing..." : "Publish"}
+            {isGeneratingThumbnail
+              ? "Preparing preview..."
+              : isPublishing
+                ? "Publishing..."
+                : "Publish"}
           </ActionButton>
         </div>
       </div>

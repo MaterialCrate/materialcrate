@@ -20,6 +20,7 @@ const SEARCH_QUERY = `
     searchPosts(query: $query, limit: $limit) {
       id
       fileUrl
+      thumbnailUrl
       title
       courseCode
       description

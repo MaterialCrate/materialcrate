@@ -10,6 +10,7 @@ import PdfThumbnail from "./PdfThumbnail";
 export type HomePost = {
   id: string;
   fileUrl: string;
+  thumbnailUrl?: string | null;
   title: string;
   courseCode: string;
   description?: string | null;
@@ -261,6 +262,7 @@ export default function Post({
           <PdfThumbnail
             postId={post.id}
             fileUrl={post.fileUrl}
+            thumbnailUrl={post.thumbnailUrl}
             title={post.title}
           />
           <div className="space-y-1 text-left h-full">

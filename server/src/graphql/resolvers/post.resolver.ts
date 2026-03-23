@@ -6,6 +6,7 @@ import { s3 } from "../../config/s3";
 
 type CreatePostArgs = {
   fileBase64: string;
+  thumbnailBase64?: string;
   fileName: string;
   mimeType: string;
   title: string;
@@ -26,6 +27,8 @@ const sanitizeFileName = (name: string) =>
 const buildS3FileUrl = (bucket: string, region: string, key: string) =>
   `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
 const POST_FILE_SIGNED_URL_TTL_SECONDS = 60 * 60;
+const POST_THUMBNAIL_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
+const MAX_POST_THUMBNAIL_BYTES = 2 * 1024 * 1024;
 
 const extractS3KeyFromUrl = (
   fileUrl: string,
@@ -298,7 +301,16 @@ export const PostResolver = {
         throw new Error("S3 bucket configuration is missing");
       }
 
-      const { fileBase64, fileName, mimeType, title, courseCode, description, year } = args;
+      const {
+        fileBase64,
+        thumbnailBase64,
+        fileName,
+        mimeType,
+        title,
+        courseCode,
+        description,
+        year,
+      } = args;
 
       if (!fileBase64 || !fileName || !mimeType || !title || !courseCode) {
         throw new Error("Missing required post fields");
@@ -328,10 +340,41 @@ export const PostResolver = {
       );
 
       const fileUrl = buildS3FileUrl(bucket, region, key);
+      let thumbnailUrl: string | null = null;
+
+      if (typeof thumbnailBase64 === "string" && thumbnailBase64.trim()) {
+        try {
+          const thumbnailBuffer = Buffer.from(thumbnailBase64, "base64");
+          if (
+            thumbnailBuffer.length > 0 &&
+            thumbnailBuffer.length <= MAX_POST_THUMBNAIL_BYTES
+          ) {
+            const thumbnailBaseName =
+              fileName.replace(/\.pdf$/i, "") || "document";
+            const thumbnailKey = `thumbnails/${Date.now()}-${randomUUID()}-${sanitizeFileName(
+              thumbnailBaseName,
+            )}.webp`;
+
+            await s3.send(
+              new PutObjectCommand({
+                Bucket: bucket,
+                Key: thumbnailKey,
+                Body: thumbnailBuffer,
+                ContentType: "image/webp",
+              }),
+            );
+
+            thumbnailUrl = buildS3FileUrl(bucket, region, thumbnailKey);
+          }
+        } catch {
+          thumbnailUrl = null;
+        }
+      }
 
       return prisma.post.create({
         data: {
           fileUrl,
+          thumbnailUrl,
           title: title.trim(),
           courseCode: courseCode.trim(),
           description: description?.trim() || null,
@@ -542,6 +585,36 @@ export const PostResolver = {
         );
       } catch {
         return rawFileUrl;
+      }
+    },
+    thumbnailUrl: async (post: any) => {
+      const rawThumbnailUrl = post.thumbnailUrl?.trim();
+      if (!rawThumbnailUrl) {
+        return rawThumbnailUrl;
+      }
+
+      const bucket = process.env.AWS_S3_BUCKET_NAME;
+      const region = process.env.AWS_REGION;
+      if (!bucket || !region) {
+        return rawThumbnailUrl;
+      }
+
+      const key = extractS3KeyFromUrl(rawThumbnailUrl, bucket, region);
+      if (!key) {
+        return rawThumbnailUrl;
+      }
+
+      try {
+        return await getSignedUrl(
+          s3,
+          new GetObjectCommand({
+            Bucket: bucket,
+            Key: key,
+          }),
+          { expiresIn: POST_THUMBNAIL_SIGNED_URL_TTL_SECONDS },
+        );
+      } catch {
+        return rawThumbnailUrl;
       }
     },
     likeCount: (post: any) => post.likeCount ?? post?._count?.likes ?? 0,

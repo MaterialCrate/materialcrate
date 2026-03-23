@@ -9,6 +9,7 @@ const GRAPHQL_ENDPOINT =
 const CREATE_POST_MUTATION = `
   mutation CreatePost(
     $fileBase64: String!
+    $thumbnailBase64: String
     $fileName: String!
     $mimeType: String!
     $title: String!
@@ -18,6 +19,7 @@ const CREATE_POST_MUTATION = `
   ) {
     createPost(
       fileBase64: $fileBase64
+      thumbnailBase64: $thumbnailBase64
       fileName: $fileName
       mimeType: $mimeType
       title: $title
@@ -27,6 +29,7 @@ const CREATE_POST_MUTATION = `
     ) {
       id
       fileUrl
+      thumbnailUrl
       title
       courseCode
       description
@@ -47,6 +50,7 @@ export async function POST(req: Request) {
   const title = formData.get("title");
   const courseCode = formData.get("courseCode");
   const description = formData.get("description");
+  const thumbnailBase64 = formData.get("thumbnailBase64");
   const yearValue = formData.get("year");
 
   if (!(file instanceof File)) {
@@ -85,6 +89,10 @@ export async function POST(req: Request) {
       query: CREATE_POST_MUTATION,
       variables: {
         fileBase64,
+        thumbnailBase64:
+          typeof thumbnailBase64 === "string" && thumbnailBase64.trim()
+            ? thumbnailBase64.trim()
+            : null,
         fileName: file.name,
         mimeType: file.type || "application/pdf",
         title: title.trim(),

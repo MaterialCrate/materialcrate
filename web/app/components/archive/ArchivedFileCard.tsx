@@ -46,6 +46,7 @@ export default function ArchivedFileCard({
           <PdfThumbnail
             postId={savedPost.post.id}
             fileUrl={savedPost.post.fileUrl}
+            thumbnailUrl={savedPost.post.thumbnailUrl}
             title={savedPost.post.title}
           />
         </button>

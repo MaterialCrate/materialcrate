@@ -1,6 +1,7 @@
 type Post {
   id: ID!
   fileUrl: String!
+  thumbnailUrl: String
   title: String!
   courseCode: String!
   description: String
@@ -44,6 +45,7 @@ extend type Query {
 extend type Mutation {
   createPost(
     fileBase64: String!
+    thumbnailBase64: String
     fileName: String!
     mimeType: String!
     title: String!

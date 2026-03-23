@@ -67,6 +67,7 @@ model SeoAccount {
 model Post {
   id         String   @id @default(cuid())
   fileUrl    String
+  thumbnailUrl String?
   title      String
   courseCode String
   description String?

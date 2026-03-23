@@ -28,6 +28,7 @@ const ARCHIVE_QUERY = `
         post {
           id
           fileUrl
+          thumbnailUrl
           title
           courseCode
           description
@@ -67,6 +68,7 @@ const SAVE_POST_MUTATION = `
       post {
         id
         fileUrl
+        thumbnailUrl
         title
         courseCode
         description

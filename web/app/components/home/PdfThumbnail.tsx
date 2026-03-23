@@ -1,10 +1,12 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 type PdfThumbnailProps = {
   postId: string;
   fileUrl: string;
+  thumbnailUrl?: string | null;
   title: string;
 };
 
@@ -13,15 +15,27 @@ type ThumbnailState = "idle" | "loading" | "ready" | "error";
 export default function PdfThumbnail({
   postId,
   fileUrl,
+  thumbnailUrl,
   title,
 }: PdfThumbnailProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [thumbnailState, setThumbnailState] = useState<ThumbnailState>("idle");
+  const [imageFailed, setImageFailed] = useState(false);
   const proxiedFileUrl = postId
     ? `/api/posts/file?postId=${encodeURIComponent(postId)}`
     : `/api/posts/file?url=${encodeURIComponent(fileUrl)}`;
+  const canUseStoredThumbnail = Boolean(thumbnailUrl && !imageFailed);
 
   useEffect(() => {
+    setImageFailed(false);
+  }, [thumbnailUrl]);
+
+  useEffect(() => {
+    if (canUseStoredThumbnail) {
+      setThumbnailState("ready");
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas || !fileUrl) {
       setThumbnailState("error");
@@ -85,18 +99,34 @@ export default function PdfThumbnail({
       const context = canvas.getContext("2d");
       context?.clearRect(0, 0, canvas.width, canvas.height);
     };
-  }, [fileUrl, proxiedFileUrl]);
+  }, [canUseStoredThumbnail, fileUrl, proxiedFileUrl]);
 
   return (
     <div className="relative h-40 w-28 shrink-0 overflow-hidden rounded-sm bg-[#E8E8E8]">
+      {canUseStoredThumbnail && thumbnailUrl ? (
+        <Image
+          src={thumbnailUrl}
+          alt={`${title} preview`}
+          className="block h-full w-full object-cover object-top"
+          width={112}
+          height={160}
+          unoptimized
+          onError={() => {
+            setImageFailed(true);
+            setThumbnailState("idle");
+          }}
+        />
+      ) : null}
       <canvas
         ref={canvasRef}
         aria-label={`${title} preview`}
         className={`block h-full w-full object-top ${
-          thumbnailState === "ready" ? "opacity-100" : "opacity-0"
+          !canUseStoredThumbnail && thumbnailState === "ready"
+            ? "opacity-100"
+            : "opacity-0"
         }`}
       />
-      {thumbnailState !== "ready" && (
+      {!canUseStoredThumbnail && thumbnailState !== "ready" && (
         <div className="absolute inset-0 flex items-center justify-center bg-[#E8E8E8] px-2 text-center text-[10px] font-medium text-[#767676]">
           {thumbnailState === "error" ? "PDF" : "Loading preview..."}
         </div>
