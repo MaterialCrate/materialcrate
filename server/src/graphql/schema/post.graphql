@@ -53,6 +53,13 @@ extend type Mutation {
     description: String
     year: Int
   ): Post!
+  updatePost(
+    postId: ID!
+    title: String!
+    courseCode: String!
+    description: String
+    year: Int
+  ): Post!
   togglePostLike(postId: ID!): Post!
   createComment(postId: ID!, content: String!, parentCommentId: ID): Comment!
   toggleCommentLike(commentId: ID!): Comment!

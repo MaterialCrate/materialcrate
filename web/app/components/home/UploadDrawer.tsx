@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ArrowDown2,
   CloseCircle,
@@ -11,13 +11,21 @@ import {
 import { createPdfThumbnailBase64 } from "@/app/lib/pdf-thumbnail";
 import ActionButton from "../ActionButton";
 import Alert from "../Alert";
+import type { HomePost } from "./Post";
 
 interface UploadDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  post?: HomePost | null;
+  onPostSaved?: (post: HomePost, mode: "create" | "edit") => void;
 }
 
-export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
+export default function UploadDrawer({
+  isOpen,
+  onClose,
+  post,
+  onPostSaved,
+}: UploadDrawerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState<string>("");
   const [courseCode, setCourseCode] = useState<string>("");
@@ -36,6 +44,26 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
   const yearOptions = Array.from({ length: 60 }, (_, index) =>
     String(currentYear - index),
   );
+  const isEditMode = Boolean(post);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setAlertMessage("");
+    setAlertType("error");
+    setIsPublishing(false);
+    setIsGeneratingThumbnail(false);
+    setSelectedFile(null);
+    setThumbnailBase64(null);
+    setTitle(post?.title ?? "");
+    setCourseCode(post?.courseCode ?? "");
+    setYear(post?.year ? String(post.year) : "");
+    setDescription(post?.description ?? "");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [isOpen, post]);
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -74,43 +102,74 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
   }
 
   const disabled =
-    !selectedFile ||
     title.length < 3 ||
     courseCode.length < 3 ||
     isPublishing ||
-    isGeneratingThumbnail;
+    isGeneratingThumbnail ||
+    (!isEditMode && !selectedFile);
 
   async function handlePublish() {
-    if (!selectedFile || disabled) return;
+    if (disabled) return;
 
     setIsPublishing(true);
     setAlertMessage("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      if (thumbnailBase64) {
-        formData.append("thumbnailBase64", thumbnailBase64);
-      }
-      formData.append("title", title.trim());
-      formData.append("courseCode", courseCode.trim());
-      formData.append("description", description.trim());
-      if (year) {
-        formData.append("year", year);
-      }
+      let response: Response;
 
-      const response = await fetch("/api/posts/create", {
-        method: "POST",
-        body: formData,
-      });
+      if (isEditMode && post) {
+        response = await fetch("/api/posts/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postId: post.id,
+            title: title.trim(),
+            courseCode: courseCode.trim(),
+            description: description.trim(),
+            year: year || null,
+          }),
+        });
+      } else {
+        if (!selectedFile) return;
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        if (thumbnailBase64) {
+          formData.append("thumbnailBase64", thumbnailBase64);
+        }
+        formData.append("title", title.trim());
+        formData.append("courseCode", courseCode.trim());
+        formData.append("description", description.trim());
+        if (year) {
+          formData.append("year", year);
+        }
+
+        response = await fetch("/api/posts/create", {
+          method: "POST",
+          body: formData,
+        });
+      }
 
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(body?.error || "Failed to upload document");
+        throw new Error(
+          isEditMode
+            ? "Failed to update document"
+            : "Failed to upload document",
+        );
+        console.error("Upload error details:", {
+          status: response.status,
+          statusText: response.statusText,
+          body,
+        });
       }
 
       setAlertType("success");
-      setAlertMessage("Document uploaded successfully.");
+      setAlertMessage(
+        isEditMode
+          ? "Document updated successfully."
+          : "Document uploaded successfully.",
+      );
       setSelectedFile(null);
       setThumbnailBase64(null);
       setTitle("");
@@ -120,12 +179,16 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      if (body?.post) {
+        onPostSaved?.(body.post, isEditMode ? "edit" : "create");
+      }
       onClose();
     } catch (error: unknown) {
       setAlertType("error");
       setAlertMessage(
-        error instanceof Error ? error.message : "Failed to upload document",
+        isEditMode ? "Failed to update document" : "Failed to upload document",
       );
+      console.error("Error details:", error);
     } finally {
       setIsPublishing(false);
     }
@@ -147,10 +210,10 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             : "translate-y-[110%] opacity-0 pointer-events-none"
         }`}
       >
-        <div className="shrink-0 px-6 py-5 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] bg-white">
+        <div className="shrink-0 px-6 py-5 bg-white">
           <div className="relative flex items-center justify-center">
-            <h4 className="text-center font-medium text-xl text-[#202020]">
-              Share a New Material
+            <h4 className="text-center font-medium text-lg text-[#202020]">
+              {isEditMode ? "Edit Material" : "Share a New Material"}
             </h4>
             <button
               aria-label="Close upload drawer"
@@ -158,78 +221,98 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
               className="absolute right-0 flex items-center justify-center"
               onClick={onClose}
             >
-              <CloseCircle size={30} color="#737373" />
+              <CloseCircle size={24} color="#737373" />
             </button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
           <div className="space-y-1">
             <p className="text-[#5B5B5B] text-sm">
-              Select document to share<span className="text-red-500">*</span>
+              {isEditMode ? "Document" : "Select document to share"}
+              {!isEditMode && <span className="text-red-500">*</span>}
             </p>
-            <input
-              ref={fileInputRef}
-              id="material-upload"
-              type="file"
-              accept=".pdf,application/pdf"
-              className="hidden"
-              onChange={handleFileChange}
-              required
-            />
-            <label
-              htmlFor="material-upload"
-              className="w-full py-6 px-3 border border-[#B0B0B0] border-dashed rounded-xl flex flex-col items-center justify-center gap-5 cursor-pointer"
-            >
-              {!selectedFile ? (
-                <>
-                  <DocumentUpload size={40} color="#B0B0B0" />
+            {isEditMode ? (
+              <div className="w-full rounded-xl border border-[#E4E4E4] bg-[#F7F7F7] px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <DocumentText size={30} color="#E1761F" variant="Bold" />
                   <div>
-                    <p className="text-xs font-medium text-[#737373]">
-                      Drag and drop or{" "}
-                      <span className="underline text-[#454545] text-center">
-                        click to upload
-                      </span>
-                    </p>
-                    <p className="text-[10px] text-[#737373] font-medium text-center">
-                      Max file size: 100MB (PDF)
+                    <p className="text-xs font-medium text-[#202020]">
+                      {post?.title || "Current document"}
                     </p>
                   </div>
-                </>
-              ) : (
-                <div className="flex justify-between items-center gap-2 w-full">
-                  <div className="flex gap-2 items-center">
-                    <DocumentText size={38} color="#E1761F" variant="Bold" />
-                    <div className="flex flex-col justify-between">
-                      <p className="text-xs text-[#202020] font-medium truncate max-w-56">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-[#B0B0B0] text-xs font-medium">
-                        {(selectedFile.size / (1024 * 1024)).toFixed(2)}MB
-                      </p>
-                      {isGeneratingThumbnail && (
-                        <p className="text-[#B0B0B0] text-[10px] font-medium">
-                          Generating preview...
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedFile(null);
-                      setThumbnailBase64(null);
-                      setIsGeneratingThumbnail(false);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                      }
-                    }}
-                  >
-                    <Trash size={22} color="#E00505" />
-                  </button>
                 </div>
-              )}
-            </label>
+              </div>
+            ) : (
+              <>
+                <input
+                  ref={fileInputRef}
+                  id="material-upload"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  required
+                />
+                <label
+                  htmlFor="material-upload"
+                  className="w-full py-6 px-3 border border-[#B0B0B0] border-dashed rounded-xl flex flex-col items-center justify-center gap-5 cursor-pointer"
+                >
+                  {!selectedFile ? (
+                    <>
+                      <DocumentUpload size={40} color="#B0B0B0" />
+                      <div>
+                        <p className="text-xs font-medium text-[#737373]">
+                          Drag and drop or{" "}
+                          <span className="underline text-[#454545] text-center">
+                            click to upload
+                          </span>
+                        </p>
+                        <p className="text-[10px] text-[#737373] font-medium text-center">
+                          Max file size: 100MB (PDF)
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center gap-2 w-full">
+                      <div className="flex gap-2 items-center">
+                        <DocumentText
+                          size={38}
+                          color="#E1761F"
+                          variant="Bold"
+                        />
+                        <div className="flex flex-col justify-between">
+                          <p className="text-xs text-[#202020] font-medium truncate max-w-56">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-[#B0B0B0] text-xs font-medium">
+                            {(selectedFile.size / (1024 * 1024)).toFixed(2)}MB
+                          </p>
+                          {isGeneratingThumbnail && (
+                            <p className="text-[#B0B0B0] text-[10px] font-medium">
+                              Generating preview...
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedFile(null);
+                          setThumbnailBase64(null);
+                          setIsGeneratingThumbnail(false);
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                          }
+                        }}
+                      >
+                        <Trash size={22} color="#E00505" />
+                      </button>
+                    </div>
+                  )}
+                </label>
+              </>
+            )}
           </div>
           <div className="space-y-1">
             <p className="text-[#5B5B5B] text-sm">
@@ -241,6 +324,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
               onChange={(e) => setTitle(e.target.value)}
               required
               maxLength={50}
+              style={{ fontSize: "0.75rem" }}
               className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs focus:outline-none"
             />
           </div>
@@ -254,6 +338,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
               onChange={(e) => setCourseCode(e.target.value)}
               required
               maxLength={8}
+              style={{ fontSize: "0.75rem" }}
               className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs  focus:outline-none"
             />
           </div>
@@ -294,6 +379,7 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
+              style={{ fontSize: "0.75rem" }}
               className="w-full rounded-lg px-3 pt-3 h-28 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs resize-none focus:outline-none"
             />
           </div>
@@ -306,8 +392,12 @@ export default function UploadDrawer({ isOpen, onClose }: UploadDrawerProps) {
             {isGeneratingThumbnail
               ? "Preparing preview..."
               : isPublishing
-                ? "Publishing..."
-                : "Publish"}
+                ? isEditMode
+                  ? "Saving..."
+                  : "Publishing..."
+                : isEditMode
+                  ? "Save changes"
+                  : "Publish"}
           </ActionButton>
         </div>
       </div>

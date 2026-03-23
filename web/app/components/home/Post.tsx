@@ -210,18 +210,17 @@ export default function Post({
   ]);
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-4 space-y-2">
       <div className="flex justify-between items-start px-6">
         <button
           type="button"
-          className="flex items-center gap-2 text-left"
+          className="flex items-center space-x-2 text-left"
           onClick={() => {
             if (!authorRoute) return;
             router.push(authorRoute);
           }}
           disabled={!authorRoute}
         >
-          <div></div>
           <div className="w-10 h-10 aspect-square bg-[#F3F3F3] rounded-full flex items-center justify-center overflow-hidden">
             {authorProfilePicture ? (
               <Image

@@ -15,6 +15,14 @@ type CreatePostArgs = {
   year?: number;
 };
 
+type UpdatePostArgs = {
+  postId: string;
+  title: string;
+  courseCode: string;
+  description?: string;
+  year?: number;
+};
+
 type GraphQLContext = {
   user?: {
     sub?: string;
@@ -383,6 +391,52 @@ export const PostResolver = {
         },
         include: buildPostInclude(ctx.user.sub),
       });
+    },
+    updatePost: async (_: unknown, args: UpdatePostArgs, ctx: GraphQLContext) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedPostId = args.postId?.trim();
+      const normalizedTitle = args.title?.trim();
+      const normalizedCourseCode = args.courseCode?.trim();
+      const normalizedDescription = args.description?.trim() || null;
+      const normalizedYear = Number.isFinite(args.year) ? args.year : null;
+
+      if (!normalizedPostId) {
+        throw new Error("Post id is required");
+      }
+
+      if (!normalizedTitle || !normalizedCourseCode) {
+        throw new Error("Title and course code are required");
+      }
+
+      const existingPost = await prisma.post.findUnique({
+        where: { id: normalizedPostId },
+        select: { id: true, authorId: true },
+      });
+
+      if (!existingPost) {
+        throw new Error("Post not found");
+      }
+
+      if (existingPost.authorId !== viewerId) {
+        throw new Error("You can only edit your own posts");
+      }
+
+      const updatedPost = await prisma.post.update({
+        where: { id: normalizedPostId },
+        data: {
+          title: normalizedTitle,
+          courseCode: normalizedCourseCode,
+          description: normalizedDescription,
+          year: normalizedYear,
+        },
+        include: buildPostInclude(viewerId),
+      });
+
+      return mapPostForGraphQL(updatedPost, viewerId);
     },
     togglePostLike: async (
       _: unknown,

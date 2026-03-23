@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
 import {
   Archive,
   Edit2,
@@ -11,7 +10,6 @@ import {
   ProfileAdd,
   Slash,
   Trash,
-  User,
   UserCirlceAdd,
   VolumeMute,
 } from "iconsax-reactjs";
@@ -23,16 +21,16 @@ interface OptionsDrawerProps {
   onClose: () => void;
   post?: HomePost | null;
   anchor?: PostOptionsAnchor | null;
+  onEditPost?: (post: HomePost) => void;
 }
 
-export default function OptionsDrawer({
+export default function OptionsOptions({
   isOpen,
-  onClose,
   post,
   anchor,
+  onEditPost,
 }: OptionsDrawerProps) {
   const drawerRef = React.useRef<HTMLDivElement | null>(null);
-  const router = useRouter();
   const { user } = useAuth();
   const author = post?.author;
   const username = author?.username?.trim()
@@ -46,50 +44,33 @@ export default function OptionsDrawer({
   const primaryActions = isOwner
     ? [
         {
-          label: "Edit post details",
-          description: "Update the title, caption or material info",
+          label: "Edit post",
           icon: <Edit2 size={20} color="#111111" variant="Bold" />,
         },
         {
           label: "Pin to profile",
-          description: "Keep this post easy to find",
           icon: <UserCirlceAdd size={20} color="#111111" variant="Bold" />,
         },
         {
-          label: "Turn off replies",
-          description: "Limit conversation on this post",
+          label: "Disable comments",
           icon: <MessageQuestion size={20} color="#111111" variant="Bold" />,
         },
       ]
     : [
         {
           label: `Follow ${username}`,
-          description: "See more posts from this creator",
           icon: <ProfileAdd size={20} color="#111111" variant="Bold" />,
         },
         {
-          label: `View ${username}'s profile`,
-          description: "Open the creator profile page",
-          icon: <User size={20} color="#111111" variant="Bold" />,
-          onClick: () => {
-            if (!author?.username) return;
-            onClose();
-            router.push(`/user/${encodeURIComponent(author.username)}`);
-          },
-        },
-        {
           label: `Mute ${username}`,
-          description: "Hide future posts without unfollowing",
           icon: <VolumeMute size={20} color="#111111" variant="Bold" />,
         },
         {
           label: "Not interested in this post",
-          description: "Show less like this in your feed",
           icon: <EyeSlash size={20} color="#111111" variant="Bold" />,
         },
         {
           label: `Block ${username}`,
-          description: "You won't see each other’s activity",
           icon: <Slash size={20} color="#111111" />,
         },
       ];
@@ -98,14 +79,12 @@ export default function OptionsDrawer({
     ? [
         {
           label: "Move to archive",
-          description: "Keep it, but remove it from the main feed",
           icon: <Archive size={20} color="#111111" variant="Bold" />,
         },
       ]
     : [
         {
           label: "Why am I seeing this post?",
-          description: "Understand why it appeared in your feed",
           icon: <MessageQuestion size={20} color="#111111" variant="Bold" />,
         },
       ];
@@ -188,7 +167,11 @@ export default function OptionsDrawer({
               <button
                 key={action.label}
                 type="button"
-                onClick={action.onClick}
+                onClick={() => {
+                  if (action.label === "Edit post" && post) {
+                    onEditPost?.(post);
+                  }
+                }}
                 className={`flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 ${
                   index < primaryActions.length - 1
                     ? "border-b border-black/6"

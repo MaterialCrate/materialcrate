@@ -8,7 +8,7 @@ import Post, {
 } from "./components/home/Post";
 import UploadDrawer from "./components/home/UploadDrawer";
 import CommentDrawer from "./components/home/CommentDrawer";
-import OptionsDrawer from "./components/home/PostMenuDrawer";
+import OptionsDrawer from "./components/home/PostOptions";
 import PdfViewerModal from "./components/home/PdfViewerModal";
 import Header from "./components/home/Header";
 import ArchiveDrawer from "./components/home/ArchiveDrawer";
@@ -21,6 +21,7 @@ type ArchiveSavedPost = {
 export default function Home() {
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
+  const [editingPost, setEditingPost] = useState<HomePost | null>(null);
   const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
   const [isPostOptionsDrawerOpen, setIsPostOptionsDrawerOpen] = useState(false);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
@@ -90,8 +91,13 @@ export default function Home() {
         }
 
         const nextArchiveMap = Object.fromEntries(
-          (Array.isArray(body?.archive?.savedPosts) ? body.archive.savedPosts : [])
-            .map((savedPost: ArchiveSavedPost) => [savedPost.postId, savedPost.id]),
+          (Array.isArray(body?.archive?.savedPosts)
+            ? body.archive.savedPosts
+            : []
+          ).map((savedPost: ArchiveSavedPost) => [
+            savedPost.postId,
+            savedPost.id,
+          ]),
         );
 
         setArchiveSavedPostIdsByPostId(nextArchiveMap);
@@ -116,8 +122,13 @@ export default function Home() {
       if (!response.ok) return;
 
       const nextArchiveMap = Object.fromEntries(
-        (Array.isArray(body?.archive?.savedPosts) ? body.archive.savedPosts : [])
-          .map((savedPost: ArchiveSavedPost) => [savedPost.postId, savedPost.id]),
+        (Array.isArray(body?.archive?.savedPosts)
+          ? body.archive.savedPosts
+          : []
+        ).map((savedPost: ArchiveSavedPost) => [
+          savedPost.postId,
+          savedPost.id,
+        ]),
       );
 
       setArchiveSavedPostIdsByPostId(nextArchiveMap);
@@ -166,7 +177,21 @@ export default function Home() {
       />
       <UploadDrawer
         isOpen={isUploadDrawerOpen}
-        onClose={() => setIsUploadDrawerOpen(false)}
+        post={editingPost}
+        onClose={() => {
+          setIsUploadDrawerOpen(false);
+          setEditingPost(null);
+        }}
+        onPostSaved={(savedPost, mode) => {
+          if (mode === "edit") {
+            setPosts((current) =>
+              current.map((post) => (post.id === savedPost.id ? savedPost : post)),
+            );
+            return;
+          }
+
+          setPosts((current) => [savedPost, ...current]);
+        }}
       />
       <CommentDrawer
         isOpen={isCommentDrawerOpen}
@@ -185,6 +210,19 @@ export default function Home() {
         }}
         post={activeOptionsPost}
         anchor={activeOptionsAnchor}
+        onEditPost={(selectedPost) => {
+          setEditingPost(selectedPost);
+          setIsUploadDrawerOpen(true);
+          setIsPostOptionsDrawerOpen(false);
+          setActiveOptionsPost(null);
+          setActiveOptionsAnchor(null);
+          setIsCommentDrawerOpen(false);
+          setActiveCommentPostId(null);
+          setIsArchiveDrawerOpen(false);
+          setActiveArchivePost(null);
+          setActivePdfPost(null);
+          setMoreOptionsOpen(false);
+        }}
       />
       <PdfViewerModal
         isOpen={Boolean(activePdfPost)}
@@ -211,6 +249,7 @@ export default function Home() {
           }
           setMoreOptionsOpen(false);
           setIsUploadDrawerOpen(false);
+          setEditingPost(null);
           setIsCommentDrawerOpen(false);
           setIsPostOptionsDrawerOpen(false);
           setActiveCommentPostId(null);
@@ -223,7 +262,19 @@ export default function Home() {
         <button
           aria-label="Upload button"
           type="button"
-          onClick={() => setIsUploadDrawerOpen(true)}
+          onClick={() => {
+            setEditingPost(null);
+            setIsUploadDrawerOpen(true);
+            setIsPostOptionsDrawerOpen(false);
+            setActiveOptionsPost(null);
+            setActiveOptionsAnchor(null);
+            setIsCommentDrawerOpen(false);
+            setActiveCommentPostId(null);
+            setIsArchiveDrawerOpen(false);
+            setActiveArchivePost(null);
+            setActivePdfPost(null);
+            setMoreOptionsOpen(false);
+          }}
           className={`flex items-center gap-3 bg-white py-3 px-5 rounded-3xl transition-all duration-300 ease-out ${
             moreOptionsOpen
               ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
@@ -262,6 +313,7 @@ export default function Home() {
                   setIsCommentDrawerOpen(true);
                   setMoreOptionsOpen(false);
                   setIsUploadDrawerOpen(false);
+                  setEditingPost(null);
                   setIsPostOptionsDrawerOpen(false);
                   setIsArchiveDrawerOpen(false);
                   setActiveOptionsPost(null);
@@ -274,6 +326,7 @@ export default function Home() {
                   setIsPostOptionsDrawerOpen(true);
                   setMoreOptionsOpen(false);
                   setIsUploadDrawerOpen(false);
+                  setEditingPost(null);
                   setIsCommentDrawerOpen(false);
                   setIsArchiveDrawerOpen(false);
                   setActiveCommentPostId(null);
@@ -284,6 +337,7 @@ export default function Home() {
                   setActivePdfPost(selectedPost);
                   setMoreOptionsOpen(false);
                   setIsUploadDrawerOpen(false);
+                  setEditingPost(null);
                   setIsCommentDrawerOpen(false);
                   setActiveCommentPostId(null);
                   setIsPostOptionsDrawerOpen(false);
@@ -297,6 +351,7 @@ export default function Home() {
                   setIsArchiveDrawerOpen(true);
                   setMoreOptionsOpen(false);
                   setIsUploadDrawerOpen(false);
+                  setEditingPost(null);
                   setIsCommentDrawerOpen(false);
                   setActiveCommentPostId(null);
                   setIsPostOptionsDrawerOpen(false);
