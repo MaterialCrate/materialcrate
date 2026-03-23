@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
 import Acheivement from "@/app/components/profile/Acheivement";
 import Header, { type ProfileTab } from "@/app/components/profile/Header";
-import Post, { type HomePost } from "@/app/components/home/Post";
+import Post, {
+  type HomePost,
+  type PostOptionsAnchor,
+} from "@/app/components/home/Post";
 import CommentDrawer from "@/app/components/home/CommentDrawer";
 import OptionsDrawer from "@/app/components/home/PostMenuDrawer";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
@@ -50,6 +53,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(
     null,
   );
+  const [activeOptionsAnchor, setActiveOptionsAnchor] =
+    useState<PostOptionsAnchor | null>(null);
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
   const [selectedTab, setSelectedTab] = useState<ProfileTab>("posts");
@@ -309,8 +314,10 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         onClose={() => {
           setIsPostOptionsDrawerOpen(false);
           setActiveOptionsPost(null);
+          setActiveOptionsAnchor(null);
         }}
-        authorUsername={activeOptionsPost?.author?.username}
+        post={activeOptionsPost}
+        anchor={activeOptionsAnchor}
       />
       <PdfViewerModal
         isOpen={Boolean(activePdfPost)}
@@ -371,10 +378,12 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                         setIsCommentDrawerOpen(true);
                         setIsPostOptionsDrawerOpen(false);
                         setActiveOptionsPost(null);
+                        setActiveOptionsAnchor(null);
                         setActivePdfPost(null);
                       }}
-                      onOptionsClick={(selectedPost) => {
+                      onOptionsClick={(selectedPost, anchor) => {
                         setActiveOptionsPost(selectedPost);
+                        setActiveOptionsAnchor(anchor);
                         setIsPostOptionsDrawerOpen(true);
                         setIsCommentDrawerOpen(false);
                         setActiveCommentPostId(null);
@@ -386,6 +395,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                         setActiveCommentPostId(null);
                         setIsPostOptionsDrawerOpen(false);
                         setActiveOptionsPost(null);
+                        setActiveOptionsAnchor(null);
                       }}
                     />
                     {index < posts.length - 1 && (

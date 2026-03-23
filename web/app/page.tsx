@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Add, DocumentUpload } from "iconsax-reactjs";
-import Post, { type HomePost } from "./components/home/Post";
+import Post, {
+  type HomePost,
+  type PostOptionsAnchor,
+} from "./components/home/Post";
 import UploadDrawer from "./components/home/UploadDrawer";
 import CommentDrawer from "./components/home/CommentDrawer";
 import OptionsDrawer from "./components/home/PostMenuDrawer";
@@ -28,6 +31,8 @@ export default function Home() {
   const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(
     null,
   );
+  const [activeOptionsAnchor, setActiveOptionsAnchor] =
+    useState<PostOptionsAnchor | null>(null);
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
   const [activeArchivePost, setActiveArchivePost] = useState<HomePost | null>(
     null,
@@ -176,8 +181,10 @@ export default function Home() {
         onClose={() => {
           setIsPostOptionsDrawerOpen(false);
           setActiveOptionsPost(null);
+          setActiveOptionsAnchor(null);
         }}
-        authorUsername={activeOptionsPost?.author?.username}
+        post={activeOptionsPost}
+        anchor={activeOptionsAnchor}
       />
       <PdfViewerModal
         isOpen={Boolean(activePdfPost)}
@@ -194,8 +201,8 @@ export default function Home() {
           isPostOptionsDrawerOpen ||
           isArchiveDrawerOpen ||
           activePdfPost
-            ? "bg-black/25 backdrop-blur-[2px] opacity-100 pointer-events-auto"
-            : "bg-black/0 backdrop-blur-none opacity-0 pointer-events-none"
+            ? "bg-black/12 opacity-100 pointer-events-auto"
+            : "bg-black/0 opacity-0 pointer-events-none"
         }`}
         onClick={() => {
           if (isArchiveDrawerOpen) {
@@ -208,6 +215,7 @@ export default function Home() {
           setIsPostOptionsDrawerOpen(false);
           setActiveCommentPostId(null);
           setActiveOptionsPost(null);
+          setActiveOptionsAnchor(null);
           setActivePdfPost(null);
         }}
       />
@@ -257,10 +265,12 @@ export default function Home() {
                   setIsPostOptionsDrawerOpen(false);
                   setIsArchiveDrawerOpen(false);
                   setActiveOptionsPost(null);
+                  setActiveOptionsAnchor(null);
                   setActiveArchivePost(null);
                 }}
-                onOptionsClick={(selectedPost) => {
+                onOptionsClick={(selectedPost, anchor) => {
                   setActiveOptionsPost(selectedPost);
+                  setActiveOptionsAnchor(anchor);
                   setIsPostOptionsDrawerOpen(true);
                   setMoreOptionsOpen(false);
                   setIsUploadDrawerOpen(false);
@@ -278,6 +288,7 @@ export default function Home() {
                   setActiveCommentPostId(null);
                   setIsPostOptionsDrawerOpen(false);
                   setActiveOptionsPost(null);
+                  setActiveOptionsAnchor(null);
                   setIsArchiveDrawerOpen(false);
                   setActiveArchivePost(null);
                 }}
@@ -290,6 +301,7 @@ export default function Home() {
                   setActiveCommentPostId(null);
                   setIsPostOptionsDrawerOpen(false);
                   setActiveOptionsPost(null);
+                  setActiveOptionsAnchor(null);
                   setActivePdfPost(null);
                 }}
                 onArchiveRemoveClick={(selectedPost) => {

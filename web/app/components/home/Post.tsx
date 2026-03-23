@@ -29,10 +29,19 @@ export type HomePost = {
   } | null;
 };
 
+export type PostOptionsAnchor = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+  width: number;
+  height: number;
+};
+
 type PostProps = {
   post: HomePost;
   onCommentClick?: (post: HomePost) => void;
-  onOptionsClick?: (post: HomePost) => void;
+  onOptionsClick?: (post: HomePost, anchor: PostOptionsAnchor) => void;
   onFileClick?: (post: HomePost) => void;
   onArchiveClick?: (post: HomePost) => void;
   onArchiveRemoveClick?: (post: HomePost) => void;
@@ -90,6 +99,7 @@ export default function Post({
 }: PostProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
+  const optionsButtonRef = React.useRef<HTMLButtonElement | null>(null);
   const authorFullName = post.author?.displayName?.trim() || "Unknown user";
   const authorUsername = post.author?.username
     ? `@${post.author.username}`
@@ -201,7 +211,7 @@ export default function Post({
 
   return (
     <div className="mt-4 space-y-4">
-      <div className="flex justify-between items-center px-6">
+      <div className="flex justify-between items-start px-6">
         <button
           type="button"
           className="flex items-center gap-2 text-left"
@@ -211,6 +221,7 @@ export default function Post({
           }}
           disabled={!authorRoute}
         >
+          <div></div>
           <div className="w-10 h-10 aspect-square bg-[#F3F3F3] rounded-full flex items-center justify-center overflow-hidden">
             {authorProfilePicture ? (
               <Image
@@ -240,11 +251,23 @@ export default function Post({
           </div>
         </button>
         <button
+          ref={optionsButtonRef}
           type="button"
           aria-label="Post options"
-          onClick={() => onOptionsClick?.(post)}
+          onClick={() => {
+            const rect = optionsButtonRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            onOptionsClick?.(post, {
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              left: rect.left,
+              width: rect.width,
+              height: rect.height,
+            });
+          }}
         >
-          <More size={28} color="#959595" />
+          <More size={20} color="#959595" />
         </button>
       </div>
       {post.description && (
