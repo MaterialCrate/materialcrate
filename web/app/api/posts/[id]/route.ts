@@ -15,6 +15,7 @@ const POST_QUERY = `
       description
       year
       pinned
+      commentsDisabled
       likeCount
       commentCount
       viewerHasLiked

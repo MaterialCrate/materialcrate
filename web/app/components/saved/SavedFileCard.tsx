@@ -1,9 +1,10 @@
 import React from "react";
+import Image from "next/image";
 import type { HomePost } from "@/app/components/home/Post";
 import { ArrowRight, CloseCircle } from "iconsax-reactjs";
 import PdfThumbnail from "../home/PdfThumbnail";
 
-export type ArchiveFolder = {
+export type SavedFolder = {
   id: string;
   archiveId: string;
   name: string;
@@ -18,20 +19,22 @@ export type ArchiveSavedPost = {
   postId: string;
   createdAt: string;
   post: HomePost;
-  folder?: ArchiveFolder | null;
+  folder?: SavedFolder | null;
 };
 
-export default function ArchivedFileCard({
+export type SavedPostRecord = ArchiveSavedPost;
+
+export default function SavedFileCard({
   savedPost,
   onOpenFile,
   onOpenPost,
   onRemove,
   isRemoving = false,
 }: {
-  savedPost: ArchiveSavedPost;
+  savedPost: SavedPostRecord;
   onOpenFile: (post: HomePost) => void;
   onOpenPost: (postId: string) => void;
-  onRemove: (savedPost: ArchiveSavedPost) => void;
+  onRemove: (savedPost: SavedPostRecord) => void;
   isRemoving?: boolean;
 }) {
   return (
@@ -43,12 +46,26 @@ export default function ArchivedFileCard({
           className="text-left"
           onClick={() => onOpenFile(savedPost.post)}
         >
-          <PdfThumbnail
-            postId={savedPost.post.id}
-            fileUrl={savedPost.post.fileUrl}
-            thumbnailUrl={savedPost.post.thumbnailUrl}
-            title={savedPost.post.title}
-          />
+          {savedPost.post.thumbnailUrl ? (
+            <div className="relative h-40 w-28 shrink-0 overflow-hidden rounded-sm bg-[#E8E8E8]">
+              <Image
+                key={savedPost.post.thumbnailUrl}
+                src={savedPost.post.thumbnailUrl}
+                alt={`${savedPost.post.title} preview`}
+                className="block h-full w-full object-cover object-top"
+                width={112}
+                height={160}
+                unoptimized
+              />
+            </div>
+          ) : (
+            <PdfThumbnail
+              postId={savedPost.post.id}
+              fileUrl={savedPost.post.fileUrl}
+              thumbnailUrl={savedPost.post.thumbnailUrl}
+              title={savedPost.post.title}
+            />
+          )}
         </button>
         <div className="w-full flex flex-col justify-between">
           <div className="flex items-start justify-between">
@@ -63,7 +80,7 @@ export default function ArchivedFileCard({
             </div>
             <button
               type="button"
-              aria-label="remove archive"
+              aria-label="remove saved file"
               onClick={() => onRemove(savedPost)}
               disabled={isRemoving}
               className={isRemoving ? "opacity-50" : undefined}

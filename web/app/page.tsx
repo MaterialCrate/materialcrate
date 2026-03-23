@@ -29,6 +29,9 @@ export default function Home() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
   );
+  const [activeCommentPost, setActiveCommentPost] = useState<HomePost | null>(
+    null,
+  );
   const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(
     null,
   );
@@ -191,6 +194,20 @@ export default function Home() {
     );
   };
 
+  const handlePostUpdated = (updatedPost: HomePost) => {
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === updatedPost.id ? { ...post, ...updatedPost } : post,
+      ),
+    );
+    setActiveOptionsPost((current) =>
+      current?.id === updatedPost.id ? { ...current, ...updatedPost } : current,
+    );
+    setActiveCommentPost((current) =>
+      current?.id === updatedPost.id ? { ...current, ...updatedPost } : current,
+    );
+  };
+
   return (
     <div className="py-18">
       <ArchiveDrawer
@@ -226,8 +243,10 @@ export default function Home() {
         onClose={() => {
           setIsCommentDrawerOpen(false);
           setActiveCommentPostId(null);
+          setActiveCommentPost(null);
         }}
         postId={activeCommentPostId}
+        post={activeCommentPost}
       />
       <OptionsDrawer
         isOpen={isPostOptionsDrawerOpen}
@@ -239,6 +258,7 @@ export default function Home() {
         post={activeOptionsPost}
         anchor={activeOptionsAnchor}
         onPostPinned={handlePostPinned}
+        onPostUpdated={handlePostUpdated}
         onEditPost={(selectedPost) => {
           setEditingPost(selectedPost);
           setIsUploadDrawerOpen(true);
@@ -247,6 +267,7 @@ export default function Home() {
           setActiveOptionsAnchor(null);
           setIsCommentDrawerOpen(false);
           setActiveCommentPostId(null);
+          setActiveCommentPost(null);
           setIsArchiveDrawerOpen(false);
           setActiveArchivePost(null);
           setActivePdfPost(null);
@@ -282,6 +303,7 @@ export default function Home() {
           setIsCommentDrawerOpen(false);
           setIsPostOptionsDrawerOpen(false);
           setActiveCommentPostId(null);
+          setActiveCommentPost(null);
           setActiveOptionsPost(null);
           setActiveOptionsAnchor(null);
           setActivePdfPost(null);
@@ -299,6 +321,7 @@ export default function Home() {
             setActiveOptionsAnchor(null);
             setIsCommentDrawerOpen(false);
             setActiveCommentPostId(null);
+            setActiveCommentPost(null);
             setIsArchiveDrawerOpen(false);
             setActiveArchivePost(null);
             setActivePdfPost(null);
@@ -339,6 +362,7 @@ export default function Home() {
                 isArchiveBusy={Boolean(archiveBusyPostIds[post.id])}
                 onCommentClick={(selectedPost) => {
                   setActiveCommentPostId(selectedPost.id);
+                  setActiveCommentPost(selectedPost);
                   setIsCommentDrawerOpen(true);
                   setMoreOptionsOpen(false);
                   setIsUploadDrawerOpen(false);
@@ -359,6 +383,7 @@ export default function Home() {
                   setIsCommentDrawerOpen(false);
                   setIsArchiveDrawerOpen(false);
                   setActiveCommentPostId(null);
+                  setActiveCommentPost(null);
                   setActivePdfPost(null);
                   setActiveArchivePost(null);
                 }}
@@ -369,6 +394,7 @@ export default function Home() {
                   setEditingPost(null);
                   setIsCommentDrawerOpen(false);
                   setActiveCommentPostId(null);
+                  setActiveCommentPost(null);
                   setIsPostOptionsDrawerOpen(false);
                   setActiveOptionsPost(null);
                   setActiveOptionsAnchor(null);
@@ -383,6 +409,7 @@ export default function Home() {
                   setEditingPost(null);
                   setIsCommentDrawerOpen(false);
                   setActiveCommentPostId(null);
+                  setActiveCommentPost(null);
                   setIsPostOptionsDrawerOpen(false);
                   setActiveOptionsPost(null);
                   setActiveOptionsAnchor(null);

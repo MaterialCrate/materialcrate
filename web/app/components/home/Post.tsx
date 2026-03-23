@@ -24,6 +24,7 @@ export type HomePost = {
   description?: string | null;
   year?: number | null;
   pinned?: boolean;
+  commentsDisabled?: boolean;
   likeCount?: number;
   commentCount?: number;
   viewerHasLiked?: boolean;

@@ -2,30 +2,30 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import ArchivedFileCard from "@/app/components/archive/ArchivedFileCard";
+import SavedFileCard from "@/app/components/saved/SavedFileCard";
 import { ArrowLeft, DocumentText, Trash } from "iconsax-reactjs";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
 import type { HomePost } from "@/app/components/home/Post";
 import type {
-  ArchiveFolder,
-  ArchiveSavedPost,
-} from "@/app/components/archive/ArchivedFileCard";
+  SavedFolder,
+  SavedPostRecord,
+} from "@/app/components/saved/SavedFileCard";
 import LoadingBar from "@/app/components/LoadingBar";
 import Alert from "@/app/components/Alert";
 
-type ArchiveData = {
+type SavedData = {
   id: string;
   name: string;
-  folders: ArchiveFolder[];
-  savedPosts: ArchiveSavedPost[];
+  folders: SavedFolder[];
+  savedPosts: SavedPostRecord[];
 };
 
-export default function ArchiveFolderPage() {
+export default function SavedFolderPage() {
   const router = useRouter();
   const params = useParams<{ folderId: string }>();
   const folderId = typeof params?.folderId === "string" ? params.folderId : "";
 
-  const [archive, setArchive] = useState<ArchiveData | null>(null);
+  const [saved, setSaved] = useState<SavedData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
@@ -41,7 +41,7 @@ export default function ArchiveFolderPage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    const loadArchive = async () => {
+    const loadSaved = async () => {
       try {
         setIsLoading(true);
         setError("");
@@ -53,15 +53,15 @@ export default function ArchiveFolderPage() {
         const body = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(body?.error || "Failed to fetch archive");
+          throw new Error(body?.error || "Failed to fetch saved files");
         }
 
-        setArchive(body?.archive ?? null);
+        setSaved(body?.archive ?? null);
       } catch (loadError) {
         if (!controller.signal.aborted) {
-          setError("Failed to fetch archive");
-          console.error("Error fetching archive:", loadError);
-          setArchive(null);
+          setError("Failed to fetch saved files");
+          console.error("Error fetching saved files:", loadError);
+          setSaved(null);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -70,13 +70,13 @@ export default function ArchiveFolderPage() {
       }
     };
 
-    void loadArchive();
+    void loadSaved();
     return () => controller.abort();
   }, []);
 
   const folder = useMemo(
-    () => archive?.folders.find((item) => item.id === folderId) ?? null,
-    [archive, folderId],
+    () => saved?.folders.find((item) => item.id === folderId) ?? null,
+    [saved, folderId],
   );
 
   useEffect(() => {
@@ -97,9 +97,8 @@ export default function ArchiveFolderPage() {
   }, [isEditingTitle]);
 
   const folderSavedPosts = useMemo(
-    () =>
-      archive?.savedPosts.filter((item) => item.folderId === folderId) ?? [],
-    [archive, folderId],
+    () => saved?.savedPosts.filter((item) => item.folderId === folderId) ?? [],
+    [saved, folderId],
   );
 
   const submitFolderRename = async () => {
@@ -137,17 +136,17 @@ export default function ArchiveFolderPage() {
       const body = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(body?.error || "Failed to rename archive folder");
+        throw new Error(body?.error || "Failed to rename saved folder");
       }
 
-      setArchive((currentArchive) => {
-        if (!currentArchive) {
-          return currentArchive;
+      setSaved((currentSaved) => {
+        if (!currentSaved) {
+          return currentSaved;
         }
 
         return {
-          ...currentArchive,
-          folders: currentArchive.folders.map((item) =>
+          ...currentSaved,
+          folders: currentSaved.folders.map((item) =>
             item.id === folder.id ? { ...item, name: trimmedName } : item,
           ),
         };
@@ -155,8 +154,8 @@ export default function ArchiveFolderPage() {
       setFolderNameDraft(trimmedName);
       setIsEditingTitle(false);
     } catch (renameError) {
-      setError("Failed to rename archive folder");
-      console.error("Error renaming archive folder:", renameError);
+      setError("Failed to rename saved folder");
+      console.error("Error renaming saved folder:", renameError);
     } finally {
       setIsRenaming(false);
     }
@@ -169,7 +168,7 @@ export default function ArchiveFolderPage() {
 
     if (folderSavedPosts.length > 0) {
       const confirmed = window.confirm(
-        "Deleting this folder will unarchive all files inside it. Continue?",
+        "Deleting this folder will remove all files from it. Continue?",
       );
 
       if (!confirmed) {
@@ -193,33 +192,34 @@ export default function ArchiveFolderPage() {
       const body = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(body?.error || "Failed to delete archive folder");
+        throw new Error(body?.error || "Failed to delete saved folder");
       }
 
-      router.push("/archive");
+      router.push("/saved");
     } catch (deleteError) {
-      setError("Failed to delete archive folder");
-      console.error("Error deleting archive folder:", deleteError);
+      setError("Failed to delete saved folder");
+      console.error("Error deleting saved folder:", deleteError);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleRemoveFromArchive = async (savedPost: ArchiveSavedPost) => {
+  const handleRemoveSavedFile = async (savedPost: SavedPostRecord) => {
     if (removingSavedPostIds[savedPost.id]) {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Remove this file from your archive?",
-    );
+    const confirmed = window.confirm("Remove this file from Saved?");
 
     if (!confirmed) {
       return;
     }
 
     try {
-      setRemovingSavedPostIds((current) => ({ ...current, [savedPost.id]: true }));
+      setRemovingSavedPostIds((current) => ({
+        ...current,
+        [savedPost.id]: true,
+      }));
       setError("");
 
       const response = await fetch("/api/archive", {
@@ -234,26 +234,29 @@ export default function ArchiveFolderPage() {
       const body = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(body?.error || "Failed to remove archived file");
+        throw new Error(body?.error || "Failed to remove saved file");
       }
 
-      setArchive((currentArchive) => {
-        if (!currentArchive) {
-          return currentArchive;
+      setSaved((currentSaved) => {
+        if (!currentSaved) {
+          return currentSaved;
         }
 
         return {
-          ...currentArchive,
-          savedPosts: currentArchive.savedPosts.filter(
+          ...currentSaved,
+          savedPosts: currentSaved.savedPosts.filter(
             (item) => item.id !== savedPost.id,
           ),
         };
       });
     } catch (removeError) {
-      setError("Failed to remove archived file");
-      console.error("Error removing archived file:", removeError);
+      setError("Failed to remove saved file");
+      console.error("Error removing saved file:", removeError);
     } finally {
-      setRemovingSavedPostIds((current) => ({ ...current, [savedPost.id]: false }));
+      setRemovingSavedPostIds((current) => ({
+        ...current,
+        [savedPost.id]: false,
+      }));
     }
   };
 
@@ -272,8 +275,8 @@ export default function ArchiveFolderPage() {
           <div className="relative flex items-center justify-center min-h-10">
             <button
               type="button"
-              aria-label="Back to archive"
-              onClick={() => router.push("/archive")}
+              aria-label="Back to saved files"
+              onClick={() => router.push("/saved")}
               className="absolute left-0 top-1/2 -translate-y-1/2"
             >
               <ArrowLeft size={22} color="#202020" />
@@ -299,7 +302,7 @@ export default function ArchiveFolderPage() {
                   }}
                   disabled={isRenaming}
                   maxLength={30}
-                  aria-label="Rename archive folder"
+                  aria-label="Rename saved folder"
                   className="w-full max-w-55 bg-transparent text-center text-xl font-medium outline-none"
                 />
               ) : (
@@ -316,7 +319,7 @@ export default function ArchiveFolderPage() {
                   }}
                   className="max-w-55 truncate text-center text-xl font-medium"
                 >
-                  {folder?.name || "Archive Folder"}
+                  {folder?.name || "Saved Folder"}
                 </button>
               )}
             </div>
@@ -342,7 +345,7 @@ export default function ArchiveFolderPage() {
                 Folder not found.
               </p>
               <p className="mt-2 text-sm text-[#696969]">
-                This archive folder may have been removed.
+                This saved folder may have been removed.
               </p>
             </div>
           ) : (
@@ -367,7 +370,7 @@ export default function ArchiveFolderPage() {
                 ) : (
                   <div className="space-y-3">
                     {folderSavedPosts.map((savedPost) => (
-                      <ArchivedFileCard
+                      <SavedFileCard
                         key={savedPost.id}
                         savedPost={savedPost}
                         onOpenFile={(selectedPost) =>
@@ -377,7 +380,7 @@ export default function ArchiveFolderPage() {
                           router.push(`/post/${encodeURIComponent(postId)}`)
                         }
                         onRemove={(selectedSavedPost) =>
-                          void handleRemoveFromArchive(selectedSavedPost)
+                          void handleRemoveSavedFile(selectedSavedPost)
                         }
                         isRemoving={Boolean(removingSavedPostIds[savedPost.id])}
                       />

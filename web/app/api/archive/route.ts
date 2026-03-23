@@ -33,6 +33,7 @@ const ARCHIVE_QUERY = `
           courseCode
           description
           year
+          commentsDisabled
           likeCount
           commentCount
           viewerHasLiked
@@ -73,6 +74,7 @@ const SAVE_POST_MUTATION = `
         courseCode
         description
         year
+        commentsDisabled
         likeCount
         commentCount
         viewerHasLiked

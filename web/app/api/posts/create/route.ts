@@ -34,6 +34,7 @@ const CREATE_POST_MUTATION = `
       courseCode
       description
       year
+      commentsDisabled
     }
   }
 `;

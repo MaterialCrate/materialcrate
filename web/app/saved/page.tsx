@@ -3,28 +3,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import ArchivedFileCard from "@/app/components/archive/ArchivedFileCard";
+import SavedFileCard from "@/app/components/saved/SavedFileCard";
 import { FolderOpen, Folder2, DocumentText } from "iconsax-reactjs";
 import emptyWorkspace from "@/assets/icons/empty-workspace.svg";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
 import type { HomePost } from "@/app/components/home/Post";
 import type {
-  ArchiveFolder,
-  ArchiveSavedPost,
-} from "@/app/components/archive/ArchivedFileCard";
+  SavedFolder,
+  SavedPostRecord,
+} from "@/app/components/saved/SavedFileCard";
 import LoadingBar from "../components/LoadingBar";
 import Alert from "../components/Alert";
 
-type ArchiveData = {
+type SavedData = {
   id: string;
   name: string;
-  folders: ArchiveFolder[];
-  savedPosts: ArchiveSavedPost[];
+  folders: SavedFolder[];
+  savedPosts: SavedPostRecord[];
 };
 
-export default function ArchivePage() {
+export default function SavedPage() {
   const router = useRouter();
-  const [archive, setArchive] = useState<ArchiveData | null>(null);
+  const [saved, setSaved] = useState<SavedData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
@@ -35,7 +35,7 @@ export default function ArchivePage() {
   useEffect(() => {
     const controller = new AbortController();
 
-    const loadArchive = async () => {
+    const loadSaved = async () => {
       try {
         setIsLoading(true);
         setError("");
@@ -47,15 +47,15 @@ export default function ArchivePage() {
         const body = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(body?.error || "Failed to fetch archive");
+          throw new Error(body?.error || "Failed to fetch saved files");
         }
 
-        setArchive(body?.archive ?? null);
+        setSaved(body?.archive ?? null);
       } catch (loadError) {
         if (!controller.signal.aborted) {
-          setError("Failed to fetch archive");
-          console.error("Error fetching archive:", loadError);
-          setArchive(null);
+          setError("Failed to fetch saved files");
+          console.error("Error fetching saved files:", loadError);
+          setSaved(null);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -64,44 +64,45 @@ export default function ArchivePage() {
       }
     };
 
-    void loadArchive();
+    void loadSaved();
     return () => controller.abort();
   }, []);
 
   const rootSavedPosts = useMemo(
-    () => archive?.savedPosts?.filter((item) => !item.folderId) ?? [],
-    [archive],
+    () => saved?.savedPosts?.filter((item) => !item.folderId) ?? [],
+    [saved],
   );
 
   const totalFileCount = rootSavedPosts.length;
-  const totalFolderCount = archive?.folders.length ?? 0;
+  const totalFolderCount = saved?.folders.length ?? 0;
 
   const foldersWithSavedPosts = useMemo(
     () =>
-      (archive?.folders ?? []).map((folder) => ({
+      (saved?.folders ?? []).map((folder) => ({
         ...folder,
         savedPosts:
-          archive?.savedPosts?.filter((item) => item.folderId === folder.id) ??
+          saved?.savedPosts?.filter((item) => item.folderId === folder.id) ??
           [],
       })),
-    [archive],
+    [saved],
   );
 
-  const handleRemoveFromArchive = async (savedPost: ArchiveSavedPost) => {
+  const handleRemoveSavedFile = async (savedPost: SavedPostRecord) => {
     if (removingSavedPostIds[savedPost.id]) {
       return;
     }
 
-    const confirmed = window.confirm(
-      "Remove this file from your archive?",
-    );
+    const confirmed = window.confirm("Remove this file from Saved?");
 
     if (!confirmed) {
       return;
     }
 
     try {
-      setRemovingSavedPostIds((current) => ({ ...current, [savedPost.id]: true }));
+      setRemovingSavedPostIds((current) => ({
+        ...current,
+        [savedPost.id]: true,
+      }));
       setError("");
 
       const response = await fetch("/api/archive", {
@@ -116,26 +117,29 @@ export default function ArchivePage() {
       const body = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(body?.error || "Failed to remove archived file");
+        throw new Error(body?.error || "Failed to remove saved file");
       }
 
-      setArchive((currentArchive) => {
-        if (!currentArchive) {
-          return currentArchive;
+      setSaved((currentSaved) => {
+        if (!currentSaved) {
+          return currentSaved;
         }
 
         return {
-          ...currentArchive,
-          savedPosts: currentArchive.savedPosts.filter(
+          ...currentSaved,
+          savedPosts: currentSaved.savedPosts.filter(
             (item) => item.id !== savedPost.id,
           ),
         };
       });
     } catch (removeError) {
-      setError("Failed to remove archived file");
-      console.error("Error removing archived file:", removeError);
+      setError("Failed to remove saved file");
+      console.error("Error removing saved file:", removeError);
     } finally {
-      setRemovingSavedPostIds((current) => ({ ...current, [savedPost.id]: false }));
+      setRemovingSavedPostIds((current) => ({
+        ...current,
+        [savedPost.id]: false,
+      }));
     }
   };
 
@@ -151,25 +155,24 @@ export default function ArchivePage() {
 
       <div className="fixed top-0 left-0 right-0 z-40 ">
         <header className="bg-[#F7F7F7] px-6 pt-6 pb-3">
-          <h1 className="text-center text-xl font-medium">My Archive</h1>
+          <h1 className="text-center text-xl font-medium">My Saved</h1>
         </header>
         {isLoading && <LoadingBar />}
       </div>
 
       {!isLoading && (
         <main className="space-y-6 px-6">
-          {!archive ||
-          (!archive.folders.length && !archive.savedPosts.length) ? (
+          {!saved || (!saved.folders.length && !saved.savedPosts.length) ? (
             <div className="flex flex-col items-center justify-center gap-4 px-12 py-16 text-center">
               <Image
                 src={emptyWorkspace}
-                alt="Empty archive"
+                alt="Empty saved files"
                 width={80}
                 height={80}
               />
               <p className="text-sm text-[#696969]">
-                You haven&apos;t archived any files yet. Save attachments from
-                the feed and they&apos;ll appear here.
+                You haven&apos;t saved any files yet. Save attachments from the
+                feed and they&apos;ll appear here.
               </p>
             </div>
           ) : (
@@ -195,7 +198,7 @@ export default function ArchivePage() {
                         className="flex flex-col items-center gap-2 text-center"
                         onClick={() =>
                           router.push(
-                            `/archive/folder/${encodeURIComponent(folder.id)}`,
+                            `/saved/folder/${encodeURIComponent(folder.id)}`,
                           )
                         }
                       >
@@ -226,7 +229,7 @@ export default function ArchivePage() {
                   </div>
                   <div className="space-y-3">
                     {rootSavedPosts.map((savedPost) => (
-                      <ArchivedFileCard
+                      <SavedFileCard
                         key={savedPost.id}
                         savedPost={savedPost}
                         onOpenFile={(selectedPost) =>
@@ -236,7 +239,7 @@ export default function ArchivePage() {
                           router.push(`/post/${encodeURIComponent(postId)}`)
                         }
                         onRemove={(selectedSavedPost) =>
-                          void handleRemoveFromArchive(selectedSavedPost)
+                          void handleRemoveSavedFile(selectedSavedPost)
                         }
                         isRemoving={Boolean(removingSavedPostIds[savedPost.id])}
                       />

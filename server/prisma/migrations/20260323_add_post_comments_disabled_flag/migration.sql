@@ -1,0 +1,2 @@
+ALTER TABLE "Post"
+ADD COLUMN "commentsDisabled" BOOLEAN NOT NULL DEFAULT false;

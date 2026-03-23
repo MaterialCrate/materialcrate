@@ -60,7 +60,7 @@ export default function ArchiveDrawer({
         const body = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(body?.error || "Failed to load archive");
+          throw new Error(body?.error || "Failed to load saved files");
         }
 
         if (!isCancelled) {
@@ -72,7 +72,7 @@ export default function ArchiveDrawer({
         if (!isCancelled) {
           setFeedbackType("error");
           setFeedbackMessage(
-            error instanceof Error ? error.message : "Failed to load archive",
+            error instanceof Error ? error.message : "Failed to load saved files",
           );
           setFolders([]);
         }
@@ -116,13 +116,13 @@ export default function ArchiveDrawer({
         const body = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          throw new Error(body?.error || "Failed to save file to archive");
+          throw new Error(body?.error || "Failed to save file");
         }
 
         setHasSavedCurrentPost(true);
         setFeedbackType("success");
         setFeedbackMessage(
-          folderId ? "File saved to archive folder." : "File saved to archive.",
+          folderId ? "File saved to folder." : "File saved.",
         );
         onSaved?.();
         return true;
@@ -131,7 +131,7 @@ export default function ArchiveDrawer({
         setFeedbackMessage(
           error instanceof Error
             ? error.message
-            : "Failed to save file to archive",
+            : "Failed to save file",
         );
         return false;
       } finally {
@@ -163,7 +163,7 @@ export default function ArchiveDrawer({
       const body = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(body?.error || "Failed to create archive folder");
+        throw new Error(body?.error || "Failed to create saved folder");
       }
 
       const createdFolder = body?.folder;
@@ -172,13 +172,13 @@ export default function ArchiveDrawer({
       }
       setFolderName("");
       setFeedbackType("success");
-      setFeedbackMessage("Archive folder created.");
+      setFeedbackMessage("Saved folder created.");
     } catch (error) {
       setFeedbackType("error");
       setFeedbackMessage(
         error instanceof Error
           ? error.message
-          : "Failed to create archive folder",
+          : "Failed to create saved folder",
       );
     } finally {
       setIsCreatingFolder(false);
@@ -215,7 +215,7 @@ export default function ArchiveDrawer({
           </div>
 
           <div>
-            <h1 className="text-lg font-medium text-[#202020]">Archive file</h1>
+            <h1 className="text-lg font-medium text-[#202020]">Save file</h1>
             <p className="mt-1 text-sm text-[#696969]">
               Save this attachment inside a folder or close to save it at the
               top level.
@@ -258,8 +258,8 @@ export default function ArchiveDrawer({
               <p className="text-sm text-[#696969]">Loading folders...</p>
             ) : sortedFolders.length === 0 ? (
               <p className="text-sm text-[#696969]">
-                No folders yet. Create one or close to save the file at archive
-                root.
+                No folders yet. Create one or close to save the file at the top
+                level.
               </p>
             ) : (
               <div className="max-h-72 space-y-3 overflow-y-auto pr-1">

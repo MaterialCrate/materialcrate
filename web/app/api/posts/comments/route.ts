@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+export const runtime = "nodejs";
+
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
-const POSTS_QUERY = `
-  query Posts($authorUsername: String) {
-    posts(authorUsername: $authorUsername) {
+const TOGGLE_POST_COMMENTS_MUTATION = `
+  mutation TogglePostComments($postId: ID!) {
+    togglePostComments(postId: $postId) {
       id
       fileUrl
       thumbnailUrl
@@ -16,10 +18,10 @@ const POSTS_QUERY = `
       year
       pinned
       commentsDisabled
+      createdAt
       likeCount
       commentCount
       viewerHasLiked
-      createdAt
       author {
         id
         displayName
@@ -31,21 +33,29 @@ const POSTS_QUERY = `
   }
 `;
 
-export async function GET(request: Request) {
+export async function POST(req: Request) {
   const cookieStore = await cookies();
   const token = cookieStore.get("mc_session")?.value;
-  const { searchParams } = new URL(request.url);
-  const authorUsername = searchParams.get("author")?.trim() || null;
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null);
+  const postId = typeof body?.postId === "string" ? body.postId.trim() : "";
+
+  if (!postId) {
+    return NextResponse.json({ error: "Post id is required" }, { status: 400 });
+  }
 
   const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      query: POSTS_QUERY,
-      variables: { authorUsername },
+      query: TOGGLE_POST_COMMENTS_MUTATION,
+      variables: { postId },
     }),
   });
 
@@ -54,11 +64,17 @@ export async function GET(request: Request) {
   if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
     return NextResponse.json(
       {
-        error: graphqlBody?.errors?.[0]?.message || "Failed to fetch posts",
+        error:
+          graphqlBody?.errors?.[0]?.message ||
+          "Failed to update comment settings",
+        details: graphqlBody?.errors ?? null,
       },
       { status: 400 },
     );
   }
 
-  return NextResponse.json({ posts: graphqlBody?.data?.posts ?? [] });
+  return NextResponse.json({
+    ok: true,
+    post: graphqlBody?.data?.togglePostComments ?? null,
+  });
 }

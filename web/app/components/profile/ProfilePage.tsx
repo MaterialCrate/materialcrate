@@ -52,6 +52,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
   );
+  const [activeCommentPost, setActiveCommentPost] = useState<HomePost | null>(
+    null,
+  );
   const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(
     null,
   );
@@ -314,6 +317,20 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     );
   };
 
+  const handlePostUpdated = (updatedPost: HomePost) => {
+    setPosts((current) =>
+      current.map((post) =>
+        post.id === updatedPost.id ? { ...post, ...updatedPost } : post,
+      ),
+    );
+    setActiveOptionsPost((current) =>
+      current?.id === updatedPost.id ? { ...current, ...updatedPost } : current,
+    );
+    setActiveCommentPost((current) =>
+      current?.id === updatedPost.id ? { ...current, ...updatedPost } : current,
+    );
+  };
+
   if (!isPublicProfile && isLoadingAuth) {
     return (
       <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>
@@ -342,8 +359,10 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         onClose={() => {
           setIsCommentDrawerOpen(false);
           setActiveCommentPostId(null);
+          setActiveCommentPost(null);
         }}
         postId={activeCommentPostId}
+        post={activeCommentPost}
       />
       <UploadDrawer
         isOpen={isUploadDrawerOpen}
@@ -368,6 +387,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         post={activeOptionsPost}
         anchor={activeOptionsAnchor}
         onPostPinned={handlePostPinned}
+        onPostUpdated={handlePostUpdated}
         onEditPost={(selectedPost) => {
           setEditingPost(selectedPost);
           setIsUploadDrawerOpen(true);
@@ -376,6 +396,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
           setActiveOptionsAnchor(null);
           setIsCommentDrawerOpen(false);
           setActiveCommentPostId(null);
+          setActiveCommentPost(null);
           setActivePdfPost(null);
         }}
       />
@@ -436,6 +457,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                       showPinnedIndicator
                       onCommentClick={(selectedPost) => {
                         setActiveCommentPostId(selectedPost.id);
+                        setActiveCommentPost(selectedPost);
                         setIsCommentDrawerOpen(true);
                         setIsUploadDrawerOpen(false);
                         setEditingPost(null);
@@ -452,6 +474,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                         setEditingPost(null);
                         setIsCommentDrawerOpen(false);
                         setActiveCommentPostId(null);
+                        setActiveCommentPost(null);
                         setActivePdfPost(null);
                       }}
                       onFileClick={(selectedPost) => {
@@ -460,6 +483,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                         setEditingPost(null);
                         setIsCommentDrawerOpen(false);
                         setActiveCommentPostId(null);
+                        setActiveCommentPost(null);
                         setIsPostOptionsDrawerOpen(false);
                         setActiveOptionsPost(null);
                         setActiveOptionsAnchor(null);

@@ -2,7 +2,11 @@
 
 import { useDeferredValue, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Post, { type HomePost } from "@/app/components/home/Post";
+import Post, {
+  type HomePost,
+  type PostOptionsAnchor,
+} from "@/app/components/home/Post";
+import OptionsDrawer from "@/app/components/home/PostOptions";
 import Header, { type SearchTab } from "@/app/components/search/Header";
 import UserCard, { type SearchUser } from "@/app/components/search/UserCard";
 import LoadingBar from "../components/LoadingBar";
@@ -24,6 +28,10 @@ export default function SearchPage() {
   const [documents, setDocuments] = useState<HomePost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isPostOptionsDrawerOpen, setIsPostOptionsDrawerOpen] = useState(false);
+  const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(null);
+  const [activeOptionsAnchor, setActiveOptionsAnchor] =
+    useState<PostOptionsAnchor | null>(null);
 
   const deferredQuery = useDeferredValue(query.trim());
 
@@ -108,10 +116,31 @@ export default function SearchPage() {
 
   const visibleResults = activeTab === "users" ? users : documents;
   const hasQuery = query.trim().length > 0;
+  const handlePostUpdated = (updatedPost: HomePost) => {
+    setDocuments((current) =>
+      current.map((post) =>
+        post.id === updatedPost.id ? { ...post, ...updatedPost } : post,
+      ),
+    );
+    setActiveOptionsPost((current) =>
+      current?.id === updatedPost.id ? { ...current, ...updatedPost } : current,
+    );
+  };
 
   return (
     <div className="min-h-dvh bg-[#f7f7f7] pb-4 pt-34">
       {error && <Alert type="error" message={error} />}
+      <OptionsDrawer
+        isOpen={isPostOptionsDrawerOpen}
+        onClose={() => {
+          setIsPostOptionsDrawerOpen(false);
+          setActiveOptionsPost(null);
+          setActiveOptionsAnchor(null);
+        }}
+        post={activeOptionsPost}
+        anchor={activeOptionsAnchor}
+        onPostUpdated={handlePostUpdated}
+      />
       <>
         <Header
           query={query}
@@ -167,6 +196,11 @@ export default function SearchPage() {
                 <Post
                   key={document.id}
                   post={document}
+                  onOptionsClick={(selectedDocument, anchor) => {
+                    setActiveOptionsPost(selectedDocument);
+                    setActiveOptionsAnchor(anchor);
+                    setIsPostOptionsDrawerOpen(true);
+                  }}
                   onFileClick={(selectedDocument) =>
                     router.push(
                       `/post/${encodeURIComponent(selectedDocument.id)}`,

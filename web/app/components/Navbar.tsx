@@ -16,7 +16,7 @@ type NavItem = {
 const items: NavItem[] = [
   { label: "Home", href: "/", Icon: Home },
   { label: "Hub", href: "/hub", Icon: Clipboard },
-  { label: "Archive", href: "/archive", Icon: Archive },
+  { label: "Saved", href: "/saved", Icon: Archive },
   { label: "Profile", href: "/user", Icon: Profile },
 ];
 
@@ -32,17 +32,17 @@ export default function Navbar() {
     <ul className="font-semibold text-xs flex w-full justify-between px-12">
       {items.map(({ label, href, Icon }) => {
         const isProfileItem = href === "/user";
-        const isArchiveItem = href === "/archive";
+        const isArchiveItem = href === "/saved";
         const resolvedHref = isProfileItem ? userProfileHref : href;
         const isActive = isProfileItem
           ? Boolean(user?.username) &&
             pathname === `/user/${encodeURIComponent(user.username)}`
           : isArchiveItem
-            ? pathname === href || pathname.startsWith("/archive/folder/")
+            ? pathname === href || pathname.startsWith("/saved/folder/")
             : pathname === href;
         const color = isActive ? "#E1761F" : "#959595";
         return (
-          <li key={href} className="flex flex-col items-center">
+          <li key={href} className="flex flex-col items-center text-[10px]">
             <Link
               href={resolvedHref}
               className="flex flex-col items-center gap-1"
@@ -55,7 +55,7 @@ export default function Navbar() {
               }}
             >
               <Icon
-                size={28}
+                size={24}
                 color={color}
                 variant={isActive ? "Bold" : "Linear"}
               />

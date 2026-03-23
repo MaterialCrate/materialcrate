@@ -17,6 +17,7 @@ const PIN_POST_MUTATION = `
       description
       year
       pinned
+      commentsDisabled
       createdAt
       likeCount
       commentCount

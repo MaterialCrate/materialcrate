@@ -25,6 +25,7 @@ const SEARCH_QUERY = `
       courseCode
       description
       year
+      commentsDisabled
       likeCount
       commentCount
       viewerHasLiked

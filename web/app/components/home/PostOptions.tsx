@@ -25,6 +25,7 @@ interface OptionsDrawerProps {
   anchor?: PostOptionsAnchor | null;
   onEditPost?: (post: HomePost) => void;
   onPostPinned?: (post: HomePost) => void;
+  onPostUpdated?: (post: HomePost) => void;
 }
 
 export default function OptionsOptions({
@@ -34,10 +35,12 @@ export default function OptionsOptions({
   anchor,
   onEditPost,
   onPostPinned,
+  onPostUpdated,
 }: OptionsDrawerProps) {
   const drawerRef = React.useRef<HTMLDivElement | null>(null);
   const { user } = useAuth();
   const [isPinning, setIsPinning] = React.useState(false);
+  const [isTogglingComments, setIsTogglingComments] = React.useState(false);
   const author = post?.author;
   const username = author?.username?.trim()
     ? `@${author.username}`
@@ -46,7 +49,10 @@ export default function OptionsOptions({
     Boolean(user?.username?.trim()) &&
     user?.username?.trim().toLowerCase() ===
       author?.username?.trim().toLowerCase();
-  const pinActionLabel = post?.pinned ? "Unpin for profile" : "Pin to profile";
+  const pinActionLabel = post?.pinned ? "Unpin from profile" : "Pin to profile";
+  const commentsActionLabel = post?.commentsDisabled
+    ? "Enable comments"
+    : "Disable comments";
   const pinActionIcon = post?.pinned ? (
     <LocationSlash size={20} color="#111111" variant="Bold" />
   ) : (
@@ -64,7 +70,7 @@ export default function OptionsOptions({
           icon: pinActionIcon,
         },
         {
-          label: "Disable comments",
+          label: commentsActionLabel,
           icon: <MessageQuestion size={20} color="#111111" variant="Bold" />,
         },
       ]
@@ -90,7 +96,7 @@ export default function OptionsOptions({
   const secondaryActions = isOwner
     ? [
         {
-          label: "Move to archive",
+          label: "Move to Saved",
           icon: <Archive size={20} color="#111111" variant="Bold" />,
         },
       ]
@@ -160,6 +166,25 @@ export default function OptionsOptions({
     return () => window.removeEventListener("resize", updatePosition);
   }, [anchor, isOpen]);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (drawerRef.current?.contains(target)) return;
+      onClose();
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [isOpen, onClose]);
+
   return (
     <div
       ref={drawerRef}
@@ -179,7 +204,7 @@ export default function OptionsOptions({
               <button
                 key={action.label}
                 type="button"
-                disabled={isPinning}
+                disabled={isPinning || isTogglingComments}
                 onClick={async () => {
                   if (!post) return;
 
@@ -189,8 +214,38 @@ export default function OptionsOptions({
                   }
 
                   if (
+                    action.label === "Disable comments" ||
+                    action.label === "Enable comments"
+                  ) {
+                    try {
+                      setIsTogglingComments(true);
+                      const response = await fetch("/api/posts/comments", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ postId: post.id }),
+                      });
+                      const body = await response.json().catch(() => ({}));
+
+                      if (!response.ok || !body?.post) {
+                        throw new Error(
+                          body?.error || "Failed to update comment settings",
+                        );
+                      }
+
+                      onPostUpdated?.(body.post);
+                      onClose();
+                    } catch (error) {
+                      console.error("Failed to update comment settings:", error);
+                    } finally {
+                      setIsTogglingComments(false);
+                    }
+
+                    return;
+                  }
+
+                  if (
                     action.label !== "Pin to profile" &&
-                    action.label !== "Unpin for profile"
+                    action.label !== "Unpin from profile"
                   ) {
                     return;
                   }
@@ -209,6 +264,7 @@ export default function OptionsOptions({
                     }
 
                     onPostPinned?.(body.post);
+                    onPostUpdated?.(body.post);
                     onClose();
                   } catch (error) {
                     console.error("Failed to pin post:", error);

@@ -27,6 +27,10 @@ type PinPostArgs = {
   postId: string;
 };
 
+type TogglePostCommentsArgs = {
+  postId: string;
+};
+
 type GraphQLContext = {
   user?: {
     sub?: string;
@@ -503,6 +507,42 @@ export const PostResolver = {
 
       return mapPostForGraphQL(pinnedPost, viewerId);
     },
+    togglePostComments: async (
+      _: unknown,
+      { postId }: TogglePostCommentsArgs,
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedPostId = postId?.trim();
+      if (!normalizedPostId) {
+        throw new Error("Post id is required");
+      }
+
+      const existingPost = await prisma.post.findUnique({
+        where: { id: normalizedPostId },
+        select: { id: true, authorId: true, commentsDisabled: true },
+      });
+
+      if (!existingPost) {
+        throw new Error("Post not found");
+      }
+
+      if (existingPost.authorId !== viewerId) {
+        throw new Error("You can only change comments on your own posts");
+      }
+
+      const updatedPost = await prisma.post.update({
+        where: { id: normalizedPostId },
+        data: { commentsDisabled: !existingPost.commentsDisabled },
+        include: buildPostInclude(viewerId),
+      });
+
+      return mapPostForGraphQL(updatedPost, viewerId);
+    },
     togglePostLike: async (
       _: unknown,
       { postId }: { postId: string },
@@ -515,10 +555,14 @@ export const PostResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true },
+        select: { id: true, authorId: true, commentsDisabled: true },
       });
       if (!post) {
         throw new Error("Post not found");
+      }
+
+      if (post.commentsDisabled && post.authorId !== viewerId) {
+        throw new Error("Comments are disabled for this post");
       }
 
       const existingLike = await prisma.like.findUnique({
@@ -738,6 +782,7 @@ export const PostResolver = {
     },
     likeCount: (post: any) => post.likeCount ?? post?._count?.likes ?? 0,
     commentCount: (post: any) => post.commentCount ?? post?._count?.comments ?? 0,
+    commentsDisabled: (post: any) => Boolean(post.commentsDisabled),
     comments: async (
       post: { id: string },
       { limit = 20, offset = 0 }: { limit?: number; offset?: number },

@@ -4,11 +4,13 @@ import Image from "next/image";
 import { CloseCircle, Heart, Send, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import Alert from "../Alert";
+import type { HomePost } from "./Post";
 
 interface CommentDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   postId: string | null;
+  post?: HomePost | null;
 }
 
 type CommentAuthor = {
@@ -84,6 +86,7 @@ export default function CommentDrawer({
   isOpen,
   onClose,
   postId,
+  post,
 }: CommentDrawerProps) {
   const router = useRouter();
   const { user, isLoading } = useAuth();
@@ -104,6 +107,11 @@ export default function CommentDrawer({
   const [isLikingByCommentId, setIsLikingByCommentId] = useState<
     Record<string, boolean>
   >({});
+  const isOwner =
+    Boolean(user?.username?.trim()) &&
+    user?.username?.trim().toLowerCase() ===
+      post?.author?.username?.trim().toLowerCase();
+  const commentsLocked = Boolean(post?.commentsDisabled) && !isOwner;
 
   const resetState = useCallback(() => {
     setExpandedRepliesByCommentId({});
@@ -286,6 +294,7 @@ export default function CommentDrawer({
   };
 
   const handleReplyToComment = (target: DrawerComment) => {
+    if (commentsLocked) return;
     if (!ensureAuthenticated()) return;
 
     const parentCommentId = target.parentId ?? target.id;
@@ -326,7 +335,13 @@ export default function CommentDrawer({
         ? baseContent
         : `${replyTarget.mention} ${baseContent}`.trim()
       : baseContent;
-    if (!postId || !content || isSubmittingComment || !ensureAuthenticated()) {
+    if (
+      commentsLocked ||
+      !postId ||
+      !content ||
+      isSubmittingComment ||
+      !ensureAuthenticated()
+    ) {
       return;
     }
 
@@ -464,6 +479,8 @@ export default function CommentDrawer({
                           <button
                             type="button"
                             onClick={() => handleReplyToComment(comment)}
+                            disabled={commentsLocked}
+                            className="disabled:opacity-50"
                           >
                             Reply
                           </button>
@@ -548,6 +565,8 @@ export default function CommentDrawer({
                                 <button
                                   type="button"
                                   onClick={() => handleReplyToComment(reply)}
+                                  disabled={commentsLocked}
+                                  className="disabled:opacity-50"
                                 >
                                   Reply
                                 </button>
@@ -621,18 +640,31 @@ export default function CommentDrawer({
               </button>
             </div>
           ) : null}
+          {commentsLocked ? (
+            <p className="px-1 text-[11px] text-[#6A6A6A]">
+              Comments are disabled for this post.
+            </p>
+          ) : null}
           <div className="flex items-center justify-between gap-7">
             <input
               value={draftComment}
               onChange={(event) => setDraftComment(event.target.value)}
-              placeholder="Share your thoughts... "
-              className="placeholder:text-[#828282] placeholder:text-xs text-xs py-3 px-3 w-full bg-[#EBEBEB] rounded-3xl drop-shadow-xs focus:outline-0"
+              placeholder={
+                commentsLocked ? "Comments are disabled" : "Share your thoughts... "
+              }
+              disabled={commentsLocked}
+              className="placeholder:text-[#828282] placeholder:text-xs text-xs py-3 px-3 w-full bg-[#EBEBEB] rounded-3xl drop-shadow-xs focus:outline-0 disabled:opacity-60"
             />
             <button
               type="button"
               aria-label="submit comment"
               onClick={() => void handleSubmitComment()}
-              disabled={!postId || !draftComment.trim() || isSubmittingComment}
+              disabled={
+                commentsLocked ||
+                !postId ||
+                !draftComment.trim() ||
+                isSubmittingComment
+              }
               className="disabled:opacity-50"
             >
               <Send size={32} color="#5B5B5B" />

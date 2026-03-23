@@ -7,7 +7,7 @@ import useScrollVisibility from "./useScrollVisibility";
 const NAV_PATHS = new Set([
   "/",
   "/hub",
-  "/archive",
+  "/saved",
 ]);
 
 export default function ConditionalNavbar() {
@@ -16,7 +16,7 @@ export default function ConditionalNavbar() {
 
   const shouldShowNavbar =
     NAV_PATHS.has(pathname) ||
-    pathname.startsWith("/archive/folder/") ||
+    pathname.startsWith("/saved/folder/") ||
     pathname.startsWith("/user/");
 
   if (!shouldShowNavbar) {
