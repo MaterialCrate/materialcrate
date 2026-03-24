@@ -65,12 +65,54 @@ const extractS3KeyFromUrl = (
   }
 };
 
-const buildVisiblePostWhere = (uninterestedPostIds?: string[]) => ({
+const getInaccessibleAuthorIds = async (viewerId?: string) => {
+  if (!viewerId) {
+    return [];
+  }
+
+  const blockers = await prisma.user.findMany({
+    where: {
+      blockedUserIds: {
+        has: viewerId,
+      },
+    },
+    select: { id: true },
+  });
+
+  return Array.from(
+    new Set(blockers.map((user) => user.id)),
+  );
+};
+
+const getBlockedUserIdsForViewer = async (viewerId?: string) => {
+  if (!viewerId) {
+    return [];
+  }
+
+  const viewer = await prisma.user.findUnique({
+    where: { id: viewerId },
+    select: { blockedUserIds: true },
+  });
+
+  return Array.isArray(viewer?.blockedUserIds) ? viewer.blockedUserIds : [];
+};
+
+const buildVisiblePostWhere = (
+  uninterestedPostIds?: string[],
+  inaccessibleAuthorIds?: string[],
+) => ({
   deleted: false,
   ...(Array.isArray(uninterestedPostIds) && uninterestedPostIds.length > 0
     ? {
         id: {
           notIn: uninterestedPostIds,
+        },
+      }
+    : {}),
+  ...(Array.isArray(inaccessibleAuthorIds) && inaccessibleAuthorIds.length > 0
+    ? {
+        authorId: {
+          notIn: inaccessibleAuthorIds,
         },
       }
     : {}),
@@ -212,7 +254,10 @@ export const PostResolver = {
       const post = await prisma.post.findFirst({
         where: {
           id: normalizedId,
-          ...buildVisiblePostWhere(),
+          ...buildVisiblePostWhere(
+            undefined,
+            await getInaccessibleAuthorIds(viewerId),
+          ),
         },
         include: buildPostInclude(viewerId),
       });
@@ -222,18 +267,25 @@ export const PostResolver = {
     postVersions: async (
       _: unknown,
       { postId }: { postId: string },
+      ctx: GraphQLContext,
     ) => {
+      const viewerId = ctx.user?.sub;
       const normalizedPostId = postId?.trim();
       if (!normalizedPostId) {
         throw new Error("Post id is required");
       }
 
+      const inaccessibleAuthorIds = await getInaccessibleAuthorIds(viewerId);
       const post = await prisma.post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true, deleted: true },
+        select: { id: true, deleted: true, authorId: true },
       });
 
       if (!post || post.deleted) {
+        throw new Error("Post not found");
+      }
+
+      if (post.authorId && inaccessibleAuthorIds.includes(post.authorId)) {
         throw new Error("Post not found");
       }
 
@@ -254,19 +306,34 @@ export const PostResolver = {
     ) => {
       const viewerId = ctx.user?.sub;
       const normalizedAuthorUsername = String(authorUsername || "").trim();
-      const viewer = viewerId
-        ? await prisma.user.findUnique({
-            where: { id: viewerId },
-            select: { uninterestedPostIds: true },
-          })
-        : null;
-      const uninterestedPostIds = Array.isArray(viewer?.uninterestedPostIds)
-        ? viewer.uninterestedPostIds
-        : [];
+        const viewer = viewerId
+          ? await prisma.user.findUnique({
+              where: { id: viewerId },
+              select: { uninterestedPostIds: true, blockedUserIds: true },
+            })
+          : null;
+        const uninterestedPostIds = Array.isArray(viewer?.uninterestedPostIds)
+          ? viewer.uninterestedPostIds
+          : [];
+        const inaccessibleAuthorIds = normalizedAuthorUsername
+          ? await getInaccessibleAuthorIds(viewerId)
+          : Array.from(
+              new Set([
+                ...(await getInaccessibleAuthorIds(viewerId)),
+                ...(await getBlockedUserIdsForViewer(viewerId)),
+              ]),
+            );
       const posts = await prisma.post.findMany({
         where: normalizedAuthorUsername
           ? {
               deleted: false,
+              ...(inaccessibleAuthorIds.length > 0
+                ? {
+                    authorId: {
+                      notIn: inaccessibleAuthorIds,
+                    },
+                  }
+                : {}),
               author: {
                 username: {
                   equals: normalizedAuthorUsername,
@@ -276,7 +343,7 @@ export const PostResolver = {
                 disabled: false,
               },
             }
-          : buildVisiblePostWhere(uninterestedPostIds),
+          : buildVisiblePostWhere(uninterestedPostIds, inaccessibleAuthorIds),
         include: buildPostInclude(viewerId),
         orderBy: (normalizedAuthorUsername
           ? [{ pinned: "desc" }, { createdAt: "desc" }]
@@ -299,16 +366,11 @@ export const PostResolver = {
 
       const safeLimit = Math.max(1, Math.min(limit, 25));
       const numericYear = Number.parseInt(normalizedQuery, 10);
+      const inaccessibleAuthorIds = await getInaccessibleAuthorIds(viewerId);
 
       const posts = await prisma.post.findMany({
         where: {
-          deleted: false,
-          author: {
-            is: {
-              deleted: false,
-              disabled: false,
-            },
-          },
+          ...buildVisiblePostWhere(undefined, inaccessibleAuthorIds),
           OR: [
             {
               title: {

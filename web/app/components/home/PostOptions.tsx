@@ -51,6 +51,7 @@ export default function OptionsOptions({
   const [isUpdatingMute, setIsUpdatingMute] = React.useState(false);
   const [isMarkingUninterested, setIsMarkingUninterested] =
     React.useState(false);
+  const [isUpdatingBlock, setIsUpdatingBlock] = React.useState(false);
   const author = post?.author;
   const username = author?.username?.trim()
     ? `@${author.username}`
@@ -69,6 +70,9 @@ export default function OptionsOptions({
   const muteActionLabel = post?.isAuthorMutedByCurrentUser
     ? `Unmute ${username}`
     : `Mute ${username}`;
+  const blockActionLabel = post?.isAuthorBlockedByCurrentUser
+    ? `Unblock ${username}`
+    : `Block ${username}`;
   const pinActionIcon = post?.pinned ? (
     <LocationSlash size={20} color="#111111" variant="Bold" />
   ) : (
@@ -104,7 +108,7 @@ export default function OptionsOptions({
           icon: <EyeSlash size={20} color="#111111" variant="Bold" />,
         },
         {
-          label: `Block ${username}`,
+          label: blockActionLabel,
           icon: <Slash size={20} color="#111111" />,
         },
       ];
@@ -215,7 +219,8 @@ export default function OptionsOptions({
                   isDeleting ||
                   isUpdatingFollow ||
                   isUpdatingMute ||
-                  isMarkingUninterested
+                  isMarkingUninterested ||
+                  isUpdatingBlock
                 }
                 onClick={async () => {
                   if (!post) return;
@@ -335,6 +340,60 @@ export default function OptionsOptions({
                       console.error("Failed to hide post from feed:", error);
                     } finally {
                       setIsMarkingUninterested(false);
+                    }
+
+                    return;
+                  }
+
+                  if (
+                    action.label === `Block ${username}` ||
+                    action.label === `Unblock ${username}`
+                  ) {
+                    const targetUsername = post.author?.username?.trim();
+                    if (!targetUsername) return;
+
+                    const shouldUnblock = Boolean(
+                      post.isAuthorBlockedByCurrentUser,
+                    );
+
+                    if (
+                      !shouldUnblock &&
+                      !window.confirm(
+                        `Block ${username}? They won't be able to find your profile or posts.`,
+                      )
+                    ) {
+                      return;
+                    }
+
+                    const optimisticPost = {
+                      ...post,
+                      isAuthorBlockedByCurrentUser: !shouldUnblock,
+                    };
+
+                    onPostUpdated?.(optimisticPost);
+
+                    try {
+                      setIsUpdatingBlock(true);
+                      const response = await fetch(
+                        `/api/users/${encodeURIComponent(targetUsername)}/block`,
+                        {
+                          method: shouldUnblock ? "DELETE" : "POST",
+                        },
+                      );
+                      const body = await response.json().catch(() => ({}));
+
+                      if (!response.ok) {
+                        throw new Error(
+                          body?.error || "Failed to update block state",
+                        );
+                      }
+
+                      onClose();
+                    } catch (error) {
+                      onPostUpdated?.(post);
+                      console.error("Failed to update block state:", error);
+                    } finally {
+                      setIsUpdatingBlock(false);
                     }
 
                     return;

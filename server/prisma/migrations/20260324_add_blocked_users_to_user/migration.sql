@@ -1,0 +1,2 @@
+ALTER TABLE "User"
+ADD COLUMN "blockedUserIds" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];

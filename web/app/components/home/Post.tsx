@@ -32,6 +32,7 @@ export type HomePost = {
   viewerHasLiked?: boolean;
   isAuthorFollowedByCurrentUser?: boolean;
   isAuthorMutedByCurrentUser?: boolean;
+  isAuthorBlockedByCurrentUser?: boolean;
   createdAt: string;
   author?: {
     id: string;

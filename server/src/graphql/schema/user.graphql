@@ -11,6 +11,7 @@ type User {
   email: String!
   linkedSEOs: [String!]!
   uninterestedPostIds: [ID!]!
+  blockedUserIds: [ID!]!
   subscriptionPlan: String!
   subscriptionStartedAt: String
   subscriptionEndsAt: String
@@ -66,6 +67,8 @@ type Mutation {
   unfollowUser(username: String!): Boolean!
   muteUser(username: String!): Boolean!
   unmuteUser(username: String!): Boolean!
+  blockUser(username: String!): Boolean!
+  unblockUser(username: String!): Boolean!
   completeProfile(
     username: String!
     displayName: String!

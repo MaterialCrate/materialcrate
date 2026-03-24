@@ -211,6 +211,8 @@ export default function Home() {
                   updatedPost.isAuthorFollowedByCurrentUser,
                 isAuthorMutedByCurrentUser:
                   updatedPost.isAuthorMutedByCurrentUser,
+                isAuthorBlockedByCurrentUser:
+                  updatedPost.isAuthorBlockedByCurrentUser,
               }
             : post,
       ),

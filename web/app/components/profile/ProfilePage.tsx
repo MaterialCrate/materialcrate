@@ -332,6 +332,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                   updatedPost.isAuthorFollowedByCurrentUser,
                 isAuthorMutedByCurrentUser:
                   updatedPost.isAuthorMutedByCurrentUser,
+                isAuthorBlockedByCurrentUser:
+                  updatedPost.isAuthorBlockedByCurrentUser,
               }
             : post,
       ),

@@ -133,6 +133,8 @@ export default function SearchPage() {
                   updatedPost.isAuthorFollowedByCurrentUser,
                 isAuthorMutedByCurrentUser:
                   updatedPost.isAuthorMutedByCurrentUser,
+                isAuthorBlockedByCurrentUser:
+                  updatedPost.isAuthorBlockedByCurrentUser,
               }
             : post,
       ),

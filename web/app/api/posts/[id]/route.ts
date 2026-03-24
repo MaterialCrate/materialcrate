@@ -34,6 +34,7 @@ const POST_QUERY = `
 const AUTHENTICATED_POST_QUERY = `
   query PostById($id: ID!) {
     me {
+      blockedUserIds
       following {
         username
       }
@@ -122,6 +123,12 @@ export async function GET(
       )
       .filter(Boolean),
   );
+  const viewerBlockedUserIds = new Set(
+    (Array.isArray(graphqlBody?.data?.me?.blockedUserIds)
+      ? graphqlBody.data.me.blockedUserIds
+      : []
+    ).filter(Boolean),
+  );
 
   const post = graphqlBody?.data?.post;
   const authorUsername = post?.author?.username?.trim().toLowerCase();
@@ -135,6 +142,9 @@ export async function GET(
             : false,
           isAuthorMutedByCurrentUser: authorUsername
             ? viewerMutedUsernames.has(authorUsername)
+            : false,
+          isAuthorBlockedByCurrentUser: post.author?.id
+            ? viewerBlockedUserIds.has(post.author.id)
             : false,
         }
       : null,

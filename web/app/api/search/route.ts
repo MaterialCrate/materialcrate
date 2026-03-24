@@ -44,6 +44,7 @@ const SEARCH_QUERY = `
 const AUTHENTICATED_SEARCH_QUERY = `
   query Search($query: String!, $limit: Int!) {
     me {
+      blockedUserIds
       following {
         username
       }
@@ -147,12 +148,21 @@ export async function GET(request: Request) {
       )
       .filter(Boolean),
   );
+  const viewerBlockedUserIds = new Set(
+    (Array.isArray(graphqlBody?.data?.me?.blockedUserIds)
+      ? graphqlBody.data.me.blockedUserIds
+      : []
+    ).filter(Boolean),
+  );
 
   const documents = (Array.isArray(graphqlBody?.data?.searchPosts)
     ? graphqlBody.data.searchPosts
     : []
   ).map((post: Record<string, unknown>) => {
-    const author = (post.author ?? null) as { username?: string | null } | null;
+    const author = (post.author ?? null) as {
+      id?: string | null;
+      username?: string | null;
+    } | null;
     const authorUsername = author?.username?.trim().toLowerCase();
 
     return {
@@ -162,6 +172,9 @@ export async function GET(request: Request) {
         : false,
       isAuthorMutedByCurrentUser: authorUsername
         ? viewerMutedUsernames.has(authorUsername)
+        : false,
+      isAuthorBlockedByCurrentUser: author?.id
+        ? viewerBlockedUserIds.has(author.id)
         : false,
     };
   });

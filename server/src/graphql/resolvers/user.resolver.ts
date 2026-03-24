@@ -156,6 +156,19 @@ const toIsoStringOrNull = (value: unknown) => {
   return parsed.toISOString();
 };
 
+const getBlockedUserIdsForViewer = async (viewerId?: string) => {
+  if (!viewerId) {
+    return [];
+  }
+
+  const viewer = await (prisma as any).user.findUnique({
+    where: { id: viewerId },
+    select: { blockedUserIds: true },
+  });
+
+  return Array.isArray(viewer?.blockedUserIds) ? viewer.blockedUserIds : [];
+};
+
 export const UserResolver = {
   Query: {
     me: async (_: unknown, __: unknown, ctx: any) => {
@@ -170,39 +183,65 @@ export const UserResolver = {
       return prisma.user.findUnique({ where: { id } });
     },
 
-    userByUsername: async (_: unknown, { username }: { username: string }) => {
+    userByUsername: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
       const normalizedUsername = String(username || "").trim();
       if (!normalizedUsername) {
         return null;
       }
 
-      return (prisma as any).user.findFirst({
-        where: {
+        const viewerId = ctx.user?.sub;
+
+        return (prisma as any).user.findFirst({
+          where: {
           username: {
             equals: normalizedUsername,
             mode: "insensitive",
           },
           deleted: false,
           disabled: false,
-        },
+            ...(viewerId
+              ? {
+                  NOT: {
+                    blockedUserIds: {
+                      has: viewerId,
+                    },
+                  },
+                }
+              : {}),
+          },
       });
     },
 
     searchUsers: async (
       _: unknown,
       { query, limit = 12 }: { query: string; limit?: number },
+      ctx: any,
     ) => {
       const normalizedQuery = String(query || "").trim();
       if (!normalizedQuery) {
         return [];
       }
 
-      const safeLimit = Math.max(1, Math.min(limit, 25));
+        const safeLimit = Math.max(1, Math.min(limit, 25));
+        const viewerId = ctx.user?.sub;
 
-      return (prisma as any).user.findMany({
-        where: {
-          deleted: false,
-          disabled: false,
+        return (prisma as any).user.findMany({
+          where: {
+            deleted: false,
+            disabled: false,
+            ...(viewerId
+              ? {
+                  NOT: {
+                    blockedUserIds: {
+                      has: viewerId,
+                    },
+                  },
+                }
+              : {}),
           OR: [
             {
               username: {
@@ -817,6 +856,114 @@ export const UserResolver = {
         where: {
           muterId: ctx.user.sub,
           mutedId: targetUser.id,
+        },
+      });
+
+      return true;
+    },
+    blockUser: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) {
+        throw new Error("Username is required");
+      }
+
+      const targetUser = await (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+          deleted: false,
+          disabled: false,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        throw new Error("User not found");
+      }
+
+      if (targetUser.id === ctx.user.sub) {
+        throw new Error("You cannot block yourself");
+      }
+
+        const blockedUserIds = await getBlockedUserIdsForViewer(ctx.user.sub);
+
+        if (!blockedUserIds.includes(targetUser.id)) {
+          await prisma.$transaction([
+            (prisma as any).user.update({
+              where: { id: ctx.user.sub },
+              data: {
+                blockedUserIds: {
+                  push: targetUser.id,
+                },
+              },
+            }),
+            (prisma as any).follow.deleteMany({
+              where: {
+                OR: [
+                  {
+                    followerId: ctx.user.sub,
+                    followingId: targetUser.id,
+                  },
+                  {
+                    followerId: targetUser.id,
+                    followingId: ctx.user.sub,
+                  },
+                ],
+              },
+            }),
+          ]);
+        }
+
+        return true;
+      },
+    unblockUser: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) {
+        throw new Error("Username is required");
+      }
+
+      const targetUser = await (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+          deleted: false,
+          disabled: false,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        throw new Error("User not found");
+      }
+
+      const blockedUserIds = (await getBlockedUserIdsForViewer(ctx.user.sub)).filter(
+        (blockedUserId: string) => blockedUserId !== targetUser.id,
+      );
+
+      await (prisma as any).user.update({
+        where: { id: ctx.user.sub },
+        data: {
+          blockedUserIds,
         },
       });
 
