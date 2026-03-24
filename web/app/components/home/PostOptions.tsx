@@ -45,6 +45,7 @@ export default function OptionsOptions({
   const [isPinning, setIsPinning] = React.useState(false);
   const [isTogglingComments, setIsTogglingComments] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isUpdatingFollow, setIsUpdatingFollow] = React.useState(false);
   const author = post?.author;
   const username = author?.username?.trim()
     ? `@${author.username}`
@@ -57,6 +58,9 @@ export default function OptionsOptions({
   const commentsActionLabel = post?.commentsDisabled
     ? "Enable comments"
     : "Disable comments";
+  const followActionLabel = post?.isAuthorFollowedByCurrentUser
+    ? `Unfollow ${username}`
+    : `Follow ${username}`;
   const pinActionIcon = post?.pinned ? (
     <LocationSlash size={20} color="#111111" variant="Bold" />
   ) : (
@@ -80,7 +84,7 @@ export default function OptionsOptions({
       ]
     : [
         {
-          label: `Follow ${username}`,
+          label: followActionLabel,
           icon: <ProfileAdd size={20} color="#111111" variant="Bold" />,
         },
         {
@@ -197,12 +201,61 @@ export default function OptionsOptions({
               <button
                 key={action.label}
                 type="button"
-                disabled={isPinning || isTogglingComments || isDeleting}
+                disabled={
+                  isPinning ||
+                  isTogglingComments ||
+                  isDeleting ||
+                  isUpdatingFollow
+                }
                 onClick={async () => {
                   if (!post) return;
 
                   if (action.label === "Edit post") {
                     onEditPost?.(post);
+                    return;
+                  }
+
+                  if (
+                    action.label === `Follow ${username}` ||
+                    action.label === `Unfollow ${username}`
+                  ) {
+                    const targetUsername = post.author?.username?.trim();
+                    if (!targetUsername) return;
+
+                    const shouldUnfollow = Boolean(
+                      post.isAuthorFollowedByCurrentUser,
+                    );
+                    const optimisticPost = {
+                      ...post,
+                      isAuthorFollowedByCurrentUser: !shouldUnfollow,
+                    };
+
+                    onPostUpdated?.(optimisticPost);
+
+                    try {
+                      setIsUpdatingFollow(true);
+                      const response = await fetch(
+                        `/api/users/${encodeURIComponent(targetUsername)}/follow`,
+                        {
+                          method: shouldUnfollow ? "DELETE" : "POST",
+                        },
+                      );
+                      const body = await response.json().catch(() => ({}));
+
+                      if (!response.ok) {
+                        throw new Error(
+                          body?.error || "Failed to update follow state",
+                        );
+                      }
+
+                      onClose();
+                    } catch (error) {
+                      onPostUpdated?.(post);
+                      console.error("Failed to update follow state:", error);
+                    } finally {
+                      setIsUpdatingFollow(false);
+                    }
+
                     return;
                   }
 

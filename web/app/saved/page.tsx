@@ -155,7 +155,7 @@ export default function SavedPage() {
 
       <div className="fixed top-0 left-0 right-0 z-40 ">
         <header className="bg-[#F7F7F7] px-6 pt-6 pb-3">
-          <h1 className="text-center text-xl font-medium">My Saved</h1>
+          <h1 className="text-center text-LG font-medium">My Saved</h1>
         </header>
         {isLoading && <LoadingBar />}
       </div>

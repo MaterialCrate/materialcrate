@@ -317,7 +317,7 @@ export default function SavedFolderPage() {
                     setFolderNameDraft(folder.name);
                     setIsEditingTitle(true);
                   }}
-                  className="max-w-55 truncate text-center text-xl font-medium"
+                  className="max-w-55 truncate text-center text-lg font-medium"
                 >
                   {folder?.name || "Saved Folder"}
                 </button>

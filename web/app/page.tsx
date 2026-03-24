@@ -195,9 +195,22 @@ export default function Home() {
   };
 
   const handlePostUpdated = (updatedPost: HomePost) => {
+    const updatedAuthorUsername =
+      updatedPost.author?.username?.trim().toLowerCase() || "";
+
     setPosts((current) =>
       current.map((post) =>
-        post.id === updatedPost.id ? { ...post, ...updatedPost } : post,
+        post.id === updatedPost.id
+          ? { ...post, ...updatedPost }
+          : updatedAuthorUsername &&
+              post.author?.username?.trim().toLowerCase() ===
+                updatedAuthorUsername
+            ? {
+                ...post,
+                isAuthorFollowedByCurrentUser:
+                  updatedPost.isAuthorFollowedByCurrentUser,
+              }
+            : post,
       ),
     );
     setActiveOptionsPost((current) =>

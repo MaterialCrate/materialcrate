@@ -6,7 +6,7 @@ export default function WorkspacePage() {
   return (
     <div className="h-screen relative">
       <header className="flex justify-center fixed top-0 left-0 right-0 mx-0 bg-[#F7F7F7] pt-6 pb-2">
-        <h1 className="text-xl font-medium">My Workspace</h1>
+        <h1 className="text-lg font-medium">My Workspace</h1>
       </header>
       <div className="h-full flex flex-col items-center justify-center px-24 gap-4">
         <Image

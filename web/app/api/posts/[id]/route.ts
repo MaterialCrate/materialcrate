@@ -31,6 +31,38 @@ const POST_QUERY = `
   }
 `;
 
+const AUTHENTICATED_POST_QUERY = `
+  query PostById($id: ID!) {
+    me {
+      following {
+        username
+      }
+    }
+    post(id: $id) {
+      id
+      fileUrl
+      thumbnailUrl
+      title
+      courseCode
+      description
+      year
+      pinned
+      commentsDisabled
+      likeCount
+      commentCount
+      viewerHasLiked
+      createdAt
+      author {
+        id
+        displayName
+        username
+        profilePicture
+        subscriptionPlan
+      }
+    }
+  }
+`;
+
 export async function GET(
   _: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -51,7 +83,7 @@ export async function GET(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({
-      query: POST_QUERY,
+      query: token ? AUTHENTICATED_POST_QUERY : POST_QUERY,
       variables: { id: postId },
     }),
     cache: "no-store",
@@ -67,5 +99,28 @@ export async function GET(
     );
   }
 
-  return NextResponse.json({ post: graphqlBody?.data?.post ?? null });
+  const viewerFollowingUsernames = new Set(
+    (Array.isArray(graphqlBody?.data?.me?.following)
+      ? graphqlBody.data.me.following
+      : []
+    )
+      .map((entry: { username?: string | null }) =>
+        entry.username?.trim().toLowerCase(),
+      )
+      .filter(Boolean),
+  );
+
+  const post = graphqlBody?.data?.post;
+  const authorUsername = post?.author?.username?.trim().toLowerCase();
+
+  return NextResponse.json({
+    post: post
+      ? {
+          ...post,
+          isAuthorFollowedByCurrentUser: authorUsername
+            ? viewerFollowingUsernames.has(authorUsername)
+            : false,
+        }
+      : null,
+  });
 }

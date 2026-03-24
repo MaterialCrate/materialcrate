@@ -41,6 +41,48 @@ const SEARCH_QUERY = `
   }
 `;
 
+const AUTHENTICATED_SEARCH_QUERY = `
+  query Search($query: String!, $limit: Int!) {
+    me {
+      following {
+        username
+      }
+    }
+    searchUsers(query: $query, limit: $limit) {
+      id
+      username
+      displayName
+      profilePicture
+      followersCount
+      followingCount
+      subscriptionPlan
+      institution
+      program
+    }
+    searchPosts(query: $query, limit: $limit) {
+      id
+      fileUrl
+      thumbnailUrl
+      title
+      courseCode
+      description
+      year
+      commentsDisabled
+      likeCount
+      commentCount
+      viewerHasLiked
+      createdAt
+      author {
+        id
+        displayName
+        username
+        profilePicture
+        subscriptionPlan
+      }
+    }
+  }
+`;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
@@ -63,7 +105,7 @@ export async function GET(request: Request) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({
-      query: SEARCH_QUERY,
+      query: token ? AUTHENTICATED_SEARCH_QUERY : SEARCH_QUERY,
       variables: {
         query,
         limit,
@@ -82,8 +124,34 @@ export async function GET(request: Request) {
     );
   }
 
+  const viewerFollowingUsernames = new Set(
+    (Array.isArray(graphqlBody?.data?.me?.following)
+      ? graphqlBody.data.me.following
+      : []
+    )
+      .map((entry: { username?: string | null }) =>
+        entry.username?.trim().toLowerCase(),
+      )
+      .filter(Boolean),
+  );
+
+  const documents = (Array.isArray(graphqlBody?.data?.searchPosts)
+    ? graphqlBody.data.searchPosts
+    : []
+  ).map((post: Record<string, unknown>) => {
+    const author = (post.author ?? null) as { username?: string | null } | null;
+    const authorUsername = author?.username?.trim().toLowerCase();
+
+    return {
+      ...post,
+      isAuthorFollowedByCurrentUser: authorUsername
+        ? viewerFollowingUsernames.has(authorUsername)
+        : false,
+    };
+  });
+
   return NextResponse.json({
     users: graphqlBody?.data?.searchUsers ?? [],
-    documents: graphqlBody?.data?.searchPosts ?? [],
+    documents,
   });
 }

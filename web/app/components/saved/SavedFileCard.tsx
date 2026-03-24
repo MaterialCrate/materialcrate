@@ -68,7 +68,7 @@ export default function SavedFileCard({
           )}
         </button>
         <div className="w-full flex flex-col justify-between">
-          <div className="flex items-start justify-between">
+          <div className="flex items-start justify-between gap-0.5">
             <div>
               <p className="line-clamp-2 text-sm font-medium text-[#202020]">
                 {savedPost.post.title}
@@ -83,9 +83,9 @@ export default function SavedFileCard({
               aria-label="remove saved file"
               onClick={() => onRemove(savedPost)}
               disabled={isRemoving}
-              className={isRemoving ? "opacity-50" : undefined}
+              className={`${isRemoving && "opacity-50"}`}
             >
-              <CloseCircle size={24} color="#9e9e9e" variant="Bold" />
+              <CloseCircle size={24} color="#9e9e9e" />
             </button>
           </div>
           <div className="w-full space-y-1">
