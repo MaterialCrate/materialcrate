@@ -10,8 +10,10 @@ import {
   User,
   Verify,
   Location,
+  Send2,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import Alert from "@/app/components/Alert";
 import Image from "next/image";
 import PdfThumbnail from "./PdfThumbnail";
 
@@ -113,6 +115,7 @@ export default function Post({
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const optionsButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  const alertTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const authorFullName = post.author?.displayName?.trim() || "Unknown user";
   const authorUsername = post.author?.username
     ? `@${post.author.username}`
@@ -128,6 +131,13 @@ export default function Post({
     Boolean(post.viewerHasLiked),
   );
   const [isLiking, setIsLiking] = useState<boolean>(false);
+  const [alertState, setAlertState] = useState<{
+    message: string | null;
+    type: "success" | "error" | "info";
+  }>({
+    message: null,
+    type: "success",
+  });
   const [pendingProtectedAction, setPendingProtectedAction] =
     useState<PendingProtectedAction>(null);
 
@@ -181,6 +191,58 @@ export default function Post({
   );
 
   useEffect(() => {
+    return () => {
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const showAlert = useCallback(
+    (message: string, type: "success" | "error" | "info") => {
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
+
+      setAlertState({ message, type });
+      alertTimeoutRef.current = setTimeout(() => {
+        setAlertState((current) => ({ ...current, message: null }));
+      }, 3000);
+    },
+    [],
+  );
+
+  const copyPostLink = useCallback(async () => {
+    if (typeof window === "undefined") {
+      showAlert("Failed to copy post link", "error");
+      return;
+    }
+
+    const postUrl = `${window.location.origin}/post/${encodeURIComponent(post.id)}`;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(postUrl);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = postUrl;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "absolute";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+
+      showAlert("Post link copied", "success");
+    } catch (error) {
+      console.error("Failed to copy post link:", error);
+      showAlert("Failed to share post", "error");
+    }
+  }, [post.id, showAlert]);
+
+  useEffect(() => {
     if (isLoading || !pendingProtectedAction) return;
 
     if (!user) {
@@ -224,6 +286,7 @@ export default function Post({
 
   return (
     <div className="mt-4 space-y-2">
+      <Alert message={alertState.message} type={alertState.type} />
       <div className="flex justify-between items-start px-6">
         <button
           type="button"
@@ -323,59 +386,70 @@ export default function Post({
           </div>
         </button>
       </div>
-      <div className="px-6 flex items-center gap-20">
-        <button
-          type="button"
-          className="flex items-center gap-1.5 disabled:opacity-60"
-          onClick={() => {
-            void handleLike();
-          }}
-          disabled={isLiking}
-        >
-          <Heart
-            size={24}
-            color={viewerHasLiked ? "#E00505" : "#808080"}
-            variant={viewerHasLiked ? "Bold" : "Linear"}
-          />
-          <p className="text-[#808080] text-xs">{likeCount}</p>
-        </button>
-        <button
-          type="button"
-          className="flex items-center gap-1.5"
-          onClick={() => {
-            if (!ensureAuthenticated("comment")) return;
-            onCommentClick?.(post);
-          }}
-        >
-          <Messages2 size={24} color="#808080" />
-          <p className="text-[#808080] text-xs">{post.commentCount ?? 0}</p>
-        </button>
-        <button
-          aria-label="Archive"
-          type="button"
-          className={`flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors 
+      <div className="flex items-center justify-between px-6">
+        <div className="flex items-center gap-10">
+          <button
+            type="button"
+            className="flex items-center gap-1.5 disabled:opacity-60"
+            onClick={() => {
+              void handleLike();
+            }}
+            disabled={isLiking}
+          >
+            <Heart
+              size={20}
+              color={viewerHasLiked ? "#E00505" : "#808080"}
+              variant={viewerHasLiked ? "Bold" : "Linear"}
+            />
+            <p className="text-[#808080] text-xs">{likeCount}</p>
+          </button>
+          <button
+            type="button"
+            className="flex items-center gap-1.5"
+            onClick={() => {
+              if (!ensureAuthenticated("comment")) return;
+              onCommentClick?.(post);
+            }}
+          >
+            <Messages2 size={20} color="#808080" />
+            <p className="text-[#808080] text-xs">{post.commentCount ?? 0}</p>
+          </button>
+          <button
+            aria-label="Archive"
+            type="button"
+            className={`flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors 
            ${isArchiveBusy && "opacity-60"}`}
-          disabled={isArchiveBusy}
+            disabled={isArchiveBusy}
+            onClick={() => {
+              if (
+                !ensureAuthenticated(
+                  isArchived ? "archive-remove" : "archive-add",
+                )
+              ) {
+                return;
+              }
+              if (isArchived) {
+                onArchiveRemoveClick?.(post);
+                return;
+              }
+              onArchiveClick?.(post);
+            }}
+          >
+            <Archive
+              size={20}
+              color={isArchived ? "#E1761F" : "#808080"}
+              variant={isArchived ? "Bold" : "Linear"}
+            />
+          </button>
+        </div>
+        <button
+          type="button"
+          aria-label="share"
           onClick={() => {
-            if (
-              !ensureAuthenticated(
-                isArchived ? "archive-remove" : "archive-add",
-              )
-            ) {
-              return;
-            }
-            if (isArchived) {
-              onArchiveRemoveClick?.(post);
-              return;
-            }
-            onArchiveClick?.(post);
+            void copyPostLink();
           }}
         >
-          <Archive
-            size={24}
-            color={isArchived ? "#E1761F" : "#808080"}
-            variant={isArchived ? "Bold" : "Linear"}
-          />
+          <Send2 size={20} color="#808080" />
         </button>
       </div>
     </div>
