@@ -93,6 +93,35 @@ const mapPostForGraphQL = (post: any, viewerId?: string) => ({
   viewerHasLiked: viewerId ? (post?.likes?.length ?? 0) > 0 : false,
 });
 
+const buildPostVersionSnapshot = (
+  post: {
+    id: string;
+    title: string;
+    courseCode: string;
+    description?: string | null;
+    year?: number | null;
+    fileUrl: string;
+    thumbnailUrl?: string | null;
+  },
+  versionNumber: number,
+  editorId?: string | null,
+) => ({
+  postId: post.id,
+  versionNumber,
+  title: post.title,
+  courseCode: post.courseCode,
+  description: post.description ?? null,
+  year: post.year ?? null,
+  fileUrl: post.fileUrl,
+  thumbnailUrl: post.thumbnailUrl ?? null,
+  editorId: editorId ?? null,
+});
+
+const mapPostVersionForGraphQL = (version: any) => ({
+  ...version,
+  postId: version.postId,
+});
+
 const buildCommentInclude = (viewerId?: string) => {
   const include: any = {
     author: true,
@@ -169,6 +198,34 @@ export const PostResolver = {
       });
 
       return post ? mapPostForGraphQL(post, viewerId) : null;
+    },
+    postVersions: async (
+      _: unknown,
+      { postId }: { postId: string },
+    ) => {
+      const normalizedPostId = postId?.trim();
+      if (!normalizedPostId) {
+        throw new Error("Post id is required");
+      }
+
+      const post = await prisma.post.findUnique({
+        where: { id: normalizedPostId },
+        select: { id: true },
+      });
+
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      const versions = await (prisma as any).postVersion.findMany({
+        where: { postId: normalizedPostId },
+        include: {
+          editor: true,
+        },
+        orderBy: [{ versionNumber: "desc" }, { createdAt: "desc" }],
+      });
+
+      return versions.map((version: any) => mapPostVersionForGraphQL(version));
     },
     posts: async (
       _: unknown,
@@ -387,18 +444,34 @@ export const PostResolver = {
         }
       }
 
-      return prisma.post.create({
-        data: {
-          fileUrl,
-          thumbnailUrl,
-          title: title.trim(),
-          courseCode: courseCode.trim(),
-          description: description?.trim() || null,
-          year: Number.isFinite(year) ? year : null,
-          authorId: ctx.user.sub,
-        },
-        include: buildPostInclude(ctx.user.sub),
+      const createdPost = await prisma.$transaction(async (tx) => {
+        const nextPost = await tx.post.create({
+          data: {
+            fileUrl,
+            thumbnailUrl,
+            title: title.trim(),
+            courseCode: courseCode.trim(),
+            description: description?.trim() || null,
+            year: Number.isFinite(year) ? year : null,
+            authorId: ctx.user.sub,
+          },
+        });
+
+        await (tx as any).postVersion.create({
+          data: buildPostVersionSnapshot(nextPost, 1, ctx.user.sub),
+        });
+
+        return tx.post.findUnique({
+          where: { id: nextPost.id },
+          include: buildPostInclude(ctx.user.sub),
+        });
       });
+
+      if (!createdPost) {
+        throw new Error("Failed to create post");
+      }
+
+      return mapPostForGraphQL(createdPost, ctx.user.sub);
     },
     updatePost: async (_: unknown, args: UpdatePostArgs, ctx: GraphQLContext) => {
       const viewerId = ctx.user?.sub;
@@ -420,9 +493,19 @@ export const PostResolver = {
         throw new Error("Title and course code are required");
       }
 
-      const existingPost = await (prisma as any).post.findUnique({
+      const existingPost = await prisma.post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true, authorId: true, pinned: true },
+        select: {
+          id: true,
+          authorId: true,
+          pinned: true,
+          title: true,
+          courseCode: true,
+          description: true,
+          year: true,
+          fileUrl: true,
+          thumbnailUrl: true,
+        },
       });
 
       if (!existingPost) {
@@ -433,16 +516,45 @@ export const PostResolver = {
         throw new Error("You can only edit your own posts");
       }
 
-      const updatedPost = await prisma.post.update({
-        where: { id: normalizedPostId },
-        data: {
-          title: normalizedTitle,
-          courseCode: normalizedCourseCode,
-          description: normalizedDescription,
-          year: normalizedYear,
-        },
-        include: buildPostInclude(viewerId),
+      const updatedPost = await prisma.$transaction(async (tx) => {
+        const latestVersion = await (tx as any).postVersion.findFirst({
+          where: { postId: normalizedPostId },
+          orderBy: { versionNumber: "desc" },
+          select: { versionNumber: true },
+        });
+
+        let nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
+
+        if (!latestVersion) {
+          await (tx as any).postVersion.create({
+            data: buildPostVersionSnapshot(existingPost, nextVersionNumber, viewerId),
+          });
+          nextVersionNumber += 1;
+        }
+
+        const nextPost = await tx.post.update({
+          where: { id: normalizedPostId },
+          data: {
+            title: normalizedTitle,
+            courseCode: normalizedCourseCode,
+            description: normalizedDescription,
+            year: normalizedYear,
+          },
+        });
+
+        await (tx as any).postVersion.create({
+          data: buildPostVersionSnapshot(nextPost, nextVersionNumber, viewerId),
+        });
+
+        return tx.post.findUnique({
+          where: { id: normalizedPostId },
+          include: buildPostInclude(viewerId),
+        });
       });
+
+      if (!updatedPost) {
+        throw new Error("Post not found");
+      }
 
       return mapPostForGraphQL(updatedPost, viewerId);
     },
@@ -864,5 +976,8 @@ export const PostResolver = {
     likeCount: (comment: any) =>
       comment.likeCount ?? comment?._count?.commentLikes ?? 0,
     viewerHasLiked: (comment: any) => Boolean(comment.viewerHasLiked),
+  },
+  PostVersion: {
+    editor: (version: any) => sanitizeAuthorIdentity(version.editor),
   },
 };

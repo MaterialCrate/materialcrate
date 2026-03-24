@@ -5,7 +5,7 @@ import { ArrowRight2, Logout } from "iconsax-reactjs";
 import { useRouter } from "next/navigation";
 import ReferralCard from "../components/settings/ReferralCard";
 import ActionButton from "../components/ActionButton";
-import Header from "../components/settings/Header";
+import Header from "../components/Header";
 
 const settingPages = [
   {

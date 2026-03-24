@@ -1,5 +1,5 @@
 import React from "react";
-import Header from "@/app/components/settings/Header";
+import Header from "@/app/components/Header";
 import { Trash } from "iconsax-reactjs";
 import ActionButton from "@/app/components/ActionButton";
 

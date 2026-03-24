@@ -470,7 +470,7 @@ export default function CommentDrawer({
                           <Verify size={14} color="#E1761F" variant="Bold" />
                         ) : null}
                       </div>
-                      <p className="text-sm text-[#202020]">
+                      <p className="text-xs text-[#202020]">
                         {renderContentWithMentions(comment.content)}
                       </p>
                       <div className="flex items-center font-medium justify-between text-xs text-[#5B5B5B] ">
@@ -528,18 +528,18 @@ export default function CommentDrawer({
                     <div className="ml-11 mt-3 space-y-3">
                       {replies.map((reply) => (
                         <div key={reply.id} className="flex items-start gap-3 ">
-                          <div className="h-5 w-5 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+                          <div className="w-10 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
                             {getAuthorProfilePicture(reply.author) ? (
                               <Image
                                 src={getAuthorProfilePicture(reply.author)}
                                 alt={`${getAuthorName(reply.author)}'s profile picture`}
-                                width={20}
-                                height={20}
+                                width={40}
+                                height={40}
                                 className="w-full h-full object-cover rounded-full"
                                 unoptimized
                               />
                             ) : (
-                              <User size={12} color="#808080" variant="Bold" />
+                              <User size={14} color="#808080" variant="Bold" />
                             )}
                           </div>
                           <div className="space-y-1 w-full">
@@ -556,7 +556,7 @@ export default function CommentDrawer({
                                 />
                               ) : null}
                             </div>
-                            <p className="text-sm text-[#202020]">
+                            <p className="text-xs text-[#202020]">
                               {renderContentWithMentions(reply.content)}
                             </p>
                             <div className="flex items-center justify-between text-xs text-[#5B5B5B] font-medium ">
@@ -650,7 +650,9 @@ export default function CommentDrawer({
               value={draftComment}
               onChange={(event) => setDraftComment(event.target.value)}
               placeholder={
-                commentsLocked ? "Comments are disabled" : "Share your thoughts... "
+                commentsLocked
+                  ? "Comments are disabled"
+                  : "Share your thoughts... "
               }
               disabled={commentsLocked}
               className="placeholder:text-[#828282] placeholder:text-xs text-xs py-3 px-3 w-full bg-[#EBEBEB] rounded-3xl drop-shadow-xs focus:outline-0 disabled:opacity-60"

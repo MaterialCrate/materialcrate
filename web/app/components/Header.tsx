@@ -12,11 +12,11 @@ export default function Header({ title }: HeaderProps) {
   const router = useRouter();
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center">
+    <header className="fixed inset-x-0 top-0 z-50 flex items-center gap-3 border-b border-black/6 bg-[#FFFFFF] px-6 pb-3 pt-6">
       <button aria-label="Back" type="button" onClick={() => router.back()}>
-        <ArrowLeft size={24} />
+        <ArrowLeft size={24} color="#202020" />
       </button>
-      <div className="text-center flex-1 text-xl font-medium">
+      <div className="text-lg font-medium text-[#202020]">
         <h1>{title}</h1>
       </div>
     </header>

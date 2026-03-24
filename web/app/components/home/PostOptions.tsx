@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
+import { useRouter } from "next/navigation";
 import {
-  Archive,
   Edit2,
   EyeSlash,
   Flag,
@@ -10,10 +10,10 @@ import {
   ProfileAdd,
   Slash,
   Trash,
-  UserCirlceAdd,
   VolumeMute,
   Location,
   LocationSlash,
+  Clock,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import type { HomePost, PostOptionsAnchor } from "./Post";
@@ -37,6 +37,7 @@ export default function OptionsOptions({
   onPostPinned,
   onPostUpdated,
 }: OptionsDrawerProps) {
+  const router = useRouter();
   const drawerRef = React.useRef<HTMLDivElement | null>(null);
   const { user } = useAuth();
   const [isPinning, setIsPinning] = React.useState(false);
@@ -93,19 +94,10 @@ export default function OptionsOptions({
         },
       ];
 
-  const secondaryActions = isOwner
-    ? [
-        {
-          label: "Move to Saved",
-          icon: <Archive size={20} color="#111111" variant="Bold" />,
-        },
-      ]
-    : [
-        {
-          label: "Why am I seeing this post?",
-          icon: <MessageQuestion size={20} color="#111111" variant="Bold" />,
-        },
-      ];
+  const secondaryAction = {
+    label: "View history",
+    icon: <Clock size={20} color="#111111" variant="Bold" />,
+  };
 
   const destructiveAction = isOwner
     ? {
@@ -235,7 +227,10 @@ export default function OptionsOptions({
                       onPostUpdated?.(body.post);
                       onClose();
                     } catch (error) {
-                      console.error("Failed to update comment settings:", error);
+                      console.error(
+                        "Failed to update comment settings:",
+                        error,
+                      );
                     } finally {
                       setIsTogglingComments(false);
                     }
@@ -287,20 +282,26 @@ export default function OptionsOptions({
           </div>
 
           <div className="overflow-hidden rounded-[26px] bg-[#F7F7F7]">
-            {secondaryActions.map((action) => (
+            {secondaryAction && (
               <button
-                key={action.label}
+                key={secondaryAction.label}
                 type="button"
-                className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3"
+                disabled={!post}
+                onClick={() => {
+                  if (!post?.id) return;
+                  router.push(`/post/${encodeURIComponent(post.id)}/history`);
+                  onClose();
+                }}
+                className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 disabled:opacity-60"
               >
-                <span>{action.icon}</span>
+                <span>{secondaryAction.icon}</span>
                 <span className="min-w-0">
                   <span className="block text-sm text-[#111111]">
-                    {action.label}
+                    {secondaryAction.label}
                   </span>
                 </span>
               </button>
-            ))}
+            )}
           </div>
 
           <div className="overflow-hidden rounded-[26px] bg-[#FFF1F1]">

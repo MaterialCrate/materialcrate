@@ -16,6 +16,20 @@ type Post {
   createdAt: String!
 }
 
+type PostVersion {
+  id: ID!
+  postId: ID!
+  versionNumber: Int!
+  title: String!
+  courseCode: String!
+  description: String
+  year: Int
+  fileUrl: String!
+  thumbnailUrl: String
+  editor: User
+  createdAt: String!
+}
+
 type Comment {
   id: ID!
   post: Post!
@@ -34,6 +48,7 @@ type Comment {
 
 extend type Query {
   post(id: ID!): Post
+  postVersions(postId: ID!): [PostVersion!]!
   posts(authorUsername: String): [Post!]!
   searchPosts(query: String!, limit: Int = 12): [Post!]!
   comments(

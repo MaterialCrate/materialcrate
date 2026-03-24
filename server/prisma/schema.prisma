@@ -29,6 +29,7 @@ model User {
   institution   String?
   program       String?
   posts         Post[]   @relation("UserPosts")
+  postVersions  PostVersion[] @relation("PostVersionEditor")
   likes         Like[]
   comments      Comment[]
   commentLikes  CommentLike[]
@@ -76,6 +77,7 @@ model Post {
   year       Int?
   authorId   String?
   author     User?    @relation("UserPosts", fields: [authorId], references: [id], onDelete: SetNull)
+  versions   PostVersion[]
   likes      Like[]
   comments   Comment[]
   savedInWorkspaces WorkspaceSavedPost[]
@@ -85,6 +87,27 @@ model Post {
 
   @@index([authorId])
   @@index([courseCode])
+}
+
+model PostVersion {
+  id            String   @id @default(cuid())
+  postId        String
+  versionNumber Int
+  title         String
+  courseCode    String
+  description   String?
+  year          Int?
+  fileUrl       String
+  thumbnailUrl  String?
+  editorId      String?
+  createdAt     DateTime @default(now())
+
+  post   Post  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  editor User? @relation("PostVersionEditor", fields: [editorId], references: [id], onDelete: SetNull)
+
+  @@unique([postId, versionNumber])
+  @@index([postId, createdAt])
+  @@index([editorId])
 }
 
 model Workspace {

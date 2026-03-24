@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Header from "@/app/components/settings/Header";
+import Header from "@/app/components/Header";
 import ToggleSwitch from "@/app/components/ToggleSwitch";
 
 export default function Page() {

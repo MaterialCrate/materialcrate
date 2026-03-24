@@ -2,7 +2,7 @@
 
 import { Fragment } from "react";
 import { useAuth } from "@/app/lib/auth-client";
-import Header from "@/app/components/settings/Header";
+import Header from "@/app/components/Header";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-";

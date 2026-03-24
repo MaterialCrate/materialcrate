@@ -22,6 +22,9 @@ export const resolvers = {
   Comment: {
     ...PostResolver.Comment,
   },
+  PostVersion: {
+    ...PostResolver.PostVersion,
+  },
   User: {
     ...UserResolver.User,
     ...ArchiveResolver.User,
