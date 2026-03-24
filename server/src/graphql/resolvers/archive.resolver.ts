@@ -40,6 +40,11 @@ const buildArchiveInclude = (viewerId?: string) => ({
     orderBy: { createdAt: "asc" as const },
   },
   savedPosts: {
+    where: {
+      post: {
+        deleted: false,
+      },
+    },
     include: {
       folder: true,
       post: {
@@ -253,9 +258,9 @@ export const ArchiveResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true },
+        select: { id: true, deleted: true },
       });
-      if (!post) {
+      if (!post || post.deleted) {
         throw new Error("Post not found");
       }
 
@@ -344,7 +349,12 @@ export const ArchiveResolver = {
       const rows = Array.isArray(archive.savedPosts)
         ? archive.savedPosts
         : await (prisma as any).archiveSavedPost.findMany({
-            where: { archiveId: archive.id },
+            where: {
+              archiveId: archive.id,
+              post: {
+                deleted: false,
+              },
+            },
             include: {
               folder: true,
               post: {
@@ -365,7 +375,12 @@ export const ArchiveResolver = {
     ) => {
       const viewerId = ctx.user?.sub;
       const rows = await (prisma as any).archiveSavedPost.findMany({
-        where: { folderId: folder.id },
+        where: {
+          folderId: folder.id,
+          post: {
+            deleted: false,
+          },
+        },
         include: {
           folder: true,
           post: {

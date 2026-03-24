@@ -26,6 +26,7 @@ interface OptionsDrawerProps {
   onEditPost?: (post: HomePost) => void;
   onPostPinned?: (post: HomePost) => void;
   onPostUpdated?: (post: HomePost) => void;
+  onPostDeleted?: (postId: string) => void;
 }
 
 export default function OptionsOptions({
@@ -36,12 +37,14 @@ export default function OptionsOptions({
   onEditPost,
   onPostPinned,
   onPostUpdated,
+  onPostDeleted,
 }: OptionsDrawerProps) {
   const router = useRouter();
   const drawerRef = React.useRef<HTMLDivElement | null>(null);
   const { user } = useAuth();
   const [isPinning, setIsPinning] = React.useState(false);
   const [isTogglingComments, setIsTogglingComments] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
   const author = post?.author;
   const username = author?.username?.trim()
     ? `@${author.username}`
@@ -100,14 +103,12 @@ export default function OptionsOptions({
   };
 
   const destructiveAction = isOwner
-    ? {
-        label: "Delete post",
-        description: "Remove this material permanently",
-        icon: <Trash size={20} color="#D12F2F" variant="Bold" />,
-      }
+      ? {
+          label: "Delete post",
+          icon: <Trash size={20} color="#D12F2F" variant="Bold" />,
+        }
     : {
         label: "Report post",
-        description: "Flag this material for review",
         icon: <Flag size={20} color="#D12F2F" variant="Bold" />,
       };
 
@@ -196,7 +197,7 @@ export default function OptionsOptions({
               <button
                 key={action.label}
                 type="button"
-                disabled={isPinning || isTogglingComments}
+                disabled={isPinning || isTogglingComments || isDeleting}
                 onClick={async () => {
                   if (!post) return;
 
@@ -267,7 +268,7 @@ export default function OptionsOptions({
                     setIsPinning(false);
                   }
                 }}
-                className={`flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 disabled:opacity-60 ${
+                className={`flex w-full items-center gap-4 px-4 py-4 text-left hover:bg-black/3 disabled:opacity-60 active:opacity-40 transition-all duration-300 ${
                   index < primaryActions.length - 1 && "border-b border-black/6"
                 }`}
               >
@@ -281,7 +282,7 @@ export default function OptionsOptions({
             ))}
           </div>
 
-          <div className="overflow-hidden rounded-[26px] bg-[#F7F7F7]">
+          <div className="overflow-hidden rounded-[26px] bg-[#F7F7F7] active:opacity-40 transition-opacity duration-300">
             {secondaryAction && (
               <button
                 key={secondaryAction.label}
@@ -304,9 +305,34 @@ export default function OptionsOptions({
             )}
           </div>
 
-          <div className="overflow-hidden rounded-[26px] bg-[#FFF1F1]">
+          <div className="overflow-hidden rounded-[26px] bg-[#FFF1F1] active:opacity-40 transition-opacity duration-300">
             <button
               type="button"
+              disabled={!post || isDeleting || isPinning || isTogglingComments}
+              onClick={async () => {
+                if (!post || !isOwner) return;
+
+                try {
+                  setIsDeleting(true);
+                  const response = await fetch("/api/posts/delete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ postId: post.id }),
+                  });
+                  const body = await response.json().catch(() => ({}));
+
+                  if (!response.ok || !body?.ok) {
+                    throw new Error(body?.error || "Failed to delete post");
+                  }
+
+                  onPostDeleted?.(post.id);
+                  onClose();
+                } catch (error) {
+                  console.error("Failed to delete post:", error);
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}
               className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-[#ffe7e7]"
             >
               <span>{destructiveAction.icon}</span>

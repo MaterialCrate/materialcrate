@@ -126,6 +126,12 @@ export default function SearchPage() {
       current?.id === updatedPost.id ? { ...current, ...updatedPost } : current,
     );
   };
+  const handlePostDeleted = (deletedPostId: string) => {
+    setDocuments((current) => current.filter((post) => post.id !== deletedPostId));
+    setActiveOptionsPost((current) =>
+      current?.id === deletedPostId ? null : current,
+    );
+  };
 
   return (
     <div className="min-h-dvh bg-[#f7f7f7] pb-4 pt-34">
@@ -140,6 +146,7 @@ export default function SearchPage() {
         post={activeOptionsPost}
         anchor={activeOptionsAnchor}
         onPostUpdated={handlePostUpdated}
+        onPostDeleted={handlePostDeleted}
       />
       <>
         <Header

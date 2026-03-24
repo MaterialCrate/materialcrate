@@ -71,6 +71,8 @@ model Post {
   thumbnailUrl String?
   pinned     Boolean  @default(false)
   commentsDisabled Boolean @default(false)
+  deleted    Boolean  @default(false)
+  deletedAt  DateTime?
   title      String
   courseCode String
   description String?
@@ -87,6 +89,7 @@ model Post {
 
   @@index([authorId])
   @@index([courseCode])
+  @@index([deleted, deletedAt])
 }
 
 model PostVersion {

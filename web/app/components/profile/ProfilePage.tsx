@@ -331,6 +331,20 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     );
   };
 
+  const handlePostDeleted = (deletedPostId: string) => {
+    setPosts((current) => current.filter((post) => post.id !== deletedPostId));
+    setActiveOptionsPost((current) =>
+      current?.id === deletedPostId ? null : current,
+    );
+    setActiveCommentPost((current) =>
+      current?.id === deletedPostId ? null : current,
+    );
+    setActiveCommentPostId((current) =>
+      current === deletedPostId ? null : current,
+    );
+    setActivePdfPost((current) => (current?.id === deletedPostId ? null : current));
+  };
+
   if (!isPublicProfile && isLoadingAuth) {
     return (
       <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>
@@ -388,6 +402,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         anchor={activeOptionsAnchor}
         onPostPinned={handlePostPinned}
         onPostUpdated={handlePostUpdated}
+        onPostDeleted={handlePostDeleted}
         onEditPost={(selectedPost) => {
           setEditingPost(selectedPost);
           setIsUploadDrawerOpen(true);

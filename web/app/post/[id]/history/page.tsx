@@ -126,11 +126,8 @@ export default function PostHistoryPage() {
         setVersions(Array.isArray(body?.versions) ? body.versions : []);
       } catch (loadError) {
         if (!controller.signal.aborted) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Failed to load post history",
-          );
+          setError("Failed to load post history");
+          console.error("Failed to load post history: ", loadError);
           setPost(null);
           setVersions([]);
         }

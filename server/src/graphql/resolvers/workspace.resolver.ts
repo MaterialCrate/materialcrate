@@ -40,6 +40,11 @@ const buildWorkspaceInclude = (viewerId?: string) => ({
     orderBy: { createdAt: "asc" as const },
   },
   savedPosts: {
+    where: {
+      post: {
+        deleted: false,
+      },
+    },
     include: {
       folder: true,
       post: {
@@ -151,9 +156,9 @@ export const WorkspaceResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true },
+        select: { id: true, deleted: true },
       });
-      if (!post) {
+      if (!post || post.deleted) {
         throw new Error("Post not found");
       }
 
@@ -242,7 +247,12 @@ export const WorkspaceResolver = {
       const rows = Array.isArray(workspace.savedPosts)
         ? workspace.savedPosts
         : await (prisma as any).workspaceSavedPost.findMany({
-            where: { workspaceId: workspace.id },
+            where: {
+              workspaceId: workspace.id,
+              post: {
+                deleted: false,
+              },
+            },
             include: {
               folder: true,
               post: {
@@ -263,7 +273,12 @@ export const WorkspaceResolver = {
     ) => {
       const viewerId = ctx.user?.sub;
       const rows = await (prisma as any).workspaceSavedPost.findMany({
-        where: { folderId: folder.id },
+        where: {
+          folderId: folder.id,
+          post: {
+            deleted: false,
+          },
+        },
         include: {
           folder: true,
           post: {

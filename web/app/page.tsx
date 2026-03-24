@@ -208,6 +208,28 @@ export default function Home() {
     );
   };
 
+  const handlePostDeleted = (deletedPostId: string) => {
+    setPosts((current) => current.filter((post) => post.id !== deletedPostId));
+    setActiveOptionsPost((current) =>
+      current?.id === deletedPostId ? null : current,
+    );
+    setActiveCommentPost((current) =>
+      current?.id === deletedPostId ? null : current,
+    );
+    setActiveCommentPostId((current) =>
+      current === deletedPostId ? null : current,
+    );
+    setActivePdfPost((current) => (current?.id === deletedPostId ? null : current));
+    setActiveArchivePost((current) =>
+      current?.id === deletedPostId ? null : current,
+    );
+    setArchiveSavedPostIdsByPostId((current) => {
+      const next = { ...current };
+      delete next[deletedPostId];
+      return next;
+    });
+  };
+
   return (
     <div className="py-18">
       <ArchiveDrawer
@@ -259,6 +281,7 @@ export default function Home() {
         anchor={activeOptionsAnchor}
         onPostPinned={handlePostPinned}
         onPostUpdated={handlePostUpdated}
+        onPostDeleted={handlePostDeleted}
         onEditPost={(selectedPost) => {
           setEditingPost(selectedPost);
           setIsUploadDrawerOpen(true);

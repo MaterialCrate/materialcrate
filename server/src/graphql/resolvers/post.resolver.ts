@@ -65,6 +65,16 @@ const extractS3KeyFromUrl = (
   }
 };
 
+const buildVisiblePostWhere = () => ({
+  deleted: false,
+  author: {
+    is: {
+      deleted: false,
+      disabled: false,
+    },
+  },
+});
+
 const buildPostInclude = (viewerId?: string) => {
   const include: any = {
     author: true,
@@ -192,8 +202,11 @@ export const PostResolver = {
         throw new Error("Post id is required");
       }
 
-      const post = await prisma.post.findUnique({
-        where: { id: normalizedId },
+      const post = await prisma.post.findFirst({
+        where: {
+          id: normalizedId,
+          ...buildVisiblePostWhere(),
+        },
         include: buildPostInclude(viewerId),
       });
 
@@ -210,10 +223,10 @@ export const PostResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true },
+        select: { id: true, deleted: true },
       });
 
-      if (!post) {
+      if (!post || post.deleted) {
         throw new Error("Post not found");
       }
 
@@ -237,6 +250,7 @@ export const PostResolver = {
       const posts = await prisma.post.findMany({
         where: normalizedAuthorUsername
           ? {
+              deleted: false,
               author: {
                 username: {
                   equals: normalizedAuthorUsername,
@@ -246,7 +260,7 @@ export const PostResolver = {
                 disabled: false,
               },
             }
-          : undefined,
+          : buildVisiblePostWhere(),
         include: buildPostInclude(viewerId),
         orderBy: (normalizedAuthorUsername
           ? [{ pinned: "desc" }, { createdAt: "desc" }]
@@ -272,6 +286,13 @@ export const PostResolver = {
 
       const posts = await prisma.post.findMany({
         where: {
+          deleted: false,
+          author: {
+            is: {
+              deleted: false,
+              disabled: false,
+            },
+          },
           OR: [
             {
               title: {
@@ -349,6 +370,14 @@ export const PostResolver = {
       const viewerId = ctx.user?.sub;
       const safeLimit = Math.max(1, Math.min(limit, 100));
       const safeOffset = Math.max(0, offset);
+
+      const post = await prisma.post.findUnique({
+        where: { id: postId },
+        select: { id: true, deleted: true },
+      });
+      if (!post || post.deleted) {
+        throw new Error("Post not found");
+      }
 
       const comments = await (prisma as any).comment.findMany({
         where: { postId, parentId: parentCommentId },
@@ -498,6 +527,7 @@ export const PostResolver = {
         select: {
           id: true,
           authorId: true,
+          deleted: true,
           pinned: true,
           title: true,
           courseCode: true,
@@ -508,7 +538,7 @@ export const PostResolver = {
         },
       });
 
-      if (!existingPost) {
+      if (!existingPost || existingPost.deleted) {
         throw new Error("Post not found");
       }
 
@@ -575,10 +605,10 @@ export const PostResolver = {
 
       const existingPost = await (prisma as any).post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true, authorId: true, pinned: true },
+        select: { id: true, authorId: true, pinned: true, deleted: true },
       });
 
-      if (!existingPost) {
+      if (!existingPost || existingPost.deleted) {
         throw new Error("Post not found");
       }
 
@@ -596,6 +626,7 @@ export const PostResolver = {
           (prisma as any).post.updateMany({
             where: {
               authorId: viewerId,
+              deleted: false,
               pinned: true,
               NOT: { id: normalizedPostId },
             },
@@ -613,7 +644,7 @@ export const PostResolver = {
         include: buildPostInclude(viewerId),
       });
 
-      if (!pinnedPost) {
+      if (!pinnedPost || pinnedPost.deleted) {
         throw new Error("Post not found");
       }
 
@@ -636,10 +667,10 @@ export const PostResolver = {
 
       const existingPost = await prisma.post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true, authorId: true, commentsDisabled: true },
+        select: { id: true, authorId: true, commentsDisabled: true, deleted: true },
       });
 
-      if (!existingPost) {
+      if (!existingPost || existingPost.deleted) {
         throw new Error("Post not found");
       }
 
@@ -655,6 +686,41 @@ export const PostResolver = {
 
       return mapPostForGraphQL(updatedPost, viewerId);
     },
+    deletePost: async (_: unknown, { postId }: { postId: string }, ctx: GraphQLContext) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedPostId = postId?.trim();
+      if (!normalizedPostId) {
+        throw new Error("Post id is required");
+      }
+
+      const existingPost = await prisma.post.findUnique({
+        where: { id: normalizedPostId },
+        select: { id: true, authorId: true, deleted: true },
+      });
+
+      if (!existingPost || existingPost.deleted) {
+        throw new Error("Post not found");
+      }
+
+      if (existingPost.authorId !== viewerId) {
+        throw new Error("You can only delete your own posts");
+      }
+
+      await prisma.post.update({
+        where: { id: normalizedPostId },
+        data: {
+          deleted: true,
+          deletedAt: new Date(),
+          pinned: false,
+        },
+      });
+
+      return true;
+    },
     togglePostLike: async (
       _: unknown,
       { postId }: { postId: string },
@@ -667,9 +733,9 @@ export const PostResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true, authorId: true, commentsDisabled: true },
+        select: { id: true, authorId: true, commentsDisabled: true, deleted: true },
       });
-      if (!post) {
+      if (!post || post.deleted) {
         throw new Error("Post not found");
       }
 
@@ -708,7 +774,7 @@ export const PostResolver = {
         where: { id: postId },
         include: buildPostInclude(viewerId),
       });
-      if (!updatedPost) {
+      if (!updatedPost || updatedPost.deleted) {
         throw new Error("Post not found");
       }
 
@@ -742,9 +808,9 @@ export const PostResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true },
+        select: { id: true, deleted: true },
       });
-      if (!post) {
+      if (!post || post.deleted) {
         throw new Error("Post not found");
       }
 
@@ -927,7 +993,7 @@ export const PostResolver = {
         where: { id: comment.postId },
         include: buildPostInclude(),
       });
-      if (!post) {
+      if (!post || post.deleted) {
         throw new Error("Post not found");
       }
 
