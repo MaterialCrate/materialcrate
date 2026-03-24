@@ -209,6 +209,8 @@ export default function Home() {
                 ...post,
                 isAuthorFollowedByCurrentUser:
                   updatedPost.isAuthorFollowedByCurrentUser,
+                isAuthorMutedByCurrentUser:
+                  updatedPost.isAuthorMutedByCurrentUser,
               }
             : post,
       ),
@@ -295,6 +297,12 @@ export default function Home() {
         onPostPinned={handlePostPinned}
         onPostUpdated={handlePostUpdated}
         onPostDeleted={handlePostDeleted}
+        onPostHidden={(hiddenPostId) => {
+          setPosts((current) => current.filter((post) => post.id !== hiddenPostId));
+          setActiveOptionsPost((current) =>
+            current?.id === hiddenPostId ? null : current,
+          );
+        }}
         onEditPost={(selectedPost) => {
           setEditingPost(selectedPost);
           setIsUploadDrawerOpen(true);

@@ -31,6 +31,7 @@ export type HomePost = {
   commentCount?: number;
   viewerHasLiked?: boolean;
   isAuthorFollowedByCurrentUser?: boolean;
+  isAuthorMutedByCurrentUser?: boolean;
   createdAt: string;
   author?: {
     id: string;

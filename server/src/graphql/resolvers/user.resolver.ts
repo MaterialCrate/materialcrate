@@ -733,6 +733,95 @@ export const UserResolver = {
 
       return true;
     },
+    muteUser: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) {
+        throw new Error("Username is required");
+      }
+
+      const targetUser = await (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+          deleted: false,
+          disabled: false,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        throw new Error("User not found");
+      }
+
+      if (targetUser.id === ctx.user.sub) {
+        throw new Error("You cannot mute yourself");
+      }
+
+      await (prisma as any).mute.upsert({
+        where: {
+          muterId_mutedId: {
+            muterId: ctx.user.sub,
+            mutedId: targetUser.id,
+          },
+        },
+        update: {},
+        create: {
+          muterId: ctx.user.sub,
+          mutedId: targetUser.id,
+        },
+      });
+
+      return true;
+    },
+    unmuteUser: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) {
+        throw new Error("Username is required");
+      }
+
+      const targetUser = await (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+          deleted: false,
+          disabled: false,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        throw new Error("User not found");
+      }
+
+      await (prisma as any).mute.deleteMany({
+        where: {
+          muterId: ctx.user.sub,
+          mutedId: targetUser.id,
+        },
+      });
+
+      return true;
+    },
 
     completeProfile: async (_: unknown, args: any, ctx: any) => {
       if (!ctx.user?.sub) {
@@ -957,6 +1046,15 @@ export const UserResolver = {
       });
 
       return follows.map((entry: { following: unknown }) => entry.following);
+    },
+    mutedUsers: async (user: { id: string }) => {
+      const mutes = await (prisma as any).mute.findMany({
+        where: { muterId: user.id },
+        include: { muted: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return mutes.map((entry: { muted: unknown }) => entry.muted);
     },
     followersCount: async (user: { id: string }) => {
       return (prisma as any).follow.count({

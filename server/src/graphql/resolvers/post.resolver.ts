@@ -65,8 +65,15 @@ const extractS3KeyFromUrl = (
   }
 };
 
-const buildVisiblePostWhere = () => ({
+const buildVisiblePostWhere = (uninterestedPostIds?: string[]) => ({
   deleted: false,
+  ...(Array.isArray(uninterestedPostIds) && uninterestedPostIds.length > 0
+    ? {
+        id: {
+          notIn: uninterestedPostIds,
+        },
+      }
+    : {}),
   author: {
     is: {
       deleted: false,
@@ -247,6 +254,15 @@ export const PostResolver = {
     ) => {
       const viewerId = ctx.user?.sub;
       const normalizedAuthorUsername = String(authorUsername || "").trim();
+      const viewer = viewerId
+        ? await prisma.user.findUnique({
+            where: { id: viewerId },
+            select: { uninterestedPostIds: true },
+          })
+        : null;
+      const uninterestedPostIds = Array.isArray(viewer?.uninterestedPostIds)
+        ? viewer.uninterestedPostIds
+        : [];
       const posts = await prisma.post.findMany({
         where: normalizedAuthorUsername
           ? {
@@ -260,7 +276,7 @@ export const PostResolver = {
                 disabled: false,
               },
             }
-          : buildVisiblePostWhere(),
+          : buildVisiblePostWhere(uninterestedPostIds),
         include: buildPostInclude(viewerId),
         orderBy: (normalizedAuthorUsername
           ? [{ pinned: "desc" }, { createdAt: "desc" }]
@@ -685,6 +701,59 @@ export const PostResolver = {
       });
 
       return mapPostForGraphQL(updatedPost, viewerId);
+    },
+    markPostNotInterested: async (
+      _: unknown,
+      { postId }: { postId: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedPostId = postId?.trim();
+      if (!normalizedPostId) {
+        throw new Error("Post id is required");
+      }
+
+      const post = await prisma.post.findFirst({
+        where: {
+          id: normalizedPostId,
+          ...buildVisiblePostWhere(),
+        },
+        select: { id: true, authorId: true },
+      });
+
+      if (!post) {
+        throw new Error("Post not found");
+      }
+
+      if (post.authorId === viewerId) {
+        throw new Error("You cannot hide your own post");
+      }
+
+      const viewer = await prisma.user.findUnique({
+        where: { id: viewerId },
+        select: { uninterestedPostIds: true },
+      });
+
+      const uninterestedPostIds = Array.isArray(viewer?.uninterestedPostIds)
+        ? viewer.uninterestedPostIds
+        : [];
+
+      if (!uninterestedPostIds.includes(normalizedPostId)) {
+        await prisma.user.update({
+          where: { id: viewerId },
+          data: {
+            uninterestedPostIds: {
+              push: normalizedPostId,
+            },
+          },
+        });
+      }
+
+      return true;
     },
     deletePost: async (_: unknown, { postId }: { postId: string }, ctx: GraphQLContext) => {
       const viewerId = ctx.user?.sub;

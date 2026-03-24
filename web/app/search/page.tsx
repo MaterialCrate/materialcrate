@@ -131,6 +131,8 @@ export default function SearchPage() {
                 ...post,
                 isAuthorFollowedByCurrentUser:
                   updatedPost.isAuthorFollowedByCurrentUser,
+                isAuthorMutedByCurrentUser:
+                  updatedPost.isAuthorMutedByCurrentUser,
               }
             : post,
       ),

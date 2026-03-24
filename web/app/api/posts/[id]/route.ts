@@ -37,6 +37,9 @@ const AUTHENTICATED_POST_QUERY = `
       following {
         username
       }
+      mutedUsers {
+        username
+      }
     }
     post(id: $id) {
       id
@@ -109,6 +112,16 @@ export async function GET(
       )
       .filter(Boolean),
   );
+  const viewerMutedUsernames = new Set(
+    (Array.isArray(graphqlBody?.data?.me?.mutedUsers)
+      ? graphqlBody.data.me.mutedUsers
+      : []
+    )
+      .map((entry: { username?: string | null }) =>
+        entry.username?.trim().toLowerCase(),
+      )
+      .filter(Boolean),
+  );
 
   const post = graphqlBody?.data?.post;
   const authorUsername = post?.author?.username?.trim().toLowerCase();
@@ -119,6 +132,9 @@ export async function GET(
           ...post,
           isAuthorFollowedByCurrentUser: authorUsername
             ? viewerFollowingUsernames.has(authorUsername)
+            : false,
+          isAuthorMutedByCurrentUser: authorUsername
+            ? viewerMutedUsernames.has(authorUsername)
             : false,
         }
       : null,

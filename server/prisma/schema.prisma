@@ -15,6 +15,7 @@ model User {
   email         String
   password      String
   linkedSEOs    String[] @default([])
+  uninterestedPostIds String[] @default([])
   subscriptionPlan      String   @default("free")
   subscriptionStartedAt DateTime @default(now())
   subscriptionEndsAt    DateTime?
@@ -38,6 +39,8 @@ model User {
   archive       Archive?
   followerRelations Follow[] @relation("UserFollowers")
   followingRelations Follow[] @relation("UserFollowing")
+  mutedUserRelations Mute[] @relation("UserMutedUsers")
+  mutedByRelations Mute[] @relation("UserMutedBy")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -246,4 +249,17 @@ model Follow {
   @@id([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model Mute {
+  muterId  String
+  mutedId  String
+  createdAt DateTime @default(now())
+
+  muter User @relation("UserMutedUsers", fields: [muterId], references: [id], onDelete: Cascade)
+  muted User @relation("UserMutedBy", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@id([muterId, mutedId])
+  @@index([muterId])
+  @@index([mutedId])
 }

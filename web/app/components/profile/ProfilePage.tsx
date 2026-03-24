@@ -14,6 +14,7 @@ import OptionsDrawer from "@/app/components/home/PostOptions";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
 import UploadDrawer from "@/app/components/home/UploadDrawer";
 import FollowersnFollowingList from "./FollowersnFollowingList";
+import Alert from "../Alert";
 
 type ProfileUser = {
   id: string;
@@ -185,11 +186,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
       } catch (err) {
         if (!controller.signal.aborted) {
           setPosts([]);
-          setError(
-            (current) =>
-              current ||
-              (err instanceof Error ? err.message : "Failed to load posts"),
-          );
+          setError("Failed to load posts");
+          console.error("Failed to load posts: ", err);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -332,6 +330,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                 ...post,
                 isAuthorFollowedByCurrentUser:
                   updatedPost.isAuthorFollowedByCurrentUser,
+                isAuthorMutedByCurrentUser:
+                  updatedPost.isAuthorMutedByCurrentUser,
               }
             : post,
       ),
@@ -355,7 +355,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     setActiveCommentPostId((current) =>
       current === deletedPostId ? null : current,
     );
-    setActivePdfPost((current) => (current?.id === deletedPostId ? null : current));
+    setActivePdfPost((current) =>
+      current?.id === deletedPostId ? null : current,
+    );
   };
 
   if (!isPublicProfile && isLoadingAuth) {
@@ -381,6 +383,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
 
   return (
     <div className="space-y-4 pb-24">
+      <Alert message={error} type="error" />
       <CommentDrawer
         isOpen={isCommentDrawerOpen}
         onClose={() => {
@@ -400,7 +403,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         }}
         onPostSaved={(savedPost) => {
           setPosts((current) =>
-            current.map((post) => (post.id === savedPost.id ? savedPost : post)),
+            current.map((post) =>
+              post.id === savedPost.id ? savedPost : post,
+            ),
           );
         }}
       />
@@ -467,9 +472,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
             </section>
           ) : (
             <section>
-              {error && posts.length === 0 && !isLoadingPosts ? (
-                <p className="px-6 py-8 text-sm text-[#696969]">{error}</p>
-              ) : isLoadingPosts ? (
+              {error && posts.length === 0 && isLoadingPosts ? (
                 <p className="px-6 py-8 text-sm text-[#696969]">
                   Loading posts...
                 </p>

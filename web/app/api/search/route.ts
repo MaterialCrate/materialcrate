@@ -47,6 +47,9 @@ const AUTHENTICATED_SEARCH_QUERY = `
       following {
         username
       }
+      mutedUsers {
+        username
+      }
     }
     searchUsers(query: $query, limit: $limit) {
       id
@@ -134,6 +137,16 @@ export async function GET(request: Request) {
       )
       .filter(Boolean),
   );
+  const viewerMutedUsernames = new Set(
+    (Array.isArray(graphqlBody?.data?.me?.mutedUsers)
+      ? graphqlBody.data.me.mutedUsers
+      : []
+    )
+      .map((entry: { username?: string | null }) =>
+        entry.username?.trim().toLowerCase(),
+      )
+      .filter(Boolean),
+  );
 
   const documents = (Array.isArray(graphqlBody?.data?.searchPosts)
     ? graphqlBody.data.searchPosts
@@ -146,6 +159,9 @@ export async function GET(request: Request) {
       ...post,
       isAuthorFollowedByCurrentUser: authorUsername
         ? viewerFollowingUsernames.has(authorUsername)
+        : false,
+      isAuthorMutedByCurrentUser: authorUsername
+        ? viewerMutedUsernames.has(authorUsername)
         : false,
     };
   });

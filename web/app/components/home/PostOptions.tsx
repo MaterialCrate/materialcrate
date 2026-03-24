@@ -27,6 +27,7 @@ interface OptionsDrawerProps {
   onPostPinned?: (post: HomePost) => void;
   onPostUpdated?: (post: HomePost) => void;
   onPostDeleted?: (postId: string) => void;
+  onPostHidden?: (postId: string) => void;
 }
 
 export default function OptionsOptions({
@@ -38,6 +39,7 @@ export default function OptionsOptions({
   onPostPinned,
   onPostUpdated,
   onPostDeleted,
+  onPostHidden,
 }: OptionsDrawerProps) {
   const router = useRouter();
   const drawerRef = React.useRef<HTMLDivElement | null>(null);
@@ -46,6 +48,9 @@ export default function OptionsOptions({
   const [isTogglingComments, setIsTogglingComments] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isUpdatingFollow, setIsUpdatingFollow] = React.useState(false);
+  const [isUpdatingMute, setIsUpdatingMute] = React.useState(false);
+  const [isMarkingUninterested, setIsMarkingUninterested] =
+    React.useState(false);
   const author = post?.author;
   const username = author?.username?.trim()
     ? `@${author.username}`
@@ -61,6 +66,9 @@ export default function OptionsOptions({
   const followActionLabel = post?.isAuthorFollowedByCurrentUser
     ? `Unfollow ${username}`
     : `Follow ${username}`;
+  const muteActionLabel = post?.isAuthorMutedByCurrentUser
+    ? `Unmute ${username}`
+    : `Mute ${username}`;
   const pinActionIcon = post?.pinned ? (
     <LocationSlash size={20} color="#111111" variant="Bold" />
   ) : (
@@ -88,7 +96,7 @@ export default function OptionsOptions({
           icon: <ProfileAdd size={20} color="#111111" variant="Bold" />,
         },
         {
-          label: `Mute ${username}`,
+          label: muteActionLabel,
           icon: <VolumeMute size={20} color="#111111" variant="Bold" />,
         },
         {
@@ -107,10 +115,10 @@ export default function OptionsOptions({
   };
 
   const destructiveAction = isOwner
-      ? {
-          label: "Delete post",
-          icon: <Trash size={20} color="#D12F2F" variant="Bold" />,
-        }
+    ? {
+        label: "Delete post",
+        icon: <Trash size={20} color="#D12F2F" variant="Bold" />,
+      }
     : {
         label: "Report post",
         icon: <Flag size={20} color="#D12F2F" variant="Bold" />,
@@ -205,7 +213,9 @@ export default function OptionsOptions({
                   isPinning ||
                   isTogglingComments ||
                   isDeleting ||
-                  isUpdatingFollow
+                  isUpdatingFollow ||
+                  isUpdatingMute ||
+                  isMarkingUninterested
                 }
                 onClick={async () => {
                   if (!post) return;
@@ -254,6 +264,77 @@ export default function OptionsOptions({
                       console.error("Failed to update follow state:", error);
                     } finally {
                       setIsUpdatingFollow(false);
+                    }
+
+                    return;
+                  }
+
+                  if (
+                    action.label === `Mute ${username}` ||
+                    action.label === `Unmute ${username}`
+                  ) {
+                    const targetUsername = post.author?.username?.trim();
+                    if (!targetUsername) return;
+
+                    const shouldUnmute = Boolean(
+                      post.isAuthorMutedByCurrentUser,
+                    );
+                    const optimisticPost = {
+                      ...post,
+                      isAuthorMutedByCurrentUser: !shouldUnmute,
+                    };
+
+                    onPostUpdated?.(optimisticPost);
+
+                    try {
+                      setIsUpdatingMute(true);
+                      const response = await fetch(
+                        `/api/users/${encodeURIComponent(targetUsername)}/mute`,
+                        {
+                          method: shouldUnmute ? "DELETE" : "POST",
+                        },
+                      );
+                      const body = await response.json().catch(() => ({}));
+
+                      if (!response.ok) {
+                        throw new Error(
+                          body?.error || "Failed to update mute state",
+                        );
+                      }
+
+                      onClose();
+                    } catch (error) {
+                      onPostUpdated?.(post);
+                      console.error("Failed to update mute state:", error);
+                    } finally {
+                      setIsUpdatingMute(false);
+                    }
+
+                    return;
+                  }
+
+                  if (action.label === "Not interested in this post") {
+                    try {
+                      setIsMarkingUninterested(true);
+                      const response = await fetch("/api/posts/not-interested", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ postId: post.id }),
+                      });
+                      const body = await response.json().catch(() => ({}));
+
+                      if (!response.ok || !body?.ok) {
+                        throw new Error(
+                          body?.error || "Failed to hide post from feed",
+                        );
+                      }
+
+                      onPostHidden?.(post.id);
+                      onClose();
+                    } catch (error) {
+                      console.error("Failed to hide post from feed:", error);
+                    } finally {
+                      setIsMarkingUninterested(false);
                     }
 
                     return;

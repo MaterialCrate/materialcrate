@@ -81,6 +81,7 @@ extend type Mutation {
   togglePostLike(postId: ID!): Post!
   pinPostToProfile(postId: ID!): Post!
   togglePostComments(postId: ID!): Post!
+  markPostNotInterested(postId: ID!): Boolean!
   createComment(postId: ID!, content: String!, parentCommentId: ID): Comment!
   toggleCommentLike(commentId: ID!): Comment!
 }
