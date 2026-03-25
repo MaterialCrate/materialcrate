@@ -28,116 +28,106 @@ const formatPlan = (plan?: string | null) => {
 export default function Page() {
   const { user, isLoading } = useAuth();
 
-  const accountInfo = {
-    email: user?.email ?? "-",
-    password: "********",
-    accountPlan: formatPlan(user?.subscriptionPlan),
-    subscriptionStartedAt: formatDate(user?.subscriptionStartedAt),
-    subscriptionEndsAt: formatDate(user?.subscriptionEndsAt),
-    dateJoined: formatDate(user?.createdAt),
-    linkedAccounts: Array.isArray(user?.linkedSEOs)
-      ? user.linkedSEOs.map(formatSeoProvider)
-      : [],
-  };
-
-  const accountInfoMap = [
+  const accountSections = [
     {
-      container1: [
+      key: "account-details",
+      title: "Account Details",
+      items: [
         {
           label: "Email",
-          value: accountInfo.email,
+          value: user?.email ?? "-",
           key: "email",
         },
         {
           label: "Password",
-          value: accountInfo.password,
+          value: "********",
           key: "password",
         },
         {
+          label: "Date Joined",
+          value: formatDate(user?.createdAt),
+          key: "dateJoined",
+        },
+      ],
+    },
+    {
+      key: "plan",
+      title: "Plan",
+      items: [
+        {
           label: "Subscription Plan",
-          value: accountInfo.accountPlan,
+          value: formatPlan(user?.subscriptionPlan),
           key: "accountPlan",
         },
-        ...(accountInfo.accountPlan === "pro"
+        ...(user?.subscriptionPlan?.toLowerCase() === "pro"
           ? [
               {
-                label: "Subscription Due",
-                value: accountInfo.subscriptionEndsAt,
+                label: "Started",
+                value: formatDate(user?.subscriptionStartedAt),
+                key: "subscriptionStartedAt",
+              },
+              {
+                label: "Renews",
+                value: formatDate(user?.subscriptionEndsAt),
                 key: "subscriptionEndsAt",
               },
             ]
           : []),
-        {
-          label: "Date Joined",
-          value: accountInfo.dateJoined,
-          key: "dateJoined",
-        },
+      ],
+    },
+    {
+      key: "connected-accounts",
+      title: "Connected Accounts",
+      items: [
         {
           label: "Linked Accounts",
-          value: accountInfo.linkedAccounts,
+          value: Array.isArray(user?.linkedSEOs)
+            ? user.linkedSEOs.map(formatSeoProvider).join(", ") || "None linked"
+            : "None linked",
           key: "linkedAccounts",
         },
       ],
-      container2: {
-        label: "Language",
-        value: "English",
-        key: "language",
-      },
-      container3: {
-        label: "Delete Account",
-        value: "",
-        key: "deleteAccount",
-      },
     },
-  ];
+  ] as const;
 
   return (
-    <div className="pt-30 px-6 bg-[#F7F7F7] h-screen">
+    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-30">
       <Header title="Account Information" />
       {isLoading ? (
         <div className="w-full bg-white rounded-lg py-3 px-3 text-sm text-[#3D3D3D]">
           Loading account information...
         </div>
       ) : null}
-      {accountInfoMap.map((container) => (
-        <Fragment key={container.container2.key}>
-          <div className="w-full bg-white rounded-lg py-3 flex flex-col gap-4 mb-4">
-            {container.container1.map((item) => (
+      {accountSections.map((section) => (
+        <Fragment key={section.key}>
+          <h2 className="mb-2 text-sm font-medium text-[#5B5B5B]">
+            {section.title}
+          </h2>
+          <div className="mb-4 w-full overflow-hidden rounded-lg bg-white">
+            {section.items.map((item, index) => (
               <div
                 key={item.key}
-                className="flex items-center justify-between px-3 text-[#3D3D3D]"
+                className={`flex items-center justify-between px-3 py-3 text-[#3D3D3D] ${
+                  index < section.items.length - 1 ? "border-b border-black/6" : ""
+                }`}
               >
                 <div className="text-sm font-medium">{item.label}</div>
-                <div className="text-sm">
-                  {Array.isArray(item.value)
-                    ? item.value.length
-                      ? item.value.join(", ")
-                      : "-"
-                    : item.value ||
-                      (item.key === "password" ? "********" : "-")}
-                </div>
+                <div className="text-sm">{item.value || "-"}</div>
               </div>
             ))}
           </div>
-          <div className="w-full bg-white rounded-lg py-3 mb-4">
-            <div className="flex items-center justify-between px-3 text-[#3D3D3D]">
-              <div className="text-sm font-medium">
-                {container.container2.label}
-              </div>
-              <div className="text-sm">{container.container2.value}</div>
-            </div>
-          </div>
-          <div className="w-full bg-white rounded-lg py-3 px-3 mb-4">
-            <button
-              type="button"
-              className="text-sm font-medium text-red-600"
-              aria-label={container.container3.label}
-            >
-              {container.container3.label}
-            </button>
-          </div>
         </Fragment>
       ))}
+      <h2 className="mb-2 text-sm font-medium text-[#5B5B5B]">Danger Zone</h2>
+      <div className="mb-4 w-full rounded-lg bg-white px-3 py-3">
+        <button
+          type="button"
+          className="text-sm font-medium text-red-600"
+          aria-label="Delete Account"
+        >
+          Delete Account
+        </button>
+      </div>
     </div>
   );
 }

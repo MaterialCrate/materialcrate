@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Libre_Baskerville } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import AuthSplashGate from "./components/AuthSplashGate";
 import ConditionalNavbar from "./components/ConditionalNavbar";
@@ -30,8 +31,21 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} ${libreBaskerville.variable} antialiased`}
     >
+      <Script id="materialcrate-theme-init" strategy="beforeInteractive">
+        {`
+          try {
+            var savedTheme = localStorage.getItem("mc-theme") || "system";
+            var resolvedTheme = savedTheme;
+            if (savedTheme === "system") {
+              resolvedTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            }
+            document.documentElement.dataset.theme = resolvedTheme;
+          } catch (error) {}
+        `}
+      </Script>
       <body className="font-sans relative">
         <AuthSplashGate>
           {children}

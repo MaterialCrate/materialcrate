@@ -1,60 +1,126 @@
 "use client";
 
 import React from "react";
-import { ArrowRight2, Logout } from "iconsax-reactjs";
+import {
+  ArrowRight2,
+  Brush2,
+  Logout,
+  Notification,
+  ProfileCircle,
+  SecuritySafe,
+  ShieldTick,
+  UserSquare,
+} from "iconsax-reactjs";
 import { useRouter } from "next/navigation";
-import ReferralCard from "../components/settings/ReferralCard";
 import ActionButton from "../components/ActionButton";
 import Header from "../components/Header";
 
 const settingPages = [
   {
-    title: "Profile & Account",
+    eyebrow: "Identity",
+    title: "Profile",
+    description: "Update how your account looks to other people.",
+    icon: ProfileCircle,
     buttons: [
       {
         key: "edit-profile",
         text: "Edit Profile",
+        note: "Username, photo, school and program",
         href: "/settings/profile",
       },
+    ],
+  },
+  {
+    eyebrow: "Access",
+    title: "Account",
+    description: "See account details, plan info, and linked services.",
+    icon: UserSquare,
+    buttons: [
       {
         key: "account-info",
         text: "Account Information",
+        note: "Email, password, subscription and connected accounts",
         href: "/settings/account",
       },
     ],
   },
   {
+    eyebrow: "Control",
     title: "Privacy & Safety",
+    description: "Manage who can see you and who can interact with you.",
+    icon: SecuritySafe,
     buttons: [
       {
         key: "visibility",
         text: "Account Visibility",
+        note: "Profile, posts, comments and status visibility",
         href: "/settings/privacy/visibility",
       },
       {
         key: "blocked-users",
         text: "Blocked Users",
+        note: "Review or remove blocked accounts",
         href: "/settings/privacy/blocked-users",
-      },
-      {
-        key: "terms-of-service",
-        text: "Terms of Service",
-        href: "/settings/privacy/terms-of-service",
       },
     ],
   },
   {
-    title: "Communication Preferences",
+    eyebrow: "Alerts",
+    title: "Notifications",
+    description: "Choose the updates that should reach you.",
+    icon: Notification,
     buttons: [
       {
         key: "email-notifications",
         text: "Email Notifications",
+        note: "Inbox updates and summaries",
         href: "/settings/notifications/email",
       },
       {
         key: "push-notifications",
         text: "Push Notifications",
+        note: "Realtime alerts on your device",
         href: "/settings/notifications/push",
+      },
+    ],
+  },
+  {
+    eyebrow: "Look & Feel",
+    title: "Appearance",
+    description: "Personalize the way Material Crate feels to use.",
+    icon: Brush2,
+    buttons: [
+      {
+        key: "theme",
+        text: "Theme",
+        note: "System, light, dark or sepia",
+        href: "/settings/appearance/theme",
+      },
+    ],
+  },
+  {
+    eyebrow: "Policies",
+    title: "Support & Legal",
+    description: "Get help, review policies, and understand the rules.",
+    icon: ShieldTick,
+    buttons: [
+      {
+        key: "help-support",
+        text: "Help & Support",
+        note: "Report issues, get help and review guidelines",
+        href: "/settings/support/help",
+      },
+      {
+        key: "privacy-policy",
+        text: "Privacy Policy",
+        note: "How data is collected and handled",
+        href: "/settings/legal/privacy-policy",
+      },
+      {
+        key: "terms-of-service",
+        text: "Terms of Service",
+        note: "Rules, limits and account responsibilities",
+        href: "/settings/legal/terms-of-service",
       },
     ],
   },
@@ -64,23 +130,48 @@ export default function Settings() {
   const router = useRouter();
 
   return (
-    <div className="space-y-4 pt-30 px-6 bg-[#F7F7F7] h-screen">
+    <div className="min-h-dvh bg-[#F7F7F7] px-4 pb-8 pt-20">
       <Header title="Settings" />
-      <ReferralCard />
-      <div className="w-full">
+      <div className="w-full space-y-3">
         {settingPages.map((section) => (
-          <div key={section.title} className="mb-6">
-            <h2 className="font-medium mb-3 text-[#3D3D3D]">{section.title}</h2>
-            <div className="w-full px-4 py-3 bg-white rounded-lg flex flex-col items-start gap-5">
-              {section.buttons.map((button) => (
+          <div
+            key={section.title}
+            className="overflow-hidden rounded-[20px] border border-black/6 bg-white"
+          >
+            <div className="flex items-start gap-3 px-4 py-3.5">
+              <div className="rounded-[14px] bg-[#F6EFE5] p-2.5">
+                <section.icon size={20} color="#A95A13" variant="Bulk" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold text-[#1F1F1F]">
+                  {section.title}
+                </h2>
+                <p className="mt-0.5 text-xs text-[#666666]">
+                  {section.description}
+                </p>
+              </div>
+            </div>
+            <div className="border-t border-black/6">
+              {section.buttons.map((button, index) => (
                 <button
                   type="button"
                   key={button.key}
                   onClick={() => router.push(button.href)}
-                  className="flex items-center justify-between w-full"
+                  className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-[#FBF7F2] ${
+                    index < section.buttons.length - 1
+                      ? "border-b border-black/6"
+                      : ""
+                  }`}
                 >
-                  <p className="text-sm text-[#3D3D3D]">{button.text}</p>
-                  <ArrowRight2 size={20} color="#444444" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[#242424]">
+                      {button.text}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-[#717171]">
+                      {button.note}
+                    </p>
+                  </div>
+                  <ArrowRight2 size={18} color="#444444" />
                 </button>
               ))}
             </div>
@@ -88,7 +179,7 @@ export default function Settings() {
         ))}
       </div>
       <ActionButton
-        className="w-full flex items-center justify-center gap-2"
+        className="mt-6 flex w-full items-center justify-center gap-2"
         type="button"
       >
         <Logout size={20} color="#FFFFFF" />

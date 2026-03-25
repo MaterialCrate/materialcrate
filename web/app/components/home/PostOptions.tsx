@@ -109,7 +109,7 @@ export default function OptionsOptions({
         },
         {
           label: blockActionLabel,
-          icon: <Slash size={20} color="#111111" />,
+          icon: <Slash size={20} color="#111111" variant="Bold" />,
         },
       ];
 
@@ -321,11 +321,14 @@ export default function OptionsOptions({
                   if (action.label === "Not interested in this post") {
                     try {
                       setIsMarkingUninterested(true);
-                      const response = await fetch("/api/posts/not-interested", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ postId: post.id }),
-                      });
+                      const response = await fetch(
+                        "/api/posts/not-interested",
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ postId: post.id }),
+                        },
+                      );
                       const body = await response.json().catch(() => ({}));
 
                       if (!response.ok || !body?.ok) {
