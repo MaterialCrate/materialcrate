@@ -3,6 +3,7 @@ type User {
   username: String!
   displayName: String!
   profilePicture: String
+  profileBackground: String!
   followers: [User!]!
   following: [User!]!
   mutedUsers: [User!]!
@@ -75,6 +76,10 @@ type Mutation {
     institution: String!
     program: String
     profilePicture: String
+    profileBackground: String
+    profileBackgroundFileBase64: String
+    profileBackgroundFileName: String
+    profileBackgroundMimeType: String
     profilePictureFileBase64: String
     profilePictureFileName: String
     profilePictureMimeType: String

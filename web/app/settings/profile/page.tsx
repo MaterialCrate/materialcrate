@@ -2,10 +2,15 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "iconsax-reactjs";
+import { ArrowLeft, Edit2 } from "iconsax-reactjs";
 import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 import Alert from "@/app/components/Alert";
 import ProfilePictureField from "@/app/components/profile/ProfilePictureField";
+import {
+  DEFAULT_PROFILE_BACKGROUND,
+  getProfileBackgroundPresentation,
+  isDefaultProfileBackground,
+} from "@/app/lib/profile-background";
 import { refreshAuth, useAuth } from "@/app/lib/auth-client";
 import LoadingBar from "@/app/components/LoadingBar";
 
@@ -13,12 +18,20 @@ type UserProfile = {
   username: string;
   displayName: string;
   profilePictureUrl?: string;
+  profileBackground: string;
   institution: string;
   program: string;
 };
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const MIN_USERNAME_LENGTH = 3;
+const MAX_PROFILE_BACKGROUND_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PROFILE_BACKGROUND_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 export default function Page() {
   const { user, isLoading: isLoadingAuth } = useAuth();
@@ -28,29 +41,43 @@ export default function Page() {
     institution: "",
     program: "",
     profilePictureUrl: "",
+    profileBackground: DEFAULT_PROFILE_BACKGROUND,
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [usernameMessage, setUsernameMessage] = useState<string>("");
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(
-    null,
-  );
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<
+    boolean | null
+  >(null);
   const [isLiveChecking, setIsLiveChecking] = useState<boolean>(false);
   const [isSubmitChecking, setIsSubmitChecking] = useState<boolean>(false);
   const lastLiveCheckedUsernameRef = useRef<string>("");
   const isChecking = isLiveChecking || isSubmitChecking;
   const [fetchedUsername, setFetchedUsername] = useState<string>("");
-  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(null);
+  const [profilePictureFile, setProfilePictureFile] = useState<File | null>(
+    null,
+  );
   const [profilePicturePreviewUrl, setProfilePicturePreviewUrl] =
     useState<string>("");
-  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(null);
+  const [profileBackgroundFile, setProfileBackgroundFile] =
+    useState<File | null>(null);
+  const [profileBackgroundPreviewUrl, setProfileBackgroundPreviewUrl] =
+    useState<string>("");
+  const [initialProfile, setInitialProfile] = useState<UserProfile | null>(
+    null,
+  );
+  const profileBackgroundInputRef = useRef<HTMLInputElement | null>(null);
 
   const router = useRouter();
+  const isProUser = user?.subscriptionPlan?.trim().toLowerCase() === "pro";
 
   const profilePictureToRender =
     profilePicturePreviewUrl || profile.profilePictureUrl || "";
+  const profileBackgroundPresentation = getProfileBackgroundPresentation(
+    profileBackgroundPreviewUrl || profile.profileBackground,
+  );
 
   useEffect(() => {
     if (isLoadingAuth) {
@@ -82,7 +109,8 @@ export default function Page() {
           ok: false,
           available: false,
           error:
-            body?.error || "Error connecting to server. Please try again later.",
+            body?.error ||
+            "Error connecting to server. Please try again later.",
         };
       }
 
@@ -120,6 +148,8 @@ export default function Page() {
           program: body.user.program ?? "",
           profilePictureUrl:
             body.user.profilePicture ?? body.user.profilePictureUrl ?? "",
+          profileBackground:
+            body.user.profileBackground ?? DEFAULT_PROFILE_BACKGROUND,
         });
         setInitialProfile({
           username: body.user.username ?? "",
@@ -128,6 +158,8 @@ export default function Page() {
           program: body.user.program ?? "",
           profilePictureUrl:
             body.user.profilePicture ?? body.user.profilePictureUrl ?? "",
+          profileBackground:
+            body.user.profileBackground ?? DEFAULT_PROFILE_BACKGROUND,
         });
         setFetchedUsername(body.user.username ?? "");
       } catch (err: unknown) {
@@ -154,6 +186,14 @@ export default function Page() {
       }
     };
   }, [profilePicturePreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (profileBackgroundPreviewUrl) {
+        URL.revokeObjectURL(profileBackgroundPreviewUrl);
+      }
+    };
+  }, [profileBackgroundPreviewUrl]);
 
   useEffect(() => {
     const trimmedUsername = profile.username.trim();
@@ -245,10 +285,13 @@ export default function Page() {
     ? profile.username.trim() !== initialProfile.username.trim() ||
       profile.displayName.trim() !== initialProfile.displayName.trim() ||
       profile.institution.trim() !== initialProfile.institution.trim() ||
-      profile.program.trim() !== initialProfile.program.trim()
+      profile.program.trim() !== initialProfile.program.trim() ||
+      profile.profileBackground !== initialProfile.profileBackground
     : false;
   const hasProfilePictureChange = Boolean(profilePictureFile);
-  const hasPendingChanges = hasTextChanges || hasProfilePictureChange;
+  const hasProfileBackgroundChange = Boolean(profileBackgroundFile);
+  const hasPendingChanges =
+    hasTextChanges || hasProfilePictureChange || hasProfileBackgroundChange;
 
   const isSaveDisabled =
     !hasPendingChanges ||
@@ -303,8 +346,21 @@ export default function Page() {
       if (trimmedProgram) {
         formData.append("program", trimmedProgram);
       }
+      if (
+        !profileBackgroundFile &&
+        initialProfile &&
+        profile.profileBackground !== initialProfile.profileBackground
+      ) {
+        formData.append(
+          "profileBackground",
+          profile.profileBackground || DEFAULT_PROFILE_BACKGROUND,
+        );
+      }
       if (profilePictureFile) {
         formData.append("profilePictureFile", profilePictureFile);
+      }
+      if (profileBackgroundFile) {
+        formData.append("profileBackgroundFile", profileBackgroundFile);
       }
 
       const response = await fetch("/api/graphql/complete-profile", {
@@ -330,6 +386,8 @@ export default function Page() {
             updatedUser.profilePicture ??
             updatedUser.profilePictureUrl ??
             profile.profilePictureUrl,
+          profileBackground:
+            updatedUser.profileBackground ?? profile.profileBackground,
         };
         setProfile(nextProfile);
         setInitialProfile(nextProfile);
@@ -343,6 +401,7 @@ export default function Page() {
                 displayName: profile.displayName,
                 institution: profile.institution,
                 program: profile.program,
+                profileBackground: profile.profileBackground,
               }
             : previous,
         );
@@ -356,21 +415,91 @@ export default function Page() {
         }
         return "";
       });
+      setProfileBackgroundFile(null);
+      setProfileBackgroundPreviewUrl((previous) => {
+        if (previous) {
+          URL.revokeObjectURL(previous);
+        }
+        return "";
+      });
       setSuccessMessage("Profile updated successfully.");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save profile");
+      setError("Failed to save profile");
+      console.error("Failed to save profile", err)
     } finally {
       setIsSubmitChecking(false);
       setIsSaving(false);
     }
   };
 
+  const handleProfileBackgroundButtonClick = () => {
+    if (!isProUser) {
+      setError("Custom profile backgrounds are Pro-only");
+      return;
+    }
+
+    profileBackgroundInputRef.current?.click();
+  };
+
+  const handleProfileBackgroundChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!isProUser) {
+      setError("Custom profile backgrounds are Pro-only");
+      return;
+    }
+
+    const normalizedType = file.type.toLowerCase();
+    if (!ALLOWED_PROFILE_BACKGROUND_MIME_TYPES.has(normalizedType)) {
+      setError("Unsupported image used");
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_BACKGROUND_BYTES) {
+      setError("Profile background too large");
+      return;
+    }
+
+    setError("");
+    setSuccessMessage("");
+
+    const previewUrl = URL.createObjectURL(file);
+    setProfileBackgroundFile(file);
+    setProfileBackgroundPreviewUrl((previous) => {
+      if (previous) {
+        URL.revokeObjectURL(previous);
+      }
+      return previewUrl;
+    });
+  };
+
+  const handleResetProfileBackground = () => {
+    setError("");
+    setSuccessMessage("");
+    setProfileBackgroundFile(null);
+    setProfileBackgroundPreviewUrl((previous) => {
+      if (previous) {
+        URL.revokeObjectURL(previous);
+      }
+      return "";
+    });
+    setProfile((current) => ({
+      ...current,
+      profileBackground: DEFAULT_PROFILE_BACKGROUND,
+    }));
+  };
+
   return (
-    <div>
+    <div className="relative h-screen bg-[#F7F7F7]">
       {successMessage && <Alert type="success" message={successMessage} />}
       {error && <Alert type="error" message={error} />}
-      <div className="fixed top-0 left-0 right-0">
-        <header className=" bg-white pb-4 pt-12 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center justify-between z-50">
+      <div className="fixed top-0 left-0 right-0 z-60">
+        <header className=" bg-white pb-4 pt-8 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center justify-between z-50">
           <button aria-label="Back" type="button" onClick={() => router.back()}>
             <ArrowLeft size={24} />
           </button>
@@ -391,90 +520,166 @@ export default function Page() {
         )}
       </div>
       {isLoadingAuth ? null : !user ? null : (
-      <form
-        id="profile-form"
-        className="pt-30 px-6 flex flex-col items-center gap-10"
-        onSubmit={handleSave}
-      >
-        <ProfilePictureField
-          imageUrl={profilePictureToRender}
-          onError={setError}
-          onClearStatus={() => {
-            setError("");
-            setSuccessMessage("");
-          }}
-          onImageReady={(file, previewUrl) => {
-            setProfilePictureFile(file);
-            setProfilePicturePreviewUrl((previous) => {
-              if (previous) {
-                URL.revokeObjectURL(previous);
-              }
-              return previewUrl;
-            });
-          }}
-        />
-        <div className="w-full">
-          <h2 className="text-xl font-semibold">Personal Information</h2>
-          <div className="space-y-1 mt-4">
-            <p className="text-[#5B5B5B] text-sm font-medium">Username</p>
-            <div className="relative">
-              <input
-                placeholder={profile.username}
-                value={profile.username}
-                onChange={(e) => {
-                  setProfile({ ...profile, username: e.target.value });
-                  lastLiveCheckedUsernameRef.current = "";
-                }}
-                disabled={isLoading || isSaving}
-                required
-                minLength={MIN_USERNAME_LENGTH}
-                maxLength={15}
-                className="w-full rounded-lg px-3 py-3 pr-12 bg-[#F3F3F3]/50 shadow text-xs placeholder:text-[#B1B1B1] focus:outline-none"
-              />
-              {isChecking &&
-              profile.username.length >= MIN_USERNAME_LENGTH &&
-              profile.username !== initialProfile?.username ? (
-                <span
-                  aria-hidden="true"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-[#E1761F] border-t-transparent animate-spin"
-                />
-              ) : (
-                profile.username.length >= MIN_USERNAME_LENGTH &&
-                !usernameMessage &&
-                profile.username !== fetchedUsername && (
-                  <p
-                    className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold ${isUsernameAvailable ? "text-green-500" : "text-red-500"}`}
-                  >
-                    {isUsernameAvailable ? (
-                      <IoMdCheckmarkCircle size={24} />
-                    ) : (
-                      <IoMdCloseCircle size={24} />
-                    )}
-                  </p>
-                )
-              )}
-            </div>
-            <p className="text-[12px] text-red-500">{usernameMessage}</p>
+        <form
+          id="profile-form"
+          className="relative z-0 flex flex-col items-center gap-6 px-4 pt-24 pb-8"
+          onSubmit={handleSave}
+        >
+          <div className="w-full rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
+            <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
+              Profile
+            </p>
+            <h2 className="mt-1 text-lg font-semibold">
+              Update how your account appears.
+            </h2>
+            <p className="mt-1 text-xs text-white/72">
+              Keep your photo, username, and academic details current.
+            </p>
           </div>
-          {textInputs.map((input) => (
-            <div className="space-y-1 mt-4" key={input.key}>
-              <p className="text-[#5B5B5B] text-sm font-medium">
-                {input.label}
-              </p>
+          <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
+            <div
+              className={`relative overflow-hidden rounded-[22px] ${profileBackgroundPresentation.className} px-4 py-6`}
+              style={profileBackgroundPresentation.style}
+            >
+              <button
+                type="button"
+                aria-label="Edit profile background"
+                className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-sm"
+                onClick={() => {
+                  setError("");
+                  setSuccessMessage("");
+                  handleProfileBackgroundButtonClick();
+                }}
+              >
+                <Edit2 size={18} color="#555555" />
+              </button>
               <input
-                placeholder={input.value}
-                value={input.value}
-                onChange={input.onchange}
-                disabled={isLoading || isSaving}
-                required
-                minLength={input.minLength}
-                maxLength={input.maxLength}
-                className="w-full rounded-lg px-3 py-3 bg-[#F3F3F3]/50 shadow text-xs placeholder:text-[#B1B1B1] focus:outline-none"
+                ref={profileBackgroundInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleProfileBackgroundChange}
+                aria-hidden="true"
               />
+              <div className="flex justify-center">
+                <ProfilePictureField
+                  imageUrl={profilePictureToRender}
+                  onError={setError}
+                  onClearStatus={() => {
+                    setError("");
+                    setSuccessMessage("");
+                  }}
+                  onImageReady={(file, previewUrl) => {
+                    setProfilePictureFile(file);
+                    setProfilePicturePreviewUrl((previous) => {
+                      if (previous) {
+                        URL.revokeObjectURL(previous);
+                      }
+                      return previewUrl;
+                    });
+                  }}
+                />
+              </div>
             </div>
-          ))}
-        </div>
-      </form>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-[#1F1F1F]">
+                  Profile background
+                </p>
+                <p className="mt-0.5 text-xs text-[#666666]">
+                  {isProUser
+                    ? "Tap the pen to upload an image or GIF under 5MB."
+                    : "Default background is active. Upgrade to Pro to upload images or GIFs."}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-[11px] font-medium ${
+                  isProUser
+                    ? "bg-[#FFF1DE] text-[#A95A13]"
+                    : "bg-[#EFEFEF] text-[#6A6A6A]"
+                }`}
+              >
+                {isProUser ? "Pro" : "Free"}
+              </span>
+            </div>
+            {isProUser &&
+            (!isDefaultProfileBackground(profile.profileBackground) ||
+              Boolean(profileBackgroundFile)) ? (
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={handleResetProfileBackground}
+                  className="text-sm font-medium text-[#A95A13]"
+                >
+                  Use default background
+                </button>
+              </div>
+            ) : null}
+          </div>
+          <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
+            <h2 className="text-base font-semibold text-[#1F1F1F]">
+              Personal Information
+            </h2>
+            <div className="mt-4 space-y-1">
+              <p className="text-[#5B5B5B] text-sm font-medium">Username</p>
+              <div className="relative">
+                <input
+                  placeholder={profile.username}
+                  value={profile.username}
+                  onChange={(e) => {
+                    setProfile({ ...profile, username: e.target.value });
+                    lastLiveCheckedUsernameRef.current = "";
+                  }}
+                  disabled={isLoading || isSaving}
+                  required
+                  minLength={MIN_USERNAME_LENGTH}
+                  maxLength={15}
+                  className="w-full rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 pr-12 text-sm placeholder:text-[#B1B1B1] focus:outline-none"
+                />
+                {isChecking &&
+                profile.username.length >= MIN_USERNAME_LENGTH &&
+                profile.username !== initialProfile?.username ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-[#E1761F] border-t-transparent animate-spin"
+                  />
+                ) : (
+                  profile.username.length >= MIN_USERNAME_LENGTH &&
+                  !usernameMessage &&
+                  profile.username !== fetchedUsername && (
+                    <p
+                      className={`absolute right-4 top-1/2 -translate-y-1/2 font-bold ${isUsernameAvailable ? "text-green-500" : "text-red-500"}`}
+                    >
+                      {isUsernameAvailable ? (
+                        <IoMdCheckmarkCircle size={24} />
+                      ) : (
+                        <IoMdCloseCircle size={24} />
+                      )}
+                    </p>
+                  )
+                )}
+              </div>
+              <p className="text-[12px] text-red-500">{usernameMessage}</p>
+            </div>
+            {textInputs.map((input) => (
+              <div className="space-y-1 mt-4" key={input.key}>
+                <p className="text-[#5B5B5B] text-sm font-medium">
+                  {input.label}
+                </p>
+                <input
+                  placeholder={input.value}
+                  value={input.value}
+                  onChange={input.onchange}
+                  disabled={isLoading || isSaving}
+                  required
+                  minLength={input.minLength}
+                  maxLength={input.maxLength}
+                  className="w-full rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 text-sm placeholder:text-[#B1B1B1] focus:outline-none"
+                />
+              </div>
+            ))}
+          </div>
+        </form>
       )}
     </div>
   );

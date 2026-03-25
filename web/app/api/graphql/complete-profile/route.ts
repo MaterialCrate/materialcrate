@@ -4,6 +4,13 @@ import { cookies } from "next/headers";
 export const runtime = "nodejs";
 const MAX_PROFILE_PICTURE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_PROFILE_PICTURE_MIME_TYPES = new Set(["image/jpeg", "image/png"]);
+const MAX_PROFILE_BACKGROUND_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PROFILE_BACKGROUND_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 type CompleteProfileBody = {
   username?: string;
@@ -11,6 +18,10 @@ type CompleteProfileBody = {
   institution?: string;
   program?: string;
   profilePicture?: string | null;
+  profileBackground?: string;
+  profileBackgroundFileBase64?: string;
+  profileBackgroundFileName?: string;
+  profileBackgroundMimeType?: string;
   profilePictureFileBase64?: string;
   profilePictureFileName?: string;
   profilePictureMimeType?: string;
@@ -27,6 +38,10 @@ const COMPLETE_PROFILE_MUTATION = `
     $institution: String!
     $program: String
     $profilePicture: String
+    $profileBackground: String
+    $profileBackgroundFileBase64: String
+    $profileBackgroundFileName: String
+    $profileBackgroundMimeType: String
     $profilePictureFileBase64: String
     $profilePictureFileName: String
     $profilePictureMimeType: String
@@ -37,6 +52,10 @@ const COMPLETE_PROFILE_MUTATION = `
       institution: $institution
       program: $program
       profilePicture: $profilePicture
+      profileBackground: $profileBackground
+      profileBackgroundFileBase64: $profileBackgroundFileBase64
+      profileBackgroundFileName: $profileBackgroundFileName
+      profileBackgroundMimeType: $profileBackgroundMimeType
       profilePictureFileBase64: $profilePictureFileBase64
       profilePictureFileName: $profilePictureFileName
       profilePictureMimeType: $profilePictureMimeType
@@ -47,6 +66,7 @@ const COMPLETE_PROFILE_MUTATION = `
       institution
       program
       profilePicture
+      profileBackground
     }
   }
 `;
@@ -58,16 +78,20 @@ export async function POST(req: Request) {
   if (contentType.includes("multipart/form-data")) {
     const formData = await req.formData();
     const file = formData.get("profilePictureFile");
+    const profileBackgroundFile = formData.get("profileBackgroundFile");
     const username = formData.get("username");
     const displayName = formData.get("displayName");
     const institution = formData.get("institution");
     const program = formData.get("program");
+    const profileBackground = formData.get("profileBackground");
 
     body.username = typeof username === "string" ? username : undefined;
     body.displayName =
       typeof displayName === "string" ? displayName : undefined;
     body.institution = typeof institution === "string" ? institution : undefined;
     body.program = typeof program === "string" ? program : undefined;
+    body.profileBackground =
+      typeof profileBackground === "string" ? profileBackground : undefined;
 
     if (file instanceof File) {
       const normalizedType = file.type.toLowerCase();
@@ -88,6 +112,28 @@ export async function POST(req: Request) {
       body.profilePictureFileBase64 = Buffer.from(arrayBuffer).toString("base64");
       body.profilePictureFileName = file.name;
       body.profilePictureMimeType = file.type;
+    }
+
+    if (profileBackgroundFile instanceof File) {
+      const normalizedType = profileBackgroundFile.type.toLowerCase();
+      if (!ALLOWED_PROFILE_BACKGROUND_MIME_TYPES.has(normalizedType)) {
+        return NextResponse.json(
+          { error: "Use JPG, PNG, WEBP, or GIF only for profile backgrounds." },
+          { status: 400 },
+        );
+      }
+      if (profileBackgroundFile.size > MAX_PROFILE_BACKGROUND_BYTES) {
+        return NextResponse.json(
+          { error: "Profile background must be 5MB or smaller" },
+          { status: 400 },
+        );
+      }
+
+      const arrayBuffer = await profileBackgroundFile.arrayBuffer();
+      body.profileBackgroundFileBase64 =
+        Buffer.from(arrayBuffer).toString("base64");
+      body.profileBackgroundFileName = profileBackgroundFile.name;
+      body.profileBackgroundMimeType = profileBackgroundFile.type;
     }
   } else {
     try {
@@ -132,6 +178,22 @@ export async function POST(req: Request) {
         profilePicture:
           typeof body.profilePicture === "string"
             ? body.profilePicture.trim() || null
+            : undefined,
+        profileBackground:
+          typeof body.profileBackground === "string"
+            ? body.profileBackground.trim() || undefined
+            : undefined,
+        profileBackgroundFileBase64:
+          typeof body.profileBackgroundFileBase64 === "string"
+            ? body.profileBackgroundFileBase64
+            : undefined,
+        profileBackgroundFileName:
+          typeof body.profileBackgroundFileName === "string"
+            ? body.profileBackgroundFileName.trim()
+            : undefined,
+        profileBackgroundMimeType:
+          typeof body.profileBackgroundMimeType === "string"
+            ? body.profileBackgroundMimeType.trim()
             : undefined,
         profilePictureFileBase64:
           typeof body.profilePictureFileBase64 === "string"

@@ -129,6 +129,15 @@ const ALLOWED_PROFILE_PICTURE_MIME_TYPES = new Set(["image/jpeg", "image/png"]);
 const PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 const PROFILE_PICTURE_MAX_DIMENSION = 512;
 const PROFILE_PICTURE_WEBP_QUALITY = 82;
+const DEFAULT_PROFILE_BACKGROUND =
+  "bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200";
+const MAX_PROFILE_BACKGROUND_BYTES = 5 * 1024 * 1024;
+const ALLOWED_PROFILE_BACKGROUND_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 const extractS3KeyFromUrl = (
   fileUrl: string,
@@ -979,6 +988,10 @@ export const UserResolver = {
       const displayName = args.displayName?.trim();
       const institution = args.institution?.trim();
       const profilePicture = args.profilePicture?.trim();
+      const profileBackground = args.profileBackground?.trim();
+      const profileBackgroundFileBase64 = args.profileBackgroundFileBase64;
+      const profileBackgroundFileName = args.profileBackgroundFileName?.trim();
+      const profileBackgroundMimeType = args.profileBackgroundMimeType?.trim();
       const profilePictureFileBase64 = args.profilePictureFileBase64;
       const profilePictureFileName = args.profilePictureFileName?.trim();
       const profilePictureMimeType = args.profilePictureMimeType?.trim();
@@ -989,6 +1002,13 @@ export const UserResolver = {
       const hasProfilePictureFile =
         typeof profilePictureFileBase64 === "string" &&
         profilePictureFileBase64.trim().length > 0;
+      const hasProfileBackgroundArg = Object.prototype.hasOwnProperty.call(
+        args,
+        "profileBackground",
+      );
+      const hasProfileBackgroundFile =
+        typeof profileBackgroundFileBase64 === "string" &&
+        profileBackgroundFileBase64.trim().length > 0;
 
       if (!username || !displayName || !institution) {
         throw new Error(
@@ -1002,13 +1022,18 @@ export const UserResolver = {
 
       const existingUser = await (prisma as any).user.findUnique({
         where: { id: ctx.user.sub },
-        select: { profilePicture: true },
+        select: {
+          profilePicture: true,
+          profileBackground: true,
+          subscriptionPlan: true,
+        },
       });
       if (!existingUser) {
         throw new Error("User not found");
       }
 
       let uploadedProfilePictureUrl: string | null = null;
+      let uploadedProfileBackgroundUrl: string | null = null;
 
       try {
         const updateData: Record<string, unknown> = {
@@ -1017,6 +1042,78 @@ export const UserResolver = {
           institution,
           program: args.program ?? null,
         };
+
+        const isProUser =
+          existingUser.subscriptionPlan?.trim().toLowerCase() === "pro";
+
+        if (hasProfileBackgroundFile && !isProUser) {
+          throw new Error("Profile backgrounds are available to Pro users only");
+        }
+
+        if (hasProfileBackgroundFile) {
+          if (!profileBackgroundFileName || !profileBackgroundMimeType) {
+            throw new Error(
+              "Profile background file name and mime type are required",
+            );
+          }
+
+          const normalizedBackgroundMime =
+            profileBackgroundMimeType.toLowerCase();
+          if (
+            !ALLOWED_PROFILE_BACKGROUND_MIME_TYPES.has(normalizedBackgroundMime)
+          ) {
+            throw new Error("Use JPG, PNG, WEBP, or GIF only.");
+          }
+
+          const backgroundBuffer = Buffer.from(
+            profileBackgroundFileBase64,
+            "base64",
+          );
+          if (!backgroundBuffer.length) {
+            throw new Error("Uploaded profile background is empty");
+          }
+          if (backgroundBuffer.length > MAX_PROFILE_BACKGROUND_BYTES) {
+            throw new Error("Profile background must be 5MB or smaller");
+          }
+
+          const bucket = process.env.AWS_S3_BUCKET_NAME;
+          const region = process.env.AWS_REGION;
+          if (!bucket || !region) {
+            throw new Error("S3 bucket configuration is missing");
+          }
+
+          const fileNameWithoutExtension = profileBackgroundFileName.replace(
+            /\.[^.]+$/,
+            "",
+          );
+          const sanitizedBaseName = sanitizeFileName(fileNameWithoutExtension);
+          const extension =
+            normalizedBackgroundMime === "image/jpeg"
+              ? "jpg"
+              : normalizedBackgroundMime === "image/png"
+                ? "png"
+                : normalizedBackgroundMime === "image/webp"
+                  ? "webp"
+                  : "gif";
+          const key = `profileBackgrounds/${Date.now()}-${randomUUID()}-${sanitizedBaseName || "profile-background"}.${extension}`;
+          await s3.send(
+            new PutObjectCommand({
+              Bucket: bucket,
+              Key: key,
+              Body: backgroundBuffer,
+              ContentType: normalizedBackgroundMime,
+            }),
+          );
+
+          uploadedProfileBackgroundUrl = buildS3FileUrl(bucket, region, key);
+          updateData.profileBackground = uploadedProfileBackgroundUrl;
+        } else if (hasProfileBackgroundArg) {
+          if (!profileBackground || profileBackground === DEFAULT_PROFILE_BACKGROUND) {
+            updateData.profileBackground = DEFAULT_PROFILE_BACKGROUND;
+          } else if (!isProUser) {
+            throw new Error("Profile backgrounds are available to Pro users only");
+          }
+        }
 
         if (hasProfilePictureFile) {
           if (!profilePictureFileName || !profilePictureMimeType) {
@@ -1110,6 +1207,35 @@ export const UserResolver = {
           }
         }
 
+        if (
+          (hasProfileBackgroundFile ||
+            updateData.profileBackground === DEFAULT_PROFILE_BACKGROUND) &&
+          existingUser.profileBackground &&
+          existingUser.profileBackground !== DEFAULT_PROFILE_BACKGROUND
+        ) {
+          const previousBackgroundKey = extractS3KeyFromUrl(
+            existingUser.profileBackground,
+            process.env.AWS_S3_BUCKET_NAME ?? "",
+            process.env.AWS_REGION ?? "",
+          );
+          const bucket = process.env.AWS_S3_BUCKET_NAME;
+
+          if (
+            previousBackgroundKey &&
+            bucket &&
+            existingUser.profileBackground !== uploadedProfileBackgroundUrl
+          ) {
+            void s3
+              .send(
+                new DeleteObjectCommand({
+                  Bucket: bucket,
+                  Key: previousBackgroundKey,
+                }),
+              )
+              .catch(() => null);
+          }
+        }
+
         return updatedUser;
       } catch (error) {
         if (uploadedProfilePictureUrl) {
@@ -1127,6 +1253,28 @@ export const UserResolver = {
                   new DeleteObjectCommand({
                     Bucket: bucket,
                     Key: uploadedPictureKey,
+                  }),
+                )
+                .catch(() => null);
+            }
+          }
+        }
+
+        if (uploadedProfileBackgroundUrl) {
+          const bucket = process.env.AWS_S3_BUCKET_NAME;
+          const region = process.env.AWS_REGION;
+          if (bucket && region) {
+            const uploadedBackgroundKey = extractS3KeyFromUrl(
+              uploadedProfileBackgroundUrl,
+              bucket,
+              region,
+            );
+            if (uploadedBackgroundKey) {
+              void s3
+                .send(
+                  new DeleteObjectCommand({
+                    Bucket: bucket,
+                    Key: uploadedBackgroundKey,
                   }),
                 )
                 .catch(() => null);
@@ -1174,6 +1322,40 @@ export const UserResolver = {
         );
       } catch {
         return rawProfilePicture;
+      }
+    },
+    profileBackground: async (user: { profileBackground?: string | null }) => {
+      const rawProfileBackground = user.profileBackground?.trim();
+      if (!rawProfileBackground) {
+        return DEFAULT_PROFILE_BACKGROUND;
+      }
+
+      if (rawProfileBackground === DEFAULT_PROFILE_BACKGROUND) {
+        return rawProfileBackground;
+      }
+
+      const bucket = process.env.AWS_S3_BUCKET_NAME;
+      const region = process.env.AWS_REGION;
+      if (!bucket || !region) {
+        return rawProfileBackground;
+      }
+
+      const key = extractS3KeyFromUrl(rawProfileBackground, bucket, region);
+      if (!key) {
+        return rawProfileBackground;
+      }
+
+      try {
+        return await getSignedUrl(
+          s3,
+          new GetObjectCommand({
+            Bucket: bucket,
+            Key: key,
+          }),
+          { expiresIn: PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS },
+        );
+      } catch {
+        return rawProfileBackground;
       }
     },
     followers: async (user: { id: string }) => {

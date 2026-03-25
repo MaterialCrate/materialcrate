@@ -21,6 +21,7 @@ type ProfileUser = {
   username: string;
   displayName: string;
   profilePicture?: string | null;
+  profileBackground?: string | null;
   followersCount?: number | null;
   followingCount?: number | null;
   subscriptionPlan?: string | null;
@@ -444,6 +445,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         displayName={displayName}
         username={profileUsername}
         profilePictureUrl={profilePictureUrl}
+        profileBackground={profile?.profileBackground}
         followers={followerCount}
         following={followingCount}
         subscriptionPlan={profile?.subscriptionPlan ?? "free"}

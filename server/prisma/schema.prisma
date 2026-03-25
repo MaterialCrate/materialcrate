@@ -12,6 +12,7 @@ model User {
   username      String
   displayName   String
   profilePicture String?
+  profileBackground String @default("bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200")
   email         String
   password      String
   linkedSEOs    String[] @default([])

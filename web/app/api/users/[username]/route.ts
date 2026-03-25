@@ -14,6 +14,7 @@ const USER_BY_USERNAME_QUERY = `
       username
       displayName
       profilePicture
+      profileBackground
       followersCount
       followingCount
       subscriptionPlan

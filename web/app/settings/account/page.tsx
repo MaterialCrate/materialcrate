@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
+import { ShieldSecurity, Trash } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import Header from "@/app/components/Header";
 
@@ -91,40 +92,66 @@ export default function Page() {
   ] as const;
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-30">
+    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
       <Header title="Account Information" />
+      <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
+          Account
+        </p>
+        <h2 className="mt-1 text-lg font-semibold">Your account at a glance.</h2>
+        <p className="mt-1 text-xs text-white/72">
+          Review sign-in details, plan status, and connected services.
+        </p>
+      </div>
       {isLoading ? (
-        <div className="w-full bg-white rounded-lg py-3 px-3 text-sm text-[#3D3D3D]">
+        <div className="mb-4 w-full rounded-[18px] bg-white px-4 py-3 text-sm text-[#3D3D3D]">
           Loading account information...
         </div>
       ) : null}
       {accountSections.map((section) => (
         <Fragment key={section.key}>
-          <h2 className="mb-2 text-sm font-medium text-[#5B5B5B]">
+          <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A8A8A]">
             {section.title}
           </h2>
-          <div className="mb-4 w-full overflow-hidden rounded-lg bg-white">
+          <div className="mb-4 w-full overflow-hidden rounded-[20px] border border-black/6 bg-white">
             {section.items.map((item, index) => (
               <div
                 key={item.key}
-                className={`flex items-center justify-between px-3 py-3 text-[#3D3D3D] ${
-                  index < section.items.length - 1 ? "border-b border-black/6" : ""
+                className={`flex items-center justify-between gap-3 px-4 py-3 text-[#3D3D3D] ${
+                  index < section.items.length - 1
+                    && "border-b border-black/6"
                 }`}
               >
                 <div className="text-sm font-medium">{item.label}</div>
-                <div className="text-sm">{item.value || "-"}</div>
+                <div className="text-right text-sm text-[#666666]">
+                  {item.value || "-"}
+                </div>
               </div>
             ))}
           </div>
         </Fragment>
       ))}
-      <h2 className="mb-2 text-sm font-medium text-[#5B5B5B]">Danger Zone</h2>
-      <div className="mb-4 w-full rounded-lg bg-white px-3 py-3">
+      <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[#B45C5C]">
+        Danger Zone
+      </h2>
+      <div className="mb-4 w-full rounded-[20px] border border-[#F3D2D2] bg-[#FFF5F5] px-4 py-4">
+        <div className="mb-3 flex items-start gap-3">
+          <div className="rounded-[14px] bg-[#FDE4E4] p-2.5">
+            <ShieldSecurity size={18} color="#C04A4A" variant="Bulk" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-[#2D2D2D]">Delete Account</p>
+            <p className="mt-1 text-xs text-[#7A6A6A]">
+              Permanently remove your account and associated data.
+            </p>
+          </div>
+        </div>
         <button
           type="button"
-          className="text-sm font-medium text-red-600"
+          className="inline-flex items-center gap-2 text-sm font-medium text-red-600"
           aria-label="Delete Account"
         >
+          <Trash size={16} color="#DC2626" />
           Delete Account
         </button>
       </div>

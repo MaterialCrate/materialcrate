@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { SmsNotification } from "iconsax-reactjs";
 import Header from "@/app/components/Header";
 import ToggleSwitch from "@/app/components/ToggleSwitch";
 
@@ -29,20 +30,31 @@ export default function Page() {
   ];
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-30">
+    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
       <Header title="Email Notifications" />
-      <p className="mb-4 text-sm text-[#5B5B5B]">
-        Choose which updates should be sent to your inbox.
-      </p>
+      <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
+        <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
+          Notifications
+        </p>
+        <h2 className="mt-1 text-lg font-semibold">Inbox updates, only when useful.</h2>
+        <p className="mt-1 text-xs text-white/72">
+          Pick the emails that should reach you outside the app.
+        </p>
+      </div>
       <div className="space-y-3">
         {emailOptions.map((option) => (
           <div
             key={option.label}
-            className="flex items-start justify-between gap-4 rounded-lg bg-white p-3 shadow-sm"
+            className="flex items-start justify-between gap-4 rounded-[20px] border border-black/6 bg-white px-4 py-3"
           >
-            <div>
+            <div className="flex items-start gap-3">
+              <div className="rounded-[14px] bg-[#F6EFE5] p-2.5">
+                <SmsNotification size={18} color="#A95A13" variant="Bulk" />
+              </div>
+              <div>
               <p className="text-sm font-medium text-[#3D3D3D]">{option.label}</p>
               <p className="text-xs text-[#6B6B6B]">{option.description}</p>
+              </div>
             </div>
             <ToggleSwitch
               state={option.state}
