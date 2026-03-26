@@ -14,6 +14,7 @@ model User {
   profilePicture String?
   profileBackground String @default("bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200")
   email         String
+  pendingEmail  String?
   password      String
   linkedSEOs    String[] @default([])
   uninterestedPostIds String[] @default([])
@@ -48,6 +49,7 @@ model User {
 
   @@index([username])
   @@index([email])
+  @@index([pendingEmail])
 }
 
 enum SeoProvider {

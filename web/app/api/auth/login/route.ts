@@ -54,6 +54,12 @@ export async function POST(req: Request) {
   const graphqlBody = await graphqlResponse.json().catch(() => ({}));
 
   if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+    console.error("[auth/login] GraphQL request failed", {
+      email,
+      graphqlStatus: graphqlResponse.status,
+      graphqlErrors: graphqlBody?.errors ?? null,
+    });
+
     return NextResponse.json(
       {
         error:

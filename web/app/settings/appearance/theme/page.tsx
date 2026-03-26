@@ -48,6 +48,17 @@ const resolveTheme = (value: ThemeOption["key"]) => {
     : "light";
 };
 
+const applyThemeToDocument = (theme: ThemeOption["key"]) => {
+  const resolvedTheme = resolveTheme(theme);
+
+  if (resolvedTheme === "dark" || resolvedTheme === "sepia") {
+    document.documentElement.dataset.theme = resolvedTheme;
+    return;
+  }
+
+  document.documentElement.removeAttribute("data-theme");
+};
+
 export default function Page() {
   const [selectedTheme, setSelectedTheme] =
     React.useState<ThemeOption["key"]>("system");
@@ -57,7 +68,7 @@ export default function Page() {
       (window.localStorage.getItem(STORAGE_KEY) as ThemeOption["key"] | null) ??
       "system";
     setSelectedTheme(savedTheme);
-    document.documentElement.dataset.theme = resolveTheme(savedTheme);
+    applyThemeToDocument(savedTheme);
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handlePreferenceChange = () => {
@@ -66,7 +77,7 @@ export default function Page() {
         "system";
 
       if (currentTheme === "system") {
-        document.documentElement.dataset.theme = resolveTheme(currentTheme);
+        applyThemeToDocument(currentTheme);
       }
     };
 
@@ -78,12 +89,12 @@ export default function Page() {
   const applyTheme = (theme: ThemeOption["key"]) => {
     setSelectedTheme(theme);
     window.localStorage.setItem(STORAGE_KEY, theme);
-    document.documentElement.dataset.theme = resolveTheme(theme);
+    applyThemeToDocument(theme);
   };
 
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-30">
-      <Header title="Theme" />
+      <Header title="Theme" isLoading={false} />
       <p className="mb-4 text-sm text-[#5B5B5B]">
         Choose how Material Crate looks across the app.
       </p>

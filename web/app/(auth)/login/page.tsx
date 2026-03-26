@@ -42,12 +42,12 @@ export default function Page() {
           typeof body?.error === "string" ? body.error : "Login failed";
 
         if (rawError === "Invalid credentials") {
-          setError("Incorrect email or password.");
+          setError("Incorrect email or password");
           return;
         }
 
         if (rawError === "Email is not verified") {
-          setError("Please verify your email before logging in.");
+          setError("Please verify your email");
           return;
         }
 
@@ -57,7 +57,8 @@ export default function Page() {
 
       window.location.href = "/";
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError("Login failed");
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -95,7 +96,6 @@ export default function Page() {
         ) : (
           <Password password={password} setPassword={setPassword} />
         )}
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
         {loading ? (
           <p className="text-sm text-[#444444]">Signing in...</p>
         ) : null}

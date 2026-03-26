@@ -1,20 +1,42 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ActionButton from "../ActionButton";
 import Alert from "../Alert";
 
 interface VerificationProps {
   email: string;
+  title?: string;
+  description?: React.ReactNode;
+  verifyEndpoint?: string;
+  resendEndpoint?: string;
+  buildVerifyBody?: (code: string) => Record<string, string>;
+  buildResendBody?: () => Record<string, string>;
+  successRedirect?: string;
+  onVerified?: () => void | Promise<void>;
 }
 
-export default function Verification({ email }: VerificationProps) {
+export default function Verification({
+  email,
+  title = "Verify email",
+  description,
+  verifyEndpoint = "/api/auth/verify-email-code",
+  resendEndpoint = "/api/auth/resend-verification",
+  buildVerifyBody,
+  buildResendBody,
+  successRedirect = "/login",
+  onVerified,
+}: VerificationProps) {
   const router = useRouter();
   const [code, setCode] = useState<string[]>(["", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const inputs = useRef<(HTMLInputElement | null)[]>([]);
+	const [status, setStatus] = useState<string | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	const inputs = useRef<(HTMLInputElement | null)[]>([]);
+
+	useEffect(() => {
+	  inputs.current[0]?.focus();
+	}, []);
 
   const handleChange = (value: string, index: number) => {
     if (!/^\d?$/.test(value)) return;
@@ -66,10 +88,14 @@ export default function Verification({ email }: VerificationProps) {
     setStatus(null);
 
     try {
-      const res = await fetch("/api/auth/verify-email-code", {
+      const res = await fetch(verifyEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: fullCode }),
+        body: JSON.stringify(
+          buildVerifyBody
+            ? buildVerifyBody(fullCode)
+            : { email, code: fullCode },
+        ),
       });
 
       if (!res.ok) {
@@ -77,11 +103,13 @@ export default function Verification({ email }: VerificationProps) {
         throw new Error(body.error || "Verification failed");
       }
 
-      router.replace("/login");
+      await onVerified?.();
+      router.replace(successRedirect);
       return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setError(err.message || "Verification failed");
+      setError("Verification failed");
+      console.error("Verification failed: ", err);
     } finally {
       setIsVerifying(false);
     }
@@ -93,10 +121,10 @@ export default function Verification({ email }: VerificationProps) {
     setStatus(null);
 
     try {
-      const res = await fetch("/api/auth/resend-verification", {
+      const res = await fetch(resendEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(buildResendBody ? buildResendBody() : { email }),
       });
 
       if (!res.ok) {
@@ -109,66 +137,84 @@ export default function Verification({ email }: VerificationProps) {
       setStatus("A new verification code was sent.");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setError(err.message || "Failed to resend verification code");
+      setError("Failed to resend verification code");
+      console.error("Failed to resend verification code: ", err);
     } finally {
       setIsResending(false);
     }
   };
 
-  return (
-    <div className="h-full relative w-full">
-      <div className="text-center fixed top-30 w-70 left-0 right-0 mx-auto text-4xl">
-        <h1>Verify email</h1>
-        <h2 className="text-sm text-[#333333] mt-2">
-          We’ve sent a verification code to{" "}
-          <span className="font-semibold">{email}</span>. Check your inbox.
-        </h2>
-      </div>
-      <div className="flex flex-col w-full h-full justify-center items-center">
-        <div className="flex gap-5">
-          {code.map((digit, i) => (
-            <input
-              title="Verification input"
-              key={i}
-              ref={(el) => {
-                inputs.current[i] = el;
-              }}
-              type="text"
-              maxLength={1}
-              placeholder=" "
-              value={digit}
-              onChange={(e) => handleChange(e.target.value, i)}
-              onKeyDown={(e) => handleKeyDown(e, i)}
-              onPaste={handlePaste}
-              className="w-15 h-15 text-center text-2xl border rounded-lg focus:outline-none focus:border-[#E1761F]"
-            />
-          ))}
-        </div>
-        <Alert
-          message={status ? status : error}
-          type={status ? "success" : "error"}
-        /> 
-        <button
-          type="button"
-          onClick={handleResend}
-          disabled={isResending}
-          className="text-sm underline mt-4 disabled:text-gray-400"
-        >
-          {isResending ? "Sending..." : "Resend code"}
-        </button>
-      </div>
-      <ActionButton
-        type="button"
-        onClick={handleVerify}
-        className="fixed bottom-8 left-8 right-8 mx-auto"
-        disabled={
-          code.some((digit) => digit === "") ||
-          isVerifying ||
-          isResending
-        }
-      >
-        {isVerifying ? "VERIFYING..." : "VERIFY"}
-      </ActionButton>
-    </div>
-  );
+	return (
+	  <div className="flex min-h-full w-full flex-col justify-between px-5 py-8 sm:px-8 sm:py-10">
+	    <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
+	      <div className="text-center">
+	        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#A0A0A0]">
+	          Verification
+	        </p>
+	        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#202020] sm:text-4xl">
+	          {title}
+	        </h1>
+	        <div className="mx-auto mt-3 max-w-92 text-sm leading-6 text-[#5F5F5F]">
+	          {description ?? (
+	            <>
+	              We&apos;ve sent a verification code to{" "}
+	              <span className="font-semibold text-[#202020]">{email}</span>.
+	              Enter it below to continue.
+	            </>
+	          )}
+	        </div>
+	      </div>
+	      <div className="mt-10 flex justify-center gap-3 sm:gap-4">
+	        {code.map((digit, i) => (
+	          <input
+	            title="Verification input"
+	            key={i}
+	            ref={(el) => {
+	              inputs.current[i] = el;
+	            }}
+	            type="text"
+	            inputMode="numeric"
+	            autoComplete={i === 0 ? "one-time-code" : "off"}
+	            maxLength={1}
+	            placeholder=" "
+	            value={digit}
+	            onChange={(e) => handleChange(e.target.value, i)}
+	            onKeyDown={(e) => handleKeyDown(e, i)}
+	            onPaste={handlePaste}
+	            className="h-14 w-14 rounded-2xl border border-black/10 bg-[#FAFAFA] text-center text-2xl font-semibold text-[#202020] outline-none transition focus:border-[#E1761F] focus:bg-white sm:h-16 sm:w-16"
+	          />
+	        ))}
+	      </div>
+	      <div className="mt-6 text-center">
+	        <p className="text-sm text-[#6A6A6A]">
+	          Didn&apos;t receive it?{" "}
+	          <button
+	            type="button"
+	            onClick={handleResend}
+	            disabled={isResending}
+	            className="font-medium text-[#A15D16] underline underline-offset-4 disabled:text-[#A0A0A0]"
+	          >
+	            {isResending ? "Sending..." : "Resend code"}
+	          </button>
+	        </p>
+	      </div>
+	      <Alert
+	        message={status ? status : error}
+	        type={status ? "success" : "error"}
+	      />
+	    </div>
+	    <div className="mx-auto mt-8 w-full max-w-[28rem]">
+	      <ActionButton
+	        type="button"
+	        onClick={handleVerify}
+	        className="w-full"
+	        disabled={
+	          code.some((digit) => digit === "") || isVerifying || isResending
+	        }
+	      >
+	        {isVerifying ? "VERIFYING..." : "VERIFY"}
+	      </ActionButton>
+	    </div>
+	  </div>
+	);
 }

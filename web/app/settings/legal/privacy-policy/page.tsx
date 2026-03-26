@@ -4,7 +4,7 @@ import Header from "@/app/components/Header";
 export default function Page() {
   return (
     <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F3EFE7_100%)] px-6 pt-30">
-      <Header title="Privacy Policy" />
+      <Header title="Privacy Policy" isLoading={false} />
       <div className="mb-5 rounded-[28px] bg-[#FFF7EE] px-5 py-5">
         <div className="mb-4 inline-flex rounded-2xl bg-[#F2E3CF] p-3">
           <ShieldSecurity size={22} color="#A95A13" variant="Bulk" />

@@ -2,9 +2,10 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Edit2 } from "iconsax-reactjs";
+import { Edit2 } from "iconsax-reactjs";
 import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 import Alert from "@/app/components/Alert";
+import Header from "@/app/components/Header";
 import ProfilePictureField from "@/app/components/profile/ProfilePictureField";
 import {
   DEFAULT_PROFILE_BACKGROUND,
@@ -12,7 +13,6 @@ import {
   isDefaultProfileBackground,
 } from "@/app/lib/profile-background";
 import { refreshAuth, useAuth } from "@/app/lib/auth-client";
-import LoadingBar from "@/app/components/LoadingBar";
 
 type UserProfile = {
   username: string;
@@ -425,7 +425,7 @@ export default function Page() {
       setSuccessMessage("Profile updated successfully.");
     } catch (err: unknown) {
       setError("Failed to save profile");
-      console.error("Failed to save profile", err)
+      console.error("Failed to save profile", err);
     } finally {
       setIsSubmitChecking(false);
       setIsSaving(false);
@@ -498,14 +498,10 @@ export default function Page() {
     <div className="relative h-screen bg-[#F7F7F7]">
       {successMessage && <Alert type="success" message={successMessage} />}
       {error && <Alert type="error" message={error} />}
-      <div className="fixed top-0 left-0 right-0 z-60">
-        <header className=" bg-white pb-4 pt-8 px-6 shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] flex items-center justify-between z-50">
-          <button aria-label="Back" type="button" onClick={() => router.back()}>
-            <ArrowLeft size={24} />
-          </button>
-          <div className="text-center text-xl font-medium">
-            <h1>Profile</h1>
-          </div>
+      <Header
+        title="Profile"
+        isLoading={isLoadingAuth || isLoading || isSubmitChecking}
+        rightSlot={
           <button
             type="submit"
             form="profile-form"
@@ -514,11 +510,8 @@ export default function Page() {
           >
             Save
           </button>
-        </header>
-        {(isLoadingAuth || isLoading || isSubmitChecking) && (
-          <LoadingBar className="" />
-        )}
-      </div>
+        }
+      />
       {isLoadingAuth ? null : !user ? null : (
         <form
           id="profile-form"

@@ -31,7 +31,7 @@ export default function Page() {
 
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
-      <Header title="Account Visibility" />
+      <Header title="Account Visibility" isLoading={false} />
       <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
           Privacy

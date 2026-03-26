@@ -12,8 +12,12 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { s3 } from "../../config/s3";
 import {
+  beginPendingEmailChange,
+  getVisiblePendingEmail,
+  resendPendingEmailChange,
   sendVerificationEmailForUser,
   verifyEmailCode,
+  verifyPendingEmailChange,
 } from "../../auth/emailVerification";
 import { ensureWorkspaceForUserId } from "./workspace.resolver";
 
@@ -624,6 +628,57 @@ export const UserResolver = {
 
       await sendVerificationEmailForUser(user.id, user.email);
       return true;
+    },
+    requestEmailChange: async (
+      _: unknown,
+      { newEmail }: { newEmail: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      try {
+        await beginPendingEmailChange(ctx.user.sub, newEmail);
+      } catch (error) {
+        console.error("[requestEmailChange] Failed", {
+          userId: ctx.user.sub,
+          newEmail,
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : error,
+        });
+        throw error;
+      }
+
+      return true;
+    },
+    verifyPendingEmailChange: async (
+      _: unknown,
+      { code }: { code: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      if (!code) {
+        throw new Error("Verification code is required");
+      }
+
+      return verifyPendingEmailChange(ctx.user.sub, code);
+    },
+    resendPendingEmailChange: async (_: unknown, __: unknown, ctx: any) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      return resendPendingEmailChange(ctx.user.sub);
     },
     deleteMyAccount: async (_: unknown, __: unknown, ctx: any) => {
       if (!ctx.user?.sub) {
@@ -1294,6 +1349,11 @@ export const UserResolver = {
     },
   },
   User: {
+    pendingEmail: async (user: {
+      id: string;
+      pendingEmail?: string | null;
+      emailVerificationTokenExpiresAt?: Date | string | null;
+    }) => getVisiblePendingEmail(user),
     profilePicture: async (user: { profilePicture?: string | null }) => {
       const rawProfilePicture = user.profilePicture?.trim();
       if (!rawProfilePicture) {

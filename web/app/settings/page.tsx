@@ -131,7 +131,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-4 pb-8 pt-20">
-      <Header title="Settings" />
+      <Header title="Settings" isLoading={false} />
       <div className="w-full space-y-3">
         {settingPages.map((section) => (
           <div

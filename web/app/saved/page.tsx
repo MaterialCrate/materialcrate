@@ -14,6 +14,7 @@ import type {
 } from "@/app/components/saved/SavedFileCard";
 import LoadingBar from "../components/LoadingBar";
 import Alert from "../components/Alert";
+import { useSystemPopup } from "../components/SystemPopup";
 
 type SavedData = {
   id: string;
@@ -28,6 +29,7 @@ export default function SavedPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
+  const popup = useSystemPopup();
   const [removingSavedPostIds, setRemovingSavedPostIds] = useState<
     Record<string, boolean>
   >({});
@@ -92,7 +94,13 @@ export default function SavedPage() {
       return;
     }
 
-    const confirmed = window.confirm("Remove this file from Saved?");
+    const confirmed = await popup.confirm({
+      title: "Remove Saved File?",
+      message: "This file will be removed from your saved list.",
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel",
+      isDestructive: true,
+    });
 
     if (!confirmed) {
       return;

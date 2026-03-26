@@ -12,6 +12,7 @@ import type {
 } from "@/app/components/saved/SavedFileCard";
 import LoadingBar from "@/app/components/LoadingBar";
 import Alert from "@/app/components/Alert";
+import { useSystemPopup } from "@/app/components/SystemPopup";
 
 type SavedData = {
   id: string;
@@ -28,6 +29,7 @@ export default function SavedFolderPage() {
   const [saved, setSaved] = useState<SavedData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const popup = useSystemPopup();
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [folderNameDraft, setFolderNameDraft] = useState("");
@@ -167,9 +169,13 @@ export default function SavedFolderPage() {
     }
 
     if (folderSavedPosts.length > 0) {
-      const confirmed = window.confirm(
-        "Deleting this folder will remove all files from it. Continue?",
-      );
+      const confirmed = await popup.confirm({
+        title: "Delete Folder?",
+        message: "Deleting this folder will remove all files from it.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+        isDestructive: true,
+      });
 
       if (!confirmed) {
         return;
@@ -209,7 +215,13 @@ export default function SavedFolderPage() {
       return;
     }
 
-    const confirmed = window.confirm("Remove this file from Saved?");
+    const confirmed = await popup.confirm({
+      title: "Remove Saved File?",
+      message: "This file will be removed from your saved list.",
+      confirmLabel: "Remove",
+      cancelLabel: "Cancel",
+      isDestructive: true,
+    });
 
     if (!confirmed) {
       return;

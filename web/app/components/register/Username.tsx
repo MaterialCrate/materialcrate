@@ -36,31 +36,32 @@ export default function Username({
     return "";
   }, []);
 
-  const checkUsernameAvailability = useCallback(async (
-    candidate: string,
-    signal?: AbortSignal,
-  ) => {
-    const response = await fetch(
-      `/api/auth/username-available?username=${encodeURIComponent(candidate)}`,
-      { signal },
-    );
-    const body = await response.json().catch(() => ({}));
+  const checkUsernameAvailability = useCallback(
+    async (candidate: string, signal?: AbortSignal) => {
+      const response = await fetch(
+        `/api/auth/username-available?username=${encodeURIComponent(candidate)}`,
+        { signal },
+      );
+      const body = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
+      if (!response.ok) {
+        return {
+          ok: false,
+          available: false,
+          error:
+            body?.error ||
+            "Error connecting to server. Please try again later.",
+        };
+      }
+
       return {
-        ok: false,
-        available: false,
-        error:
-          body?.error || "Error connecting to server. Please try again later.",
+        ok: true,
+        available: Boolean(body?.available),
+        error: "",
       };
-    }
-
-    return {
-      ok: true,
-      available: Boolean(body?.available),
-      error: "",
-    };
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     const trimmedUsername = username.trim();
@@ -104,7 +105,7 @@ export default function Username({
         if (error instanceof DOMException && error.name === "AbortError") {
           return;
         }
-        setMessage("Error connecting to server. Please try again later.");
+        setMessage("Error connecting to server");
       } finally {
         setIsLiveChecking(false);
       }

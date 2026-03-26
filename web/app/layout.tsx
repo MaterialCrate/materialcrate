@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Libre_Baskerville } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import AuthSplashGate from "./components/AuthSplashGate";
 import ConditionalNavbar from "./components/ConditionalNavbar";
+import { SystemPopupProvider } from "./components/SystemPopup";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,6 +23,17 @@ export const metadata: Metadata = {
   description: "Home to your studies.",
 };
 
+const themeInitScript = `
+  try {
+    var savedTheme = localStorage.getItem("mc-theme") || "system";
+    if (savedTheme === "dark" || savedTheme === "sepia") {
+      document.documentElement.dataset.theme = savedTheme;
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+  } catch (error) {}
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,23 +45,18 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${libreBaskerville.variable} antialiased`}
     >
-      <Script id="materialcrate-theme-init" strategy="beforeInteractive">
-        {`
-          try {
-            var savedTheme = localStorage.getItem("mc-theme") || "system";
-            var resolvedTheme = savedTheme;
-            if (savedTheme === "system") {
-              resolvedTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-            }
-            document.documentElement.dataset.theme = resolvedTheme;
-          } catch (error) {}
-        `}
-      </Script>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
+      </head>
       <body className="font-sans relative">
-        <AuthSplashGate>
-          {children}
-          <ConditionalNavbar />
-        </AuthSplashGate>
+        <SystemPopupProvider>
+          <AuthSplashGate>
+            {children}
+            <ConditionalNavbar />
+          </AuthSplashGate>
+        </SystemPopupProvider>
       </body>
     </html>
   );

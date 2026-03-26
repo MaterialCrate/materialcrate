@@ -4,7 +4,7 @@ import Header from "@/app/components/Header";
 export default function Page() {
   return (
     <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F4F0EA_100%)] px-6 pt-30">
-      <Header title="Terms of Service" />
+      <Header title="Terms of Service" isLoading={false} />
       <div className="mb-5 rounded-[28px] bg-[#1F1F1F] px-5 py-5 text-white">
         <div className="mb-4 inline-flex rounded-2xl bg-white/10 p-3">
           <DocumentText1 size={22} color="#FFFFFF" variant="Bulk" />

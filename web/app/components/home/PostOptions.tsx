@@ -16,6 +16,7 @@ import {
   Clock,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import { useSystemPopup } from "@/app/components/SystemPopup";
 import type { HomePost, PostOptionsAnchor } from "./Post";
 
 interface OptionsDrawerProps {
@@ -44,6 +45,7 @@ export default function OptionsOptions({
   const router = useRouter();
   const drawerRef = React.useRef<HTMLDivElement | null>(null);
   const { user } = useAuth();
+  const popup = useSystemPopup();
   const [isPinning, setIsPinning] = React.useState(false);
   const [isTogglingComments, setIsTogglingComments] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -359,13 +361,19 @@ export default function OptionsOptions({
                       post.isAuthorBlockedByCurrentUser,
                     );
 
-                    if (
-                      !shouldUnblock &&
-                      !window.confirm(
-                        `Block ${username}? They won't be able to find your profile or posts.`,
-                      )
-                    ) {
-                      return;
+                    if (!shouldUnblock) {
+                      const confirmed = await popup.confirm({
+                        title: `Block ${username}?`,
+                        message:
+                          "They won't be able to find your profile or posts.",
+                        confirmLabel: "Block",
+                        cancelLabel: "Cancel",
+                        isDestructive: true,
+                      });
+
+                      if (!confirmed) {
+                        return;
+                      }
                     }
 
                     const optimisticPost = {

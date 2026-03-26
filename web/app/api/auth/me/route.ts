@@ -9,6 +9,8 @@ const ME_QUERY = `
     me {
       id
       email
+      pendingEmail
+      emailVerified
       username
       displayName
       profilePicture
@@ -26,6 +28,42 @@ const ME_QUERY = `
   }
 `;
 
+const LEGACY_ME_QUERY = `
+  query Me {
+    me {
+      id
+      email
+      username
+      displayName
+      profilePicture
+      profileBackground
+      linkedSEOs
+      subscriptionPlan
+      subscriptionStartedAt
+      subscriptionEndsAt
+      createdAt
+      followersCount
+      followingCount
+      institution
+      program
+    }
+  }
+`;
+
+const fetchMe = async (token: string, query: string) => {
+  const response = await fetch(GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ query }),
+  });
+
+  const body = await response.json().catch(() => ({}));
+  return { response, body };
+};
+
 export async function GET() {
   const cookieStore = await cookies();
   const token = cookieStore.get("mc_session")?.value;
@@ -33,20 +71,46 @@ export async function GET() {
     return NextResponse.json({ user: null }, { status: 401 });
   }
 
-  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ query: ME_QUERY }),
-  });
+  const primary = await fetchMe(token, ME_QUERY);
+  const missingFieldError = Array.isArray(primary.body?.errors)
+    ? primary.body.errors.some((error: { message?: string }) =>
+        /Cannot query field "(pendingEmail|emailVerified)"/.test(
+          error?.message ?? "",
+        ),
+      )
+    : false;
 
-  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
+  if ((!primary.response.ok || primary.body?.errors?.length) && missingFieldError) {
+    console.warn("[auth/me] Falling back to legacy query", {
+      status: primary.response.status,
+      errors: primary.body?.errors ?? null,
+    });
 
-  if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+    const legacy = await fetchMe(token, LEGACY_ME_QUERY);
+    if (!legacy.response.ok || legacy.body?.errors?.length) {
+      console.error("[auth/me] Legacy query failed", {
+        status: legacy.response.status,
+        errors: legacy.body?.errors ?? null,
+      });
+      return NextResponse.json({ user: null }, { status: 401 });
+    }
+
+    return NextResponse.json({
+      user: {
+        ...legacy.body?.data?.me,
+        pendingEmail: null,
+        emailVerified: true,
+      },
+    });
+  }
+
+  if (!primary.response.ok || primary.body?.errors?.length) {
+    console.error("[auth/me] Query failed", {
+      status: primary.response.status,
+      errors: primary.body?.errors ?? null,
+    });
     return NextResponse.json({ user: null }, { status: 401 });
   }
 
-  return NextResponse.json({ user: graphqlBody?.data?.me ?? null });
+  return NextResponse.json({ user: primary.body?.data?.me ?? null });
 }
