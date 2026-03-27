@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Add, DocumentUpload } from "iconsax-reactjs";
+import { useRouter } from "next/navigation";
+import { DocumentUpload, More2, Notification } from "iconsax-reactjs";
 import Post, {
   type HomePost,
   type PostOptionsAnchor,
@@ -19,6 +20,7 @@ type ArchiveSavedPost = {
 };
 
 export default function Home() {
+  const router = useRouter();
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<HomePost | null>(null);
@@ -236,7 +238,9 @@ export default function Home() {
     setActiveCommentPostId((current) =>
       current === deletedPostId ? null : current,
     );
-    setActivePdfPost((current) => (current?.id === deletedPostId ? null : current));
+    setActivePdfPost((current) =>
+      current?.id === deletedPostId ? null : current,
+    );
     setActiveArchivePost((current) =>
       current?.id === deletedPostId ? null : current,
     );
@@ -269,7 +273,9 @@ export default function Home() {
         onPostSaved={(savedPost, mode) => {
           if (mode === "edit") {
             setPosts((current) =>
-              current.map((post) => (post.id === savedPost.id ? savedPost : post)),
+              current.map((post) =>
+                post.id === savedPost.id ? savedPost : post,
+              ),
             );
             return;
           }
@@ -300,7 +306,9 @@ export default function Home() {
         onPostUpdated={handlePostUpdated}
         onPostDeleted={handlePostDeleted}
         onPostHidden={(hiddenPostId) => {
-          setPosts((current) => current.filter((post) => post.id !== hiddenPostId));
+          setPosts((current) =>
+            current.filter((post) => post.id !== hiddenPostId),
+          );
           setActiveOptionsPost((current) =>
             current?.id === hiddenPostId ? null : current,
           );
@@ -355,7 +363,7 @@ export default function Home() {
           setActivePdfPost(null);
         }}
       />
-      <div className="bottom-28 right-6 fixed z-50 flex flex-col items-end gap-2">
+      <div className="fixed right-6 bottom-28 z-50">
         <button
           aria-label="Upload button"
           type="button"
@@ -373,24 +381,37 @@ export default function Home() {
             setActivePdfPost(null);
             setMoreOptionsOpen(false);
           }}
-          className={`flex items-center gap-3 bg-white py-3 px-5 rounded-3xl transition-all duration-300 ease-out ${
+          className={`absolute right-0 bottom-16 flex items-center gap-3 rounded-3xl bg-white px-5 py-3 transition-all duration-300 ease-out ${
             moreOptionsOpen
               ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
               : "opacity-0 translate-y-3 scale-95 pointer-events-none"
           }`}
         >
-          <DocumentUpload size={24} />
+          <DocumentUpload size={24} variant="Bold" />
           <p>Upload</p>
+        </button>
+        <button
+          aria-label="Upload button"
+          type="button"
+          className={`absolute right-16 bottom-0 flex items-center gap-3 rounded-3xl bg-white px-5 py-3 transition-all duration-300 ease-out ${
+            moreOptionsOpen
+              ? "opacity-100 translate-x-0 scale-100 pointer-events-auto"
+              : "opacity-0 translate-x-3 scale-95 pointer-events-none"
+          }`}
+          onClick={() => router.push("/notifications")}
+        >
+          <Notification size={24} variant="Bold" />
+          <p>Notification</p>
         </button>
         <button
           title="more actions"
           type="button"
           className={`w-12 h-12 bg-white drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out ${
-            moreOptionsOpen ? "rotate-45 scale-105" : "rotate-0 scale-100"
+            moreOptionsOpen ? "rotate-180 scale-105" : "rotate-0 scale-100"
           }`}
           onClick={() => setMoreOptionsOpen((prev) => !prev)}
         >
-          <Add size={30} />
+          <More2 size={30} />
         </button>
       </div>
       <Header />
