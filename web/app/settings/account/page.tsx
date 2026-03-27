@@ -7,7 +7,6 @@ import Alert from "@/app/components/Alert";
 import Header from "@/app/components/Header";
 import { useSystemPopup } from "@/app/components/SystemPopup";
 import { refreshAuth, useAuth } from "@/app/lib/auth-client";
-import LoadingBar from "@/app/components/LoadingBar";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
@@ -38,6 +37,7 @@ export default function Page() {
   const { user, isLoading } = useAuth();
   const popup = useSystemPopup();
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -187,12 +187,92 @@ export default function Page() {
     }
   };
 
+  const handlePasswordChangeRequest = async () => {
+    const currentPassword = await popup.prompt({
+      title: "Current Password",
+      message: "Enter your current password to continue.",
+      confirmLabel: "Continue",
+      cancelLabel: "Cancel",
+      placeholder: "Current password",
+      defaultValue: "",
+      inputType: "password",
+    });
+    if (currentPassword === null) {
+      return;
+    }
+
+    if (!currentPassword) {
+      setError("Current password is required.");
+      return;
+    }
+
+    const newPassword = await popup.prompt({
+      title: "New Password",
+      message: "Enter the new password you want to use.",
+      confirmLabel: "Save Password",
+      cancelLabel: "Cancel",
+      placeholder: "New password",
+      defaultValue: "",
+      inputType: "password",
+    });
+    if (newPassword === null) {
+      return;
+    }
+
+    if (!newPassword) {
+      setError("New password is required.");
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError("New password must be at least 8 characters.");
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setError("New password must be different from your current password.");
+      return;
+    }
+
+    setIsSubmittingPassword(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to change password");
+      }
+
+      setSuccess(
+        "Password updated successfully. We sent a confirmation email to your inbox.",
+      );
+    } catch (caughtError: unknown) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to change password",
+      );
+    } finally {
+      setIsSubmittingPassword(false);
+    }
+  };
+
   return (
     <>
       <Alert type="success" message={success} />
       <Alert type="error" message={error} />
       <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
-        <Header title="Account Information" isLoading={isSubmittingEmail} />
+        <Header
+          title="Account Information"
+          isLoading={isSubmittingEmail || isSubmittingPassword}
+        />
         <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
           <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
             Account
@@ -209,9 +289,9 @@ export default function Page() {
             Loading account information...
           </div>
         ) : null}
-        {!isLoading && user ? (
+        {!isLoading && user && (
           <div className="mb-4">
-            {user.pendingEmail && !pendingEmailMatchesCurrent ? (
+            {user.pendingEmail && !pendingEmailMatchesCurrent && (
               <div className="rounded-2xl bg-[#FFF7ED] px-4 py-3">
                 <p className="text-sm font-medium text-[#A15D16]">
                   Verification pending for {user.pendingEmail}
@@ -228,9 +308,9 @@ export default function Page() {
                   Continue verification
                 </button>
               </div>
-            ) : null}
+            )}
           </div>
-        ) : null}
+        )}
         {accountSections.map((section) => (
           <Fragment key={section.key}>
             <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A8A8A]">
@@ -242,15 +322,24 @@ export default function Page() {
                   type="button"
                   key={item.key}
                   onClick={
-                    item.key === "email" && !isSubmittingEmail
+                    item.key === "email"
                       ? handleEmailChangeRequest
-                      : undefined
+                      : item.key === "password"
+                        ? handlePasswordChangeRequest
+                        : undefined
                   }
-                  disabled={item.key === "email" ? isSubmittingEmail : false}
-                  className={`flex items-center justify-between gap-3 px-4 py-3 text-[#3D3D3D] ${
-                    index < section.items.length - 1 &&
-                    "border-b border-black/6"
-                  } ${item.key === "email" || "pendingEmail" ? "w-full text-left" : "w-full"}`}
+                  disabled={
+                    item.key === "email"
+                      ? isSubmittingEmail
+                      : item.key === "password"
+                        ? isSubmittingPassword
+                        : false
+                  }
+                  className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[#3D3D3D] active:opacity-60 ${
+                    index < section.items.length - 1
+                      ? "border-b border-black/6"
+                      : ""
+                  }`}
                 >
                   <div className="text-sm font-medium">{item.label}</div>
                   <div className="text-right text-xs text-[#666666] truncate">

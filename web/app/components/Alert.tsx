@@ -20,7 +20,7 @@ export default function Alert({ message, type }: AlertProps) {
     <div
       role="alert"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 top-5 z-50 flex justify-center animate-[mc-alert-slide_3000ms_ease-in-out_forwards]"
+      className="pointer-events-none fixed inset-x-0 top-5 z-200 flex justify-center animate-[mc-alert-slide_3000ms_ease-in-out_forwards]"
     >
       <div className="w-fit max-w-[calc(100vw-2rem)] overflow-hidden rounded-full origin-center animate-[mc-alert-expand_3000ms_ease-in-out_forwards]">
         <div className="flex items-center gap-3">

@@ -7,7 +7,6 @@ import {
   type ReactNode,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -55,19 +54,9 @@ function PopupCard({
   popup: ActivePopup;
   onClose: (value: boolean | string | null) => void;
 }) {
-  const inputRef = useRef<HTMLInputElement | null>(null);
   const [draftValue, setDraftValue] = useState(
     popup.config.kind === "prompt" ? (popup.config.defaultValue ?? "") : "",
   );
-
-  useEffect(() => {
-    if (popup.config.kind !== "prompt") {
-      return;
-    }
-
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, [popup.config.kind]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
@@ -83,6 +72,8 @@ function PopupCard({
 
   const isDestructive =
     popup.config.kind === "confirm" && popup.config.isDestructive;
+  const eyebrow =
+    popup.config.kind === "prompt" ? "Input Required" : "Confirmation";
 
   return (
     <div
@@ -92,62 +83,67 @@ function PopupCard({
       aria-describedby={
         popup.config.message ? "system-popup-message" : undefined
       }
-      className="fixed inset-0 z-120 flex items-center justify-center bg-black/28 px-5 backdrop-blur-[2px]"
+      className="fixed inset-0 z-120 flex items-center justify-center bg-[#111111]/36 px-5 backdrop-blur-sm"
       onKeyDown={handleKeyDown}
     >
       <div
-        className="w-full max-w-85 overflow-hidden rounded-[22px] bg-white shadow-[0_28px_80px_rgba(0,0,0,0.24)]"
+        className="w-full max-w-96 overflow-hidden rounded-[28px] border border-black/6 bg-[#F7F7F7] shadow-[0_28px_80px_rgba(0,0,0,0.24)]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="px-5 pb-4 pt-5 text-center">
+        <div className="bg-[#1D1D1D] px-5 pb-5 pt-5 text-white">
+          <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/55">
+            {eyebrow}
+          </p>
           <h2
             id="system-popup-title"
-            className="text-[17px] font-semibold leading-5 text-[#111111]"
+            className="mt-2 text-[28px] font-semibold leading-8 tracking-[-0.03em] text-white"
           >
             {popup.config.title}
           </h2>
           {popup.config.message ? (
             <p
               id="system-popup-message"
-              className="mt-1 text-[13px] leading-[1.35] text-[#3D3D3D]"
+              className="mt-2 max-w-80 text-sm leading-6 text-white/72"
             >
               {popup.config.message}
             </p>
           ) : null}
+        </div>
+
+        <div className="px-5 pb-5 pt-4">
           {popup.config.kind === "prompt" ? (
             <input
-              ref={inputRef}
+              autoFocus
               type={popup.config.inputType ?? "text"}
               value={draftValue}
               onChange={(event) => setDraftValue(event.target.value)}
               placeholder={popup.config.placeholder}
-              className="mt-4 h-11 w-full rounded-xl border border-black/10 bg-[#F5F5F7] px-3 text-[#111111] outline-none placeholder:text-[#9B9BA1] focus:border-[#E1761F]"
+              className="h-13 w-full rounded-2xl border border-black/8 bg-white px-4 text-[15px] text-[#202020] outline-none placeholder:text-[#9B9B9B] focus:border-[#E1761F] focus:bg-[#FFFDFC]"
             />
           ) : null}
-        </div>
 
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => onClose(null)}
-            className="flex h-11 w-full items-center justify-center text-[17px] font-normal text-[#8a8a8a] transition-colors hover:bg-black/3"
-          >
-            {popup.config.cancelLabel ?? "Cancel"}
-          </button>
-          <div className="w-px h-full bg-black/30" />
-          <button
-            type="button"
-            onClick={() =>
-              onClose(popup.config.kind === "prompt" ? draftValue : true)
-            }
-            className={`flex h-11 w-full items-center justify-center text-[17px] transition-colors hover:bg-black/3 ${
-              isDestructive
-                ? "font-semibold text-[#FF3B30]"
-                : "font-semibold text-[#E1761F]"
-            }`}
-          >
-            {popup.config.confirmLabel ?? "OK"}
-          </button>
+          <div className="mt-4 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onClose(null)}
+              className="flex h-12 flex-1 items-center justify-center rounded-2xl border border-black/8 bg-white text-[15px] font-medium text-[#5F5F5F] transition-colors hover:bg-black/3"
+            >
+              {popup.config.cancelLabel ?? "Cancel"}
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                onClose(popup.config.kind === "prompt" ? draftValue : true)
+              }
+              className={`flex h-12 flex-1 items-center justify-center rounded-2xl text-[15px] font-semibold text-white transition-colors ${
+                isDestructive
+                  ? "bg-[#C04A4A] hover:bg-[#AF3F3F]"
+                  : "bg-[#E1761F] hover:bg-[#C96619]"
+              }`}
+            >
+              {popup.config.confirmLabel ?? "OK"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -206,9 +202,13 @@ export function SystemPopupProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-      {activePopup ? (
-        <PopupCard popup={activePopup} onClose={closePopup} />
-      ) : null}
+      {activePopup && (
+        <PopupCard
+          key={`${activePopup.config.kind}:${activePopup.config.title}:${activePopup.config.message ?? ""}:${activePopup.config.kind === "prompt" ? (activePopup.config.defaultValue ?? "") : ""}`}
+          popup={activePopup}
+          onClose={closePopup}
+        />
+      )}
     </PopupContext.Provider>
   );
 }

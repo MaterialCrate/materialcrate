@@ -30,13 +30,13 @@ export default function Verification({
   const [code, setCode] = useState<string[]>(["", "", "", ""]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-	const [status, setStatus] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
-	const inputs = useRef<(HTMLInputElement | null)[]>([]);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const inputs = useRef<(HTMLInputElement | null)[]>([]);
 
-	useEffect(() => {
-	  inputs.current[0]?.focus();
-	}, []);
+  useEffect(() => {
+    inputs.current[0]?.focus();
+  }, []);
 
   const handleChange = (value: string, index: number) => {
     if (!/^\d?$/.test(value)) return;
@@ -144,77 +144,77 @@ export default function Verification({
     }
   };
 
-	return (
-	  <div className="flex min-h-full w-full flex-col justify-between px-5 py-8 sm:px-8 sm:py-10">
-	    <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
-	      <div className="text-center">
-	        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#A0A0A0]">
-	          Verification
-	        </p>
-	        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#202020] sm:text-4xl">
-	          {title}
-	        </h1>
-	        <div className="mx-auto mt-3 max-w-92 text-sm leading-6 text-[#5F5F5F]">
-	          {description ?? (
-	            <>
-	              We&apos;ve sent a verification code to{" "}
-	              <span className="font-semibold text-[#202020]">{email}</span>.
-	              Enter it below to continue.
-	            </>
-	          )}
-	        </div>
-	      </div>
-	      <div className="mt-10 flex justify-center gap-3 sm:gap-4">
-	        {code.map((digit, i) => (
-	          <input
-	            title="Verification input"
-	            key={i}
-	            ref={(el) => {
-	              inputs.current[i] = el;
-	            }}
-	            type="text"
-	            inputMode="numeric"
-	            autoComplete={i === 0 ? "one-time-code" : "off"}
-	            maxLength={1}
-	            placeholder=" "
-	            value={digit}
-	            onChange={(e) => handleChange(e.target.value, i)}
-	            onKeyDown={(e) => handleKeyDown(e, i)}
-	            onPaste={handlePaste}
-	            className="h-14 w-14 rounded-2xl border border-black/10 bg-[#FAFAFA] text-center text-2xl font-semibold text-[#202020] outline-none transition focus:border-[#E1761F] focus:bg-white sm:h-16 sm:w-16"
-	          />
-	        ))}
-	      </div>
-	      <div className="mt-6 text-center">
-	        <p className="text-sm text-[#6A6A6A]">
-	          Didn&apos;t receive it?{" "}
-	          <button
-	            type="button"
-	            onClick={handleResend}
-	            disabled={isResending}
-	            className="font-medium text-[#A15D16] underline underline-offset-4 disabled:text-[#A0A0A0]"
-	          >
-	            {isResending ? "Sending..." : "Resend code"}
-	          </button>
-	        </p>
-	      </div>
-	      <Alert
-	        message={status ? status : error}
-	        type={status ? "success" : "error"}
-	      />
-	    </div>
-	    <div className="mx-auto mt-8 w-full max-w-[28rem]">
-	      <ActionButton
-	        type="button"
-	        onClick={handleVerify}
-	        className="w-full"
-	        disabled={
-	          code.some((digit) => digit === "") || isVerifying || isResending
-	        }
-	      >
-	        {isVerifying ? "VERIFYING..." : "VERIFY"}
-	      </ActionButton>
-	    </div>
-	  </div>
-	);
+  return (
+    <div className="flex min-h-full w-full flex-col justify-between px-5 py-8 sm:px-8 sm:py-10">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
+        <div className="text-center">
+          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#A0A0A0]">
+            Verification
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#202020] sm:text-4xl">
+            {title}
+          </h1>
+          <div className="mx-auto mt-3 max-w-92 text-sm leading-6 text-[#5F5F5F]">
+            {description ?? (
+              <>
+                We&apos;ve sent a verification code to{" "}
+                <span className="font-semibold text-[#202020]">{email}</span>.
+                Enter it below to continue.
+              </>
+            )}
+          </div>
+        </div>
+        <div className="mt-10 flex justify-center gap-3 sm:gap-4">
+          {code.map((digit, i) => (
+            <input
+              title="Verification input"
+              key={i}
+              ref={(el) => {
+                inputs.current[i] = el;
+              }}
+              type="text"
+              inputMode="numeric"
+              autoComplete={i === 0 ? "one-time-code" : "off"}
+              maxLength={1}
+              placeholder=" "
+              value={digit}
+              onChange={(e) => handleChange(e.target.value, i)}
+              onKeyDown={(e) => handleKeyDown(e, i)}
+              onPaste={handlePaste}
+              className="h-14 w-14 rounded-2xl border border-black/10 bg-[#FAFAFA] text-center text-2xl font-semibold text-[#202020] outline-none transition focus:border-[#E1761F] focus:bg-white sm:h-16 sm:w-16"
+            />
+          ))}
+        </div>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-[#6A6A6A]">
+            Didn&apos;t receive it?{" "}
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={isResending}
+              className="font-medium text-[#A15D16] underline underline-offset-4 disabled:text-[#A0A0A0]"
+            >
+              {isResending ? "Sending..." : "Resend code"}
+            </button>
+          </p>
+        </div>
+        <Alert
+          message={status ? status : error}
+          type={status ? "success" : "error"}
+        />
+      </div>
+      <div className="mx-auto mt-8 w-full max-w-md">
+        <ActionButton
+          type="button"
+          onClick={handleVerify}
+          className="w-full"
+          disabled={
+            code.some((digit) => digit === "") || isVerifying || isResending
+          }
+        >
+          {isVerifying ? "VERIFYING..." : "VERIFY"}
+        </ActionButton>
+      </div>
+    </div>
+  );
 }

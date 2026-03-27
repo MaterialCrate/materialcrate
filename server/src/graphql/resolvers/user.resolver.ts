@@ -15,6 +15,7 @@ import {
   beginPendingEmailChange,
   getVisiblePendingEmail,
   resendPendingEmailChange,
+  sendPasswordChangedEmail,
   sendVerificationEmailForUser,
   verifyEmailCode,
   verifyPendingEmailChange,
@@ -654,6 +655,83 @@ export const UserResolver = {
               : error,
         });
         throw error;
+      }
+
+      return true;
+    },
+    changePassword: async (
+      _: unknown,
+      {
+        currentPassword,
+        newPassword,
+      }: { currentPassword: string; newPassword: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const currentPasswordValue = String(currentPassword || "");
+      const newPasswordValue = String(newPassword || "");
+
+      if (!currentPasswordValue || !newPasswordValue) {
+        throw new Error("Current password and new password are required");
+      }
+
+      if (newPasswordValue.length < 8) {
+        throw new Error("New password must be at least 8 characters");
+      }
+
+      if (currentPasswordValue === newPasswordValue) {
+        throw new Error("New password must be different from your current password");
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.user.sub },
+        select: {
+          id: true,
+          email: true,
+          password: true,
+        },
+      });
+
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      const passwordMatches = await bcrypt.compare(
+        currentPasswordValue,
+        user.password,
+      );
+
+      if (!passwordMatches) {
+        throw new Error("Current password is incorrect");
+      }
+
+      const nextPasswordHash = await bcrypt.hash(newPasswordValue, 12);
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          password: nextPasswordHash,
+        },
+      });
+
+      try {
+        await sendPasswordChangedEmail(user.email);
+      } catch (error) {
+        console.error("[changePassword] Failed to send confirmation email", {
+          userId: user.id,
+          email: user.email,
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : error,
+        });
       }
 
       return true;
