@@ -36,6 +36,7 @@ type PopupContextValue = {
 };
 
 const PopupContext = createContext<PopupContextValue | null>(null);
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type ActivePopup =
   | {
@@ -57,6 +58,12 @@ function PopupCard({
   const [draftValue, setDraftValue] = useState(
     popup.config.kind === "prompt" ? (popup.config.defaultValue ?? "") : "",
   );
+  const isEmailPrompt =
+    popup.config.kind === "prompt" && popup.config.inputType === "email";
+  const isPromptSubmissionDisabled =
+    popup.config.kind === "prompt" &&
+    isEmailPrompt &&
+    !EMAIL_REGEX.test(draftValue.trim());
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") {
@@ -65,6 +72,9 @@ function PopupCard({
     }
 
     if (event.key === "Enter") {
+      if (isPromptSubmissionDisabled) {
+        return;
+      }
       event.preventDefault();
       onClose(popup.config.kind === "prompt" ? draftValue : true);
     }
@@ -132,13 +142,16 @@ function PopupCard({
             </button>
             <button
               type="button"
+              disabled={isPromptSubmissionDisabled}
               onClick={() =>
                 onClose(popup.config.kind === "prompt" ? draftValue : true)
               }
               className={`flex h-12 flex-1 items-center justify-center rounded-2xl text-[15px] font-semibold text-white transition-colors ${
-                isDestructive
-                  ? "bg-[#C04A4A] hover:bg-[#AF3F3F]"
-                  : "bg-[#E1761F] hover:bg-[#C96619]"
+                isPromptSubmissionDisabled
+                  ? "cursor-not-allowed bg-[#CFCFCF] text-white/80"
+                  : isDestructive
+                    ? "bg-[#C04A4A] hover:bg-[#AF3F3F]"
+                    : "bg-[#E1761F] hover:bg-[#C96619]"
               }`}
             >
               {popup.config.confirmLabel ?? "OK"}

@@ -30,12 +30,33 @@ const formatPlan = (plan?: string | null) => {
 };
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const formatElapsedSince = (value?: string | null, now = Date.now()) => {
+  if (!value) return "-";
+
+  const parsed = new Date(value);
+  const joinedAt = parsed.getTime();
+
+  if (Number.isNaN(joinedAt)) return "-";
+
+  const diffMs = Math.max(0, now - joinedAt);
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+};
 
 export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading } = useAuth();
   const popup = useSystemPopup();
+  const [now, setNow] = useState(() => Date.now());
+  const [showJoinedCountdown, setShowJoinedCountdown] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +73,20 @@ export default function Page() {
       setSuccess("Email updated successfully.");
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!showJoinedCountdown) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [showJoinedCountdown]);
 
   const accountSections = useMemo(
     () => [
@@ -80,7 +115,9 @@ export default function Page() {
           },
           {
             label: "Date Joined",
-            value: formatDate(user?.createdAt),
+            value: showJoinedCountdown
+              ? formatElapsedSince(user?.createdAt, now)
+              : formatDate(user?.createdAt),
             key: "dateJoined",
           },
         ],
@@ -125,7 +162,7 @@ export default function Page() {
         ],
       },
     ],
-    [user],
+    [now, showJoinedCountdown, user],
   );
 
   const pendingEmailMatchesCurrent =
@@ -153,6 +190,11 @@ export default function Page() {
       return;
     }
 
+    if (!EMAIL_REGEX.test(nextEmail)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+
     if (nextEmail === normalizeEmail(user?.email ?? "")) {
       setError("Enter a different email address.");
       return;
@@ -177,11 +219,8 @@ export default function Page() {
       await refreshAuth();
       router.push("/settings/account/verify");
     } catch (caughtError: unknown) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Failed to start email change",
-      );
+      setError("Failed to start email change");
+      console.error("Failed to start email change: ", caughtError);
     } finally {
       setIsSubmittingEmail(false);
     }
@@ -225,12 +264,12 @@ export default function Page() {
     }
 
     if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters.");
+      setError("Password too weak");
       return;
     }
 
     if (currentPassword === newPassword) {
-      setError("New password must be different from your current password.");
+      setError("New password must differ from current password");
       return;
     }
 
@@ -250,15 +289,10 @@ export default function Page() {
         throw new Error(body?.error || "Failed to change password");
       }
 
-      setSuccess(
-        "Password updated successfully. We sent a confirmation email to your inbox.",
-      );
+      setSuccess("Password updated successfully");
     } catch (caughtError: unknown) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Failed to change password",
-      );
+      setError("Failed to change password");
+      console.error("Failed to change password: ", caughtError);
     } finally {
       setIsSubmittingPassword(false);
     }
@@ -326,6 +360,11 @@ export default function Page() {
                       ? handleEmailChangeRequest
                       : item.key === "password"
                         ? handlePasswordChangeRequest
+                        : item.key === "dateJoined"
+                          ? () =>
+                              setShowJoinedCountdown(
+                                (previousValue) => !previousValue,
+                              )
                         : undefined
                   }
                   disabled={
@@ -336,9 +375,8 @@ export default function Page() {
                         : false
                   }
                   className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[#3D3D3D] active:opacity-60 ${
-                    index < section.items.length - 1
-                      ? "border-b border-black/6"
-                      : ""
+                    index < section.items.length - 1 &&
+                    "border-b border-black/6"
                   }`}
                 >
                   <div className="text-sm font-medium">{item.label}</div>
