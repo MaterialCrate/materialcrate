@@ -32,22 +32,36 @@ const formatPlan = (plan?: string | null) => {
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const formatElapsedSince = (value?: string | null, now = Date.now()) => {
-  if (!value) return "-";
-
-  const parsed = new Date(value);
-  const joinedAt = parsed.getTime();
-
-  if (Number.isNaN(joinedAt)) return "-";
-
-  const diffMs = Math.max(0, now - joinedAt);
-  const totalSeconds = Math.floor(diffMs / 1000);
+const formatDuration = (durationMs: number) => {
+  const totalSeconds = Math.floor(Math.max(0, durationMs) / 1000);
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
   return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+};
+
+const formatElapsedSince = (value?: string | null, now = Date.now()) => {
+  if (!value) return "-";
+
+  const parsed = new Date(value);
+  const timestamp = parsed.getTime();
+
+  if (Number.isNaN(timestamp)) return "-";
+
+  return formatDuration(now - timestamp);
+};
+
+const formatCountdownUntil = (value?: string | null, now = Date.now()) => {
+  if (!value) return "-";
+
+  const parsed = new Date(value);
+  const timestamp = parsed.getTime();
+
+  if (Number.isNaN(timestamp)) return "-";
+
+  return formatDuration(timestamp - now);
 };
 
 export default function Page() {
@@ -57,8 +71,12 @@ export default function Page() {
   const popup = useSystemPopup();
   const [now, setNow] = useState(() => Date.now());
   const [showJoinedCountdown, setShowJoinedCountdown] = useState(false);
+  const [showPlanStartedCountdown, setShowPlanStartedCountdown] =
+    useState(false);
+  const [showPlanRenewsCountdown, setShowPlanRenewsCountdown] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -75,7 +93,11 @@ export default function Page() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!showJoinedCountdown) {
+    if (
+      !showJoinedCountdown &&
+      !showPlanStartedCountdown &&
+      !showPlanRenewsCountdown
+    ) {
       return;
     }
 
@@ -86,7 +108,7 @@ export default function Page() {
     return () => {
       window.clearInterval(interval);
     };
-  }, [showJoinedCountdown]);
+  }, [showJoinedCountdown, showPlanRenewsCountdown, showPlanStartedCountdown]);
 
   const accountSections = useMemo(
     () => [
@@ -135,12 +157,16 @@ export default function Page() {
             ? [
                 {
                   label: "Started",
-                  value: formatDate(user?.subscriptionStartedAt),
+                  value: showPlanStartedCountdown
+                    ? formatElapsedSince(user?.subscriptionStartedAt, now)
+                    : formatDate(user?.subscriptionStartedAt),
                   key: "subscriptionStartedAt",
                 },
                 {
                   label: "Renews",
-                  value: formatDate(user?.subscriptionEndsAt),
+                  value: showPlanRenewsCountdown
+                    ? formatCountdownUntil(user?.subscriptionEndsAt, now)
+                    : formatDate(user?.subscriptionEndsAt),
                   key: "subscriptionEndsAt",
                 },
               ]
@@ -162,7 +188,13 @@ export default function Page() {
         ],
       },
     ],
-    [now, showJoinedCountdown, user],
+    [
+      now,
+      showJoinedCountdown,
+      showPlanRenewsCountdown,
+      showPlanStartedCountdown,
+      user,
+    ],
   );
 
   const pendingEmailMatchesCurrent =
@@ -298,6 +330,49 @@ export default function Page() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    const confirmed = await popup.confirm({
+      title: "Delete account?",
+      message:
+        "Your account will be softly deleted immediately. For the next 30 days you can restore it by logging back in and confirming the restore prompt. Your posts will show Deleted / @deleted during that period.",
+      confirmLabel: "Delete account",
+      cancelLabel: "Cancel",
+      isDestructive: true,
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/auth/delete-account", {
+        method: "POST",
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to delete account");
+      }
+
+      await refreshAuth();
+      const nextUrl = new URL("/login", window.location.origin);
+      nextUrl.searchParams.set("deleted", "1");
+      if (typeof body?.restoreDeadline === "string") {
+        nextUrl.searchParams.set("restoreDeadline", body.restoreDeadline);
+      }
+      router.replace(`${nextUrl.pathname}${nextUrl.search}`);
+    } catch (caughtError: unknown) {
+      setError("Failed to delete account");
+      console.error("Failed to delete account:", caughtError);
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   return (
     <>
       <Alert type="success" message={success} />
@@ -305,7 +380,9 @@ export default function Page() {
       <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
         <Header
           title="Account Information"
-          isLoading={isSubmittingEmail || isSubmittingPassword}
+          isLoading={
+            isSubmittingEmail || isSubmittingPassword || isDeletingAccount
+          }
         />
         <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
           <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
@@ -365,7 +442,17 @@ export default function Page() {
                               setShowJoinedCountdown(
                                 (previousValue) => !previousValue,
                               )
-                        : undefined
+                          : item.key === "subscriptionStartedAt"
+                            ? () =>
+                                setShowPlanStartedCountdown(
+                                  (previousValue) => !previousValue,
+                                )
+                            : item.key === "subscriptionEndsAt"
+                              ? () =>
+                                  setShowPlanRenewsCountdown(
+                                    (previousValue) => !previousValue,
+                                  )
+                              : undefined
                   }
                   disabled={
                     item.key === "email"
@@ -401,17 +488,20 @@ export default function Page() {
                 Delete Account
               </p>
               <p className="mt-1 text-xs text-[#7A6A6A]">
-                Permanently remove your account and associated data.
+                Delete your account now. You can restore it for 30 days by
+                logging back in.
               </p>
             </div>
           </div>
           <button
             type="button"
-            className="inline-flex items-center gap-2 text-sm font-medium text-red-600"
+            onClick={() => void handleDeleteAccount()}
+            disabled={isDeletingAccount}
+            className="inline-flex items-center gap-2 text-sm font-medium text-red-600 disabled:opacity-60"
             aria-label="Delete Account"
           >
             <Trash size={16} color="#DC2626" />
-            Delete Account
+            {isDeletingAccount ? "Deleting..." : "Delete Account"}
           </button>
         </div>
       </div>

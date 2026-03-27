@@ -1,19 +1,81 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import { useSearchParams } from "next/navigation";
 import Email from "@/app/components/register/Email";
 import Password from "@/app/components/register/Password";
 import Alert from "@/app/components/Alert";
+import { useSystemPopup } from "@/app/components/SystemPopup";
+import { refreshAuth } from "@/app/lib/auth-client";
+
+const formatRestoreDeadline = (value?: string | null) => {
+  if (!value) return "within 30 days";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return "within 30 days";
+
+  return parsed.toLocaleString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
 
 export default function Page() {
   const searchParams = useSearchParams();
+  const popup = useSystemPopup();
   const [step, setStep] = useState<number>(1);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const restorePromptShownRef = useRef(false);
+
+  const handleRestorePrompt = useCallback(
+    async (restoreDeadline?: string | null) => {
+      const shouldRestore = await popup.confirm({
+        title: "Restore account?",
+        message: `This account is currently deleted. If you continue, it will be restored and available again. You can restore it until ${formatRestoreDeadline(
+          restoreDeadline,
+        )}.`,
+        confirmLabel: "Restore account",
+        cancelLabel: "Cancel",
+      });
+
+      if (!shouldRestore) {
+        await fetch("/api/auth/restore", { method: "DELETE" }).catch(
+          () => null,
+        );
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/auth/restore", {
+          method: "POST",
+        });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(body?.error || "Failed to restore account");
+        }
+
+        await refreshAuth();
+        window.location.href = "/";
+      } catch (caughtError: unknown) {
+        setError("Failed to restore account");
+        console.error("Failed to restore: ", caughtError);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [popup],
+  );
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +117,13 @@ export default function Page() {
         return;
       }
 
+      const body = await res.json().catch(() => ({}));
+      if (body?.restoreRequired) {
+        await handleRestorePrompt(body?.restoreDeadline);
+        return;
+      }
+
+      await refreshAuth();
       window.location.href = "/";
     } catch (err: unknown) {
       setError("Login failed");
@@ -64,15 +133,42 @@ export default function Page() {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const socialError = searchParams.get("error");
     if (socialError) {
       setError(socialError);
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const deleted = searchParams.get("deleted");
+    if (deleted === "1") {
+      setError(null);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    const restore = searchParams.get("restore");
+    const restoreDeadline = searchParams.get("restoreDeadline");
+
+    if (restore !== "1" || restorePromptShownRef.current) {
+      return;
+    }
+
+    restorePromptShownRef.current = true;
+    void handleRestorePrompt(restoreDeadline);
+  }, [handleRestorePrompt, searchParams]);
+
   return (
     <div>
+      {searchParams.get("deleted") === "1" ? (
+        <Alert
+          type="info"
+          message={`Account deleted. Log back in by ${formatRestoreDeadline(
+            searchParams.get("restoreDeadline"),
+          )} to restore it.`}
+        />
+      ) : null}
       {error && <Alert type="error" message={error} />}
       <form
         className="flex flex-col h-dvh items-center px-8 py-12 gap-16 relative"

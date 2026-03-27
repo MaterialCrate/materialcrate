@@ -1,4 +1,10 @@
 import { NextResponse } from "next/server";
+import {
+  RESTORE_SESSION_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  SESSION_COOKIE_OPTIONS,
+  SESSION_MAX_AGE_SECONDS,
+} from "../cookies";
 
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
@@ -7,6 +13,8 @@ const LOGIN_MUTATION = `
   mutation Login($email: String!, $password: String!) {
     login(email: $email, password: $password) {
       token
+      restoreRequired
+      restoreDeadline
       user {
         id
         email
@@ -73,6 +81,11 @@ export async function POST(req: Request) {
 
   const token = graphqlBody?.data?.login?.token as string | undefined;
   const user = graphqlBody?.data?.login?.user;
+  const restoreRequired = Boolean(graphqlBody?.data?.login?.restoreRequired);
+  const restoreDeadline =
+    typeof graphqlBody?.data?.login?.restoreDeadline === "string"
+      ? graphqlBody.data.login.restoreDeadline
+      : null;
 
   if (!token) {
     return NextResponse.json(
@@ -81,14 +94,31 @@ export async function POST(req: Request) {
     );
   }
 
-  const response = NextResponse.json({ ok: true, user });
-  response.cookies.set("mc_session", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+  const response = NextResponse.json({
+    ok: true,
+    user,
+    restoreRequired,
+    restoreDeadline,
   });
+  response.cookies.set(
+    restoreRequired ? RESTORE_SESSION_COOKIE_NAME : SESSION_COOKIE_NAME,
+    token,
+    {
+      ...SESSION_COOKIE_OPTIONS,
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    },
+  );
+  if (restoreRequired) {
+    response.cookies.set(SESSION_COOKIE_NAME, "", {
+      ...SESSION_COOKIE_OPTIONS,
+      maxAge: 0,
+    });
+  } else {
+    response.cookies.set(RESTORE_SESSION_COOKIE_NAME, "", {
+      ...SESSION_COOKIE_OPTIONS,
+      maxAge: 0,
+    });
+  }
 
   return response;
 }

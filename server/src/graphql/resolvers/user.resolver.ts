@@ -20,6 +20,8 @@ import {
   verifyEmailCode,
   verifyPendingEmailChange,
 } from "../../auth/emailVerification";
+import { sendAccountDeletedEmail } from "../../email/accountDeletedEmail";
+import { sendAccountRecoveredEmail } from "../../email/accountRecoveredEmail";
 import { ensureWorkspaceForUserId } from "./workspace.resolver";
 
 const createToken = (userId: string, email: string) => {
@@ -33,6 +35,7 @@ const createToken = (userId: string, email: string) => {
 
 const RESERVED_USERNAMES = new Set(["deleted", "disabled"]);
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
+const ACCOUNT_RESTORE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const SOCIAL_PROVIDER_MAP = {
   google: "GOOGLE",
   facebook: "FACEBOOK",
@@ -78,13 +81,71 @@ const generateUniqueUsername = async (baseValue: string) => {
   throw new Error("Could not generate a unique username");
 };
 
+const getDeletedAccountRestoreDeadline = (deletedAt: unknown) => {
+  if (!deletedAt) return null;
+  const parsed =
+    deletedAt instanceof Date ? deletedAt : new Date(String(deletedAt));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getTime() + ACCOUNT_RESTORE_WINDOW_MS);
+};
+
+const getDeletedAccountRestoreState = (user: any) => {
+  if (!user?.deleted) {
+    return {
+      canRestore: false,
+      restoreDeadline: null,
+    };
+  }
+
+  const restoreDeadline = getDeletedAccountRestoreDeadline(user.deletedAt);
+  if (!restoreDeadline) {
+    return {
+      canRestore: false,
+      restoreDeadline: null,
+    };
+  }
+
+  return {
+    canRestore: restoreDeadline.getTime() > Date.now(),
+    restoreDeadline,
+  };
+};
+
+const buildAuthPayload = async (
+  user: any,
+  options?: {
+    restoreRequired?: boolean;
+    restoreDeadline?: Date | null;
+  },
+) => {
+  const token = createToken(user.id, user.email);
+  return {
+    token,
+    user,
+    verificationEmailSent: true,
+    verificationEmailError: null,
+    restoreRequired: Boolean(options?.restoreRequired),
+    restoreDeadline: toIsoStringOrNull(options?.restoreDeadline),
+  };
+};
+
 const ensureUserCanLogin = async (user: any) => {
   if (!user) {
     throw new Error("Invalid credentials");
   }
 
   if (user.deleted) {
-    throw new Error("Account has been deleted");
+    const { canRestore, restoreDeadline } = getDeletedAccountRestoreState(user);
+    if (canRestore) {
+      const error = new Error("Account restoration required");
+      Object.assign(error, {
+        restoreRequired: true,
+        restoreDeadline: toIsoStringOrNull(restoreDeadline),
+      });
+      throw error;
+    }
+
+    throw new Error("Account has been permanently deleted");
   }
 
   if (user.disabled) {
@@ -405,7 +466,14 @@ export const UserResolver = {
       }
 
       const token = createToken(user.id, user.email);
-      return { token, user, verificationEmailSent, verificationEmailError };
+      return {
+        token,
+        user,
+        verificationEmailSent,
+        verificationEmailError,
+        restoreRequired: false,
+        restoreDeadline: null,
+      };
     },
 
     login: async (_: unknown, args: any) => {
@@ -416,7 +484,7 @@ export const UserResolver = {
       }
 
       const user = await (prisma as any).user.findFirst({
-        where: { email, deleted: false },
+        where: { email },
       });
       if (!user || !user.password) {
         throw new Error("Invalid credentials");
@@ -443,28 +511,30 @@ export const UserResolver = {
         }
       }
 
+      const ok = await bcrypt.compare(password, user.password);
+      if (!ok) {
+        throw new Error("Invalid credentials");
+      }
+
       if (user.deleted) {
-        throw new Error("Account has been deleted");
+        const { canRestore, restoreDeadline } = getDeletedAccountRestoreState(user);
+        if (!canRestore) {
+          throw new Error("Account has been permanently deleted");
+        }
+
+        return buildAuthPayload(user, {
+          restoreRequired: true,
+          restoreDeadline,
+        });
       }
 
       if (!user.emailVerified) {
         throw new Error("Email is not verified");
       }
 
-      const ok = await bcrypt.compare(password, user.password);
-      if (!ok) {
-        throw new Error("Invalid credentials");
-      }
-
       await ensureWorkspaceForUserId(user.id, user.id);
 
-      const token = createToken(user.id, user.email);
-        return {
-          token,
-          user,
-          verificationEmailSent: true,
-          verificationEmailError: null,
-        };
+      return buildAuthPayload(user);
     },
     socialAuth: async (_: unknown, args: any) => {
       const provider = normalizeSocialProvider(args.provider);
@@ -491,6 +561,20 @@ export const UserResolver = {
       });
 
       if (existingSeoAccount?.user) {
+        if (existingSeoAccount.user.deleted) {
+          const { canRestore, restoreDeadline } = getDeletedAccountRestoreState(
+            existingSeoAccount.user,
+          );
+          if (!canRestore) {
+            throw new Error("Account has been permanently deleted");
+          }
+
+          return buildAuthPayload(existingSeoAccount.user, {
+            restoreRequired: true,
+            restoreDeadline,
+          });
+        }
+
         const activeUser = await ensureUserCanLogin(existingSeoAccount.user);
         const refreshedUser = await (prisma as any).user.update({
           where: { id: activeUser.id },
@@ -505,13 +589,7 @@ export const UserResolver = {
         });
 
         await ensureWorkspaceForUserId(refreshedUser.id, refreshedUser.id);
-        const token = createToken(refreshedUser.id, refreshedUser.email);
-        return {
-          token,
-          user: refreshedUser,
-          verificationEmailSent: true,
-          verificationEmailError: null,
-        };
+        return buildAuthPayload(refreshedUser);
       }
 
       const existingUserByEmail = await (prisma as any).user.findFirst({
@@ -519,6 +597,20 @@ export const UserResolver = {
       });
 
       if (existingUserByEmail) {
+        if (existingUserByEmail.deleted) {
+          const { canRestore, restoreDeadline } = getDeletedAccountRestoreState(
+            existingUserByEmail,
+          );
+          if (!canRestore) {
+            throw new Error("Account has been permanently deleted");
+          }
+
+          return buildAuthPayload(existingUserByEmail, {
+            restoreRequired: true,
+            restoreDeadline,
+          });
+        }
+
         const activeUser = await ensureUserCanLogin(existingUserByEmail);
 
         await (prisma as any).seoAccount.create({
@@ -551,13 +643,7 @@ export const UserResolver = {
         });
 
         await ensureWorkspaceForUserId(updatedUser.id, updatedUser.id);
-        const token = createToken(updatedUser.id, updatedUser.email);
-        return {
-          token,
-          user: updatedUser,
-          verificationEmailSent: true,
-          verificationEmailError: null,
-        };
+        return buildAuthPayload(updatedUser);
       }
 
       const emailLocalPart = email.split("@")[0] || "user";
@@ -587,13 +673,7 @@ export const UserResolver = {
         },
       });
 
-      const token = createToken(createdUser.id, createdUser.email);
-      return {
-        token,
-        user: createdUser,
-        verificationEmailSent: true,
-        verificationEmailError: null,
-      };
+      return buildAuthPayload(createdUser);
     },
 
     verifyEmailCode: async (
@@ -765,24 +845,74 @@ export const UserResolver = {
 
       const user = await prisma.user.findUnique({
         where: { id: ctx.user.sub },
-        select: { id: true },
+        select: { id: true, email: true },
       });
       if (!user) {
         throw new Error("User not found");
       }
 
+      const deletedAt = new Date();
+      const restoreDeadline = new Date(
+        deletedAt.getTime() + ACCOUNT_RESTORE_WINDOW_MS,
+      );
+
       await (prisma as any).user.update({
         where: { id: user.id },
         data: {
           deleted: true,
-          deletedAt: new Date(),
+          deletedAt,
           disabled: false,
           disabledAt: null,
           disabledUntil: null,
         },
       });
 
+      void sendAccountDeletedEmail(user.email, restoreDeadline).catch((error) => {
+        console.error("[deleteMyAccount] Failed to send deletion email", {
+          userId: user.id,
+          error,
+        });
+      });
+
       return true;
+    },
+    restoreDeletedAccount: async (_: unknown, __: unknown, ctx: any) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.user.sub },
+      });
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      if (!user.deleted) {
+        return user;
+      }
+
+      const { canRestore } = getDeletedAccountRestoreState(user);
+      if (!canRestore) {
+        throw new Error("Account has been permanently deleted");
+      }
+
+      const restoredUser = await (prisma as any).user.update({
+        where: { id: user.id },
+        data: {
+          deleted: false,
+          deletedAt: null,
+        },
+      });
+
+      void sendAccountRecoveredEmail(restoredUser.email).catch((error) => {
+        console.error("[restoreDeletedAccount] Failed to send recovery email", {
+          userId: restoredUser.id,
+          error,
+        });
+      });
+
+      return restoredUser;
     },
     disableMyAccount: async (
       _: unknown,

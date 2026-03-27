@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  RESTORE_SESSION_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  SESSION_COOKIE_OPTIONS,
+  SESSION_MAX_AGE_SECONDS,
+} from "../../../cookies";
 
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
@@ -22,6 +28,8 @@ const SOCIAL_AUTH_MUTATION = `
       displayName: $displayName
     ) {
       token
+      restoreRequired
+      restoreDeadline
       user {
         id
         email
@@ -259,16 +267,43 @@ export async function GET(
       throw new Error("Social authentication did not return a token");
     }
 
+    const restoreRequired = Boolean(
+      graphqlBody?.data?.socialAuth?.restoreRequired,
+    );
+    const restoreDeadline =
+      typeof graphqlBody?.data?.socialAuth?.restoreDeadline === "string"
+        ? graphqlBody.data.socialAuth.restoreDeadline
+        : null;
     const nextPath = readNextPath(req, provider);
-    const destination = nextPath.startsWith("/") ? nextPath : "/";
+    const destination = restoreRequired
+      ? `/login?restore=1${
+          restoreDeadline
+            ? `&restoreDeadline=${encodeURIComponent(restoreDeadline)}`
+            : ""
+        }`
+      : nextPath.startsWith("/")
+        ? nextPath
+        : "/";
     const response = NextResponse.redirect(new URL(destination, origin));
-    response.cookies.set("mc_session", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    response.cookies.set(
+      restoreRequired ? RESTORE_SESSION_COOKIE_NAME : SESSION_COOKIE_NAME,
+      token,
+      {
+        ...SESSION_COOKIE_OPTIONS,
+        maxAge: SESSION_MAX_AGE_SECONDS,
+      },
+    );
+    if (restoreRequired) {
+      response.cookies.set(SESSION_COOKIE_NAME, "", {
+        ...SESSION_COOKIE_OPTIONS,
+        maxAge: 0,
+      });
+    } else {
+      response.cookies.set(RESTORE_SESSION_COOKIE_NAME, "", {
+        ...SESSION_COOKIE_OPTIONS,
+        maxAge: 0,
+      });
+    }
     clearSocialCookies(response, provider);
     return response;
   } catch (caughtError: unknown) {

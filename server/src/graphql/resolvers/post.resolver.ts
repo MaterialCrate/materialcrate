@@ -224,8 +224,11 @@ const sanitizeAuthorIdentity = (author: any) => {
   if (author.deleted) {
     return {
       ...author,
-      displayName: "Deleted User",
+      displayName: "Deleted",
       username: "deleted",
+      profilePicture: null,
+      profilePictureUrl: null,
+      subscriptionPlan: null,
     };
   }
   if (author.disabled) {

@@ -33,6 +33,8 @@ type AuthPayload {
   user: User!
   verificationEmailSent: Boolean!
   verificationEmailError: String
+  restoreRequired: Boolean!
+  restoreDeadline: String
 }
 
 type Query {
@@ -67,6 +69,7 @@ type Mutation {
   verifyPendingEmailChange(code: String!): User!
   resendPendingEmailChange: Boolean!
   deleteMyAccount: Boolean!
+  restoreDeletedAccount: User!
   disableMyAccount(until: String): Boolean!
   reactivateMyAccount: Boolean!
   followUser(username: String!): Boolean!
