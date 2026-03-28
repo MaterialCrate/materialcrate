@@ -8,6 +8,7 @@ const NOTIFICATIONS_QUERY = `
   query Notifications($limit: Int!, $unreadOnly: Boolean!) {
     notifications(limit: $limit, unreadOnly: $unreadOnly) {
       id
+      type
       title
       description
       icon
@@ -20,6 +21,7 @@ const NOTIFICATIONS_QUERY = `
 
 const CREATE_NOTIFICATION_MUTATION = `
   mutation CreateNotification(
+    $type: String
     $title: String!
     $description: String!
     $icon: String!
@@ -27,6 +29,7 @@ const CREATE_NOTIFICATION_MUTATION = `
     $userId: ID
   ) {
     createNotification(
+      type: $type
       title: $title
       description: $description
       icon: $icon
@@ -34,6 +37,7 @@ const CREATE_NOTIFICATION_MUTATION = `
       userId: $userId
     ) {
       id
+      type
       title
       description
       icon
@@ -48,6 +52,7 @@ const MARK_NOTIFICATION_READ_MUTATION = `
   mutation MarkNotificationRead($notificationId: ID!) {
     markNotificationRead(notificationId: $notificationId) {
       id
+      type
       title
       description
       icon
@@ -127,6 +132,7 @@ export async function GET(request: NextRequest) {
 }
 
 type CreateNotificationBody = {
+  type?: string;
   title?: string;
   description?: string;
   icon?: string;
@@ -147,6 +153,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
+  const type = body.type?.trim() || undefined;
   const title = body.title?.trim();
   const description = body.description?.trim();
   const icon = body.icon?.trim() || "Notification";
@@ -162,7 +169,7 @@ export async function POST(request: Request) {
 
   const { graphqlResponse, graphqlBody } = await runGraphQL({
     query: CREATE_NOTIFICATION_MUTATION,
-    variables: { title, description, icon, profilePicture, userId },
+    variables: { type, title, description, icon, profilePicture, userId },
     token,
   });
 

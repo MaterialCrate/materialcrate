@@ -5,6 +5,7 @@ import { s3 } from "../../config/s3";
 import {
   createNotification,
   NOTIFICATION_ICON,
+  NOTIFICATION_TYPE,
 } from "../../services/notifications";
 
 type GraphQLContext = {
@@ -69,6 +70,7 @@ const resolveNotificationProfilePicture = async (
 
 const toNotificationGraphQL = async (notification: any) => ({
   id: notification.id,
+  type: notification.type ?? NOTIFICATION_TYPE.SYSTEM,
   title: notification.title,
   description: notification.description,
   icon: notification.icon,
@@ -122,12 +124,14 @@ export const NotificationResolver = {
         icon,
         profilePicture,
         userId,
+        type,
       }: {
         title: string;
         description: string;
         icon: string;
         profilePicture?: string;
         userId?: string;
+        type?: string;
       },
       ctx: GraphQLContext,
     ) => {
@@ -143,6 +147,7 @@ export const NotificationResolver = {
         description,
         icon: icon?.trim() || NOTIFICATION_ICON.SYSTEM,
         profilePicture,
+        type,
       });
 
       return toNotificationGraphQL(notification);

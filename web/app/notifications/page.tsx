@@ -15,9 +15,11 @@ import {
   Setting4,
 } from "iconsax-reactjs";
 import Header from "../components/Header";
+import Alert from "../components/Alert";
 
 type NotificationItem = {
   id: string | number;
+  type?: string;
   title: string;
   description: string;
   icon?: string;
@@ -32,6 +34,7 @@ type NotificationItem = {
 
 type ApiNotificationItem = {
   id: string | number;
+  type?: string;
   title: string;
   description: string;
   icon?: string;
@@ -163,7 +166,12 @@ export default function Page() {
 
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError(body?.error || "Failed to fetch notifications");
+        setError("Failed to fetch notifications");
+        console.error(
+          "Failed to fetch notifications: ",
+          body?.error,
+          body?.details,
+        );
         return;
       }
 
@@ -189,6 +197,7 @@ export default function Page() {
 
       current.push({
         id: notification.id,
+        type: notification.type,
         title: notification.title,
         description: notification.description,
         profilePicture: notification.profilePicture ?? null,
@@ -235,7 +244,8 @@ export default function Page() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        setError(body?.error || "Failed to mark notifications as read");
+        setError("Failed to read notifications");
+        console.error("Failed to mark notifications as read: ", body?.error);
         return;
       }
 
@@ -246,7 +256,7 @@ export default function Page() {
         })),
       );
     } catch {
-      setError("Failed to mark notifications as read");
+      setError("Failed to read notifications");
     }
   };
 
@@ -262,7 +272,8 @@ export default function Page() {
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        setError(body?.error || "Failed to mark notification as read");
+        setError("Failed to read notification");
+        console.error("Failed to mark notification as read: ", body?.error);
         return;
       }
 
@@ -284,9 +295,9 @@ export default function Page() {
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-4 pb-28 pt-20">
       <Header title="Notifications" isLoading={isLoading} />
+      {error && <Alert message={error} type="error" />}
 
       <main className="space-y-5">
-        {error && <p className="text-xs text-[#A94442]">{error}</p>}
         {notificationGroups.map((group) => (
           <section key={group.label}>
             <div className="mb-2 flex items-center justify-between">
@@ -308,7 +319,10 @@ export default function Page() {
               {group.items.map((item) => (
                 <article
                   key={item.id}
-                  className="rounded-[22px] border border-black/6 bg-white px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.04)]"
+                  className="rounded-[22px] border border-black/6 bg-white px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.04)] active:opacity-50 cursor-pointer"
+                  onClick={() => {
+                    void (item.unread && markOneAsRead(item.id));
+                  }}
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative shrink-0">
@@ -354,19 +368,6 @@ export default function Page() {
                       <p className="text-sm leading-6 text-[#666666]">
                         {item.description}
                       </p>
-                      {/*
-                      {item.unread && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            void markOneAsRead(item.id);
-                          }}
-                          className="mt-2 text-[11px] font-medium text-[#8A8A8A]"
-                        >
-                          Mark as read
-                        </button>
-                      )}
-                      */}
                     </div>
                   </div>
                 </article>

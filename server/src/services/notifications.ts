@@ -8,8 +8,17 @@ export const NOTIFICATION_ICON = {
   SYSTEM: "Notification",
 } as const;
 
+export const NOTIFICATION_TYPE = {
+  COMMENT: "COMMENT",
+  COMMENT_LIKE: "COMMENT_LIKE",
+  FOLLOW: "FOLLOW",
+  POST_LIKE: "POST_LIKE",
+  SYSTEM: "SYSTEM",
+} as const;
+
 type CreateNotificationInput = {
   userId: string;
+  type?: string;
   title: string;
   description: string;
   icon: string;
@@ -19,6 +28,7 @@ type CreateNotificationInput = {
 
 export const createNotification = async ({
   userId,
+  type = NOTIFICATION_TYPE.SYSTEM,
   title,
   description,
   icon,
@@ -33,6 +43,7 @@ export const createNotification = async ({
   return (prisma as any).notification.create({
     data: {
       userId: normalizedUserId,
+      type: type.trim() || NOTIFICATION_TYPE.SYSTEM,
       title: title.trim(),
       description: description.trim(),
       icon: icon.trim(),

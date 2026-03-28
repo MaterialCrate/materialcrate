@@ -26,6 +26,7 @@ import { ensureWorkspaceForUserId } from "./workspace.resolver";
 import {
   createNotification,
   NOTIFICATION_ICON,
+  NOTIFICATION_TYPE,
 } from "../../services/notifications";
 
 const createToken = (userId: string, email: string) => {
@@ -1045,6 +1046,7 @@ export const UserResolver = {
           actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
         await createNotification({
           userId: targetUser.id,
+          type: NOTIFICATION_TYPE.FOLLOW,
           title: "New follower",
           description: `${actorLabel} started following you.`,
           icon: NOTIFICATION_ICON.FOLLOW,

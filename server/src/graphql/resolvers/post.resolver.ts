@@ -6,6 +6,7 @@ import { s3 } from "../../config/s3";
 import {
   createNotification,
   NOTIFICATION_ICON,
+  NOTIFICATION_TYPE,
 } from "../../services/notifications";
 
 type CreatePostArgs = {
@@ -936,6 +937,7 @@ export const PostResolver = {
 
           await createNotification({
             userId: post.authorId,
+            type: NOTIFICATION_TYPE.POST_LIKE,
             title: "New like",
             description: `${actorLabel} liked your post.`,
             icon: NOTIFICATION_ICON.POST_LIKE,
@@ -1022,6 +1024,9 @@ export const PostResolver = {
 
         await createNotification({
           userId: post.authorId,
+          type: normalizedParentCommentId
+            ? NOTIFICATION_TYPE.COMMENT
+            : NOTIFICATION_TYPE.COMMENT,
           title: normalizedParentCommentId ? "New reply" : "New comment",
           description: normalizedParentCommentId
             ? `${actorLabel} replied to a thread on your post.`
@@ -1087,6 +1092,7 @@ export const PostResolver = {
 
           await createNotification({
             userId: comment.authorId,
+            type: NOTIFICATION_TYPE.COMMENT_LIKE,
             title: "Comment liked",
             description: `${actorLabel} liked your comment.`,
             icon: NOTIFICATION_ICON.COMMENT_LIKE,
