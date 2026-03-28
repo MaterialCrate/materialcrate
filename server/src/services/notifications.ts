@@ -18,6 +18,7 @@ export const NOTIFICATION_TYPE = {
 
 type CreateNotificationInput = {
   userId: string;
+  actorId?: string | null;
   type?: string;
   title: string;
   description: string;
@@ -28,6 +29,7 @@ type CreateNotificationInput = {
 
 export const createNotification = async ({
   userId,
+  actorId,
   type = NOTIFICATION_TYPE.SYSTEM,
   title,
   description,
@@ -43,6 +45,7 @@ export const createNotification = async ({
   return (prisma as any).notification.create({
     data: {
       userId: normalizedUserId,
+      actorId: actorId?.trim() || null,
       type: type.trim() || NOTIFICATION_TYPE.SYSTEM,
       title: title.trim(),
       description: description.trim(),

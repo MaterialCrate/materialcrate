@@ -1046,6 +1046,7 @@ export const UserResolver = {
           actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
         await createNotification({
           userId: targetUser.id,
+          actorId: ctx.user.sub,
           type: NOTIFICATION_TYPE.FOLLOW,
           title: "New follower",
           description: `${actorLabel} started following you.`,
@@ -1090,6 +1091,14 @@ export const UserResolver = {
         where: {
           followerId: ctx.user.sub,
           followingId: targetUser.id,
+        },
+      });
+
+      await (prisma as any).notification.deleteMany({
+        where: {
+          userId: targetUser.id,
+          actorId: ctx.user.sub,
+          type: NOTIFICATION_TYPE.FOLLOW,
         },
       });
 
