@@ -1,0 +1,25 @@
+type Notification {
+  id: ID!
+  title: String!
+  description: String!
+  icon: String!
+  profilePicture: String
+  unread: Boolean!
+  time: String!
+}
+
+extend type Query {
+  notifications(limit: Int = 50, unreadOnly: Boolean = false): [Notification!]!
+}
+
+extend type Mutation {
+  createNotification(
+    title: String!
+    description: String!
+    icon: String!
+    profilePicture: String
+    userId: ID
+  ): Notification!
+  markNotificationRead(notificationId: ID!): Notification!
+  markAllNotificationsRead: Boolean!
+}

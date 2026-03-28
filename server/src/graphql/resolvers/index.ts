@@ -2,6 +2,7 @@ import { UserResolver } from "./user.resolver";
 import { ArchiveResolver } from "./archive.resolver";
 import { PostResolver } from "./post.resolver";
 import { WorkspaceResolver } from "./workspace.resolver";
+import { NotificationResolver } from "./notification.resolver";
 
 export const resolvers = {
   Query: {
@@ -9,12 +10,14 @@ export const resolvers = {
     ...ArchiveResolver.Query,
     ...PostResolver.Query,
     ...WorkspaceResolver.Query,
+    ...NotificationResolver.Query,
   },
   Mutation: {
     ...UserResolver.Mutation,
     ...ArchiveResolver.Mutation,
     ...PostResolver.Mutation,
     ...WorkspaceResolver.Mutation,
+    ...NotificationResolver.Mutation,
   },
   Post: {
     ...PostResolver.Post,

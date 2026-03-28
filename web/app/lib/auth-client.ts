@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from "react";
 
+type User = Record<string, unknown>;
+
 type AuthState = {
-  user: any | null;
+  user: User | null;
   loading: boolean;
   hasResolvedInitialAuth: boolean;
 };
 
-let cachedUser: any | null = null;
+let cachedUser: User | null = null;
 let cachedLoading = true;
 let cachedHasResolvedInitialAuth = false;
-let inFlight: Promise<any | null> | null = null;
+let inFlight: Promise<User | null> | null = null;
 const listeners = new Set<(state: AuthState) => void>();
 
 const notify = () => {

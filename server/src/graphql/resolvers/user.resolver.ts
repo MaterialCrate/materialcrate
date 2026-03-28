@@ -23,6 +23,10 @@ import {
 import { sendAccountDeletedEmail } from "../../email/accountDeletedEmail";
 import { sendAccountRecoveredEmail } from "../../email/accountRecoveredEmail";
 import { ensureWorkspaceForUserId } from "./workspace.resolver";
+import {
+  createNotification,
+  NOTIFICATION_ICON,
+} from "../../services/notifications";
 
 const createToken = (userId: string, email: string) => {
   const secret = process.env.JWT_SECRET;
@@ -45,7 +49,9 @@ type SocialProviderKey = keyof typeof SOCIAL_PROVIDER_MAP;
 type SocialProviderValue = (typeof SOCIAL_PROVIDER_MAP)[SocialProviderKey];
 
 const normalizeSocialProvider = (provider: unknown): SocialProviderValue => {
-  const normalized = String(provider || "").trim().toLowerCase();
+  const normalized = String(provider || "")
+    .trim()
+    .toLowerCase();
   if (normalized === "google") return SOCIAL_PROVIDER_MAP.google;
   if (normalized === "facebook") return SOCIAL_PROVIDER_MAP.facebook;
   throw new Error("Unsupported social provider");
@@ -248,7 +254,9 @@ export const UserResolver = {
   Query: {
     me: async (_: unknown, __: unknown, ctx: any) => {
       if (!ctx.user?.sub) return null;
-      const user = await prisma.user.findUnique({ where: { id: ctx.user.sub } });
+      const user = await prisma.user.findUnique({
+        where: { id: ctx.user.sub },
+      });
       if (!user) return null;
       await ensureWorkspaceForUserId(user.id, ctx.user.sub);
       return user;
@@ -268,26 +276,26 @@ export const UserResolver = {
         return null;
       }
 
-        const viewerId = ctx.user?.sub;
+      const viewerId = ctx.user?.sub;
 
-        return (prisma as any).user.findFirst({
-          where: {
+      return (prisma as any).user.findFirst({
+        where: {
           username: {
             equals: normalizedUsername,
             mode: "insensitive",
           },
           deleted: false,
           disabled: false,
-            ...(viewerId
-              ? {
-                  NOT: {
-                    blockedUserIds: {
-                      has: viewerId,
-                    },
+          ...(viewerId
+            ? {
+                NOT: {
+                  blockedUserIds: {
+                    has: viewerId,
                   },
-                }
-              : {}),
-          },
+                },
+              }
+            : {}),
+        },
       });
     },
 
@@ -301,22 +309,22 @@ export const UserResolver = {
         return [];
       }
 
-        const safeLimit = Math.max(1, Math.min(limit, 25));
-        const viewerId = ctx.user?.sub;
+      const safeLimit = Math.max(1, Math.min(limit, 25));
+      const viewerId = ctx.user?.sub;
 
-        return (prisma as any).user.findMany({
-          where: {
-            deleted: false,
-            disabled: false,
-            ...(viewerId
-              ? {
-                  NOT: {
-                    blockedUserIds: {
-                      has: viewerId,
-                    },
+      return (prisma as any).user.findMany({
+        where: {
+          deleted: false,
+          disabled: false,
+          ...(viewerId
+            ? {
+                NOT: {
+                  blockedUserIds: {
+                    has: viewerId,
                   },
-                }
-              : {}),
+                },
+              }
+            : {}),
           OR: [
             {
               username: {
@@ -377,7 +385,9 @@ export const UserResolver = {
       return !existing;
     },
     emailAvailable: async (_: unknown, { email }: { email: string }) => {
-      const trimmedEmail = String(email || "").trim().toLowerCase();
+      const trimmedEmail = String(email || "")
+        .trim()
+        .toLowerCase();
       if (!trimmedEmail) return false;
 
       const existing = await (prisma as any).user.findFirst({
@@ -397,11 +407,17 @@ export const UserResolver = {
 
   Mutation: {
     signup: async (_: unknown, args: any) => {
-      const { email, password, username, displayName, institution, program } = args;
+      const { email, password, username, displayName, institution, program } =
+        args;
       const normalizedUsername = username?.trim();
       const normalizedDisplayName = displayName?.trim();
 
-      if (!email || !password || !normalizedUsername || !normalizedDisplayName) {
+      if (
+        !email ||
+        !password ||
+        !normalizedUsername ||
+        !normalizedDisplayName
+      ) {
         throw new Error(
           "Email, password, username, and display name are required",
         );
@@ -433,25 +449,27 @@ export const UserResolver = {
         program: program ?? null,
       };
 
-      const user = await prisma.user.create({
-        data: {
-          ...(createUserData as any),
-          workspace: {
-            create: {
-              name: "My Workspace",
+      const user = await prisma.user
+        .create({
+          data: {
+            ...(createUserData as any),
+            workspace: {
+              create: {
+                name: "My Workspace",
+              },
             },
           },
-        },
-      }).catch((error) => {
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2002"
-        ) {
-          throw new Error("Email or username already in use");
-        }
+        })
+        .catch((error) => {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === "P2002"
+          ) {
+            throw new Error("Email or username already in use");
+          }
 
-        throw error;
-      });
+          throw error;
+        });
 
       let verificationEmailSent = true;
       let verificationEmailError: string | null = null;
@@ -461,8 +479,13 @@ export const UserResolver = {
       } catch (error) {
         verificationEmailSent = false;
         verificationEmailError =
-          error instanceof Error ? error.message : "Failed to send verification email";
-        console.error("Failed to send verification email during signup:", error);
+          error instanceof Error
+            ? error.message
+            : "Failed to send verification email";
+        console.error(
+          "Failed to send verification email during signup:",
+          error,
+        );
       }
 
       const token = createToken(user.id, user.email);
@@ -517,7 +540,8 @@ export const UserResolver = {
       }
 
       if (user.deleted) {
-        const { canRestore, restoreDeadline } = getDeletedAccountRestoreState(user);
+        const { canRestore, restoreDeadline } =
+          getDeletedAccountRestoreState(user);
         if (!canRestore) {
           throw new Error("Account has been permanently deleted");
         }
@@ -539,14 +563,17 @@ export const UserResolver = {
     socialAuth: async (_: unknown, args: any) => {
       const provider = normalizeSocialProvider(args.provider);
       const providerUserId = String(args.providerUserId || "").trim();
-      const email = String(args.email || "").trim().toLowerCase();
+      const email = String(args.email || "")
+        .trim()
+        .toLowerCase();
       const displayName = String(args.displayName || "").trim();
 
       if (!providerUserId || !email) {
         throw new Error("providerUserId and email are required");
       }
 
-      const derivedDisplayName = displayName || email.split("@")[0]?.trim() || "User";
+      const derivedDisplayName =
+        displayName || email.split("@")[0]?.trim() || "User";
 
       const existingSeoAccount = await (prisma as any).seoAccount.findUnique({
         where: {
@@ -598,9 +625,8 @@ export const UserResolver = {
 
       if (existingUserByEmail) {
         if (existingUserByEmail.deleted) {
-          const { canRestore, restoreDeadline } = getDeletedAccountRestoreState(
-            existingUserByEmail,
-          );
+          const { canRestore, restoreDeadline } =
+            getDeletedAccountRestoreState(existingUserByEmail);
           if (!canRestore) {
             throw new Error("Account has been permanently deleted");
           }
@@ -613,22 +639,24 @@ export const UserResolver = {
 
         const activeUser = await ensureUserCanLogin(existingUserByEmail);
 
-        await (prisma as any).seoAccount.create({
-          data: {
-            userId: activeUser.id,
-            provider,
-            providerUserId,
-          },
-        }).catch((error: unknown) => {
-          if (
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === "P2002"
-          ) {
-            return null;
-          }
+        await (prisma as any).seoAccount
+          .create({
+            data: {
+              userId: activeUser.id,
+              provider,
+              providerUserId,
+            },
+          })
+          .catch((error: unknown) => {
+            if (
+              error instanceof Prisma.PrismaClientKnownRequestError &&
+              error.code === "P2002"
+            ) {
+              return null;
+            }
 
-          throw error;
-        });
+            throw error;
+          });
 
         const updatedUser = await (prisma as any).user.update({
           where: { id: activeUser.id },
@@ -763,7 +791,9 @@ export const UserResolver = {
       }
 
       if (currentPasswordValue === newPasswordValue) {
-        throw new Error("New password must be different from your current password");
+        throw new Error(
+          "New password must be different from your current password",
+        );
       }
 
       const user = await prisma.user.findUnique({
@@ -867,12 +897,14 @@ export const UserResolver = {
         },
       });
 
-      void sendAccountDeletedEmail(user.email, restoreDeadline).catch((error) => {
-        console.error("[deleteMyAccount] Failed to send deletion email", {
-          userId: user.id,
-          error,
-        });
-      });
+      void sendAccountDeletedEmail(user.email, restoreDeadline).catch(
+        (error) => {
+          console.error("[deleteMyAccount] Failed to send deletion email", {
+            userId: user.id,
+            error,
+          });
+        },
+      );
 
       return true;
     },
@@ -1002,6 +1034,23 @@ export const UserResolver = {
           followingId: targetUser.id,
         },
       });
+
+      const actor = await (prisma as any).user.findUnique({
+        where: { id: ctx.user.sub },
+        select: { displayName: true, username: true, profilePicture: true },
+      });
+
+      if (targetUser.id !== ctx.user.sub) {
+        const actorLabel =
+          actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+        await createNotification({
+          userId: targetUser.id,
+          title: "New follower",
+          description: `${actorLabel} started following you.`,
+          icon: NOTIFICATION_ICON.FOLLOW,
+          profilePicture: actor?.profilePicture,
+        });
+      }
 
       return true;
     },
@@ -1167,37 +1216,37 @@ export const UserResolver = {
         throw new Error("You cannot block yourself");
       }
 
-        const blockedUserIds = await getBlockedUserIdsForViewer(ctx.user.sub);
+      const blockedUserIds = await getBlockedUserIdsForViewer(ctx.user.sub);
 
-        if (!blockedUserIds.includes(targetUser.id)) {
-          await prisma.$transaction([
-            (prisma as any).user.update({
-              where: { id: ctx.user.sub },
-              data: {
-                blockedUserIds: {
-                  push: targetUser.id,
+      if (!blockedUserIds.includes(targetUser.id)) {
+        await prisma.$transaction([
+          (prisma as any).user.update({
+            where: { id: ctx.user.sub },
+            data: {
+              blockedUserIds: {
+                push: targetUser.id,
+              },
+            },
+          }),
+          (prisma as any).follow.deleteMany({
+            where: {
+              OR: [
+                {
+                  followerId: ctx.user.sub,
+                  followingId: targetUser.id,
                 },
-              },
-            }),
-            (prisma as any).follow.deleteMany({
-              where: {
-                OR: [
-                  {
-                    followerId: ctx.user.sub,
-                    followingId: targetUser.id,
-                  },
-                  {
-                    followerId: targetUser.id,
-                    followingId: ctx.user.sub,
-                  },
-                ],
-              },
-            }),
-          ]);
-        }
+                {
+                  followerId: targetUser.id,
+                  followingId: ctx.user.sub,
+                },
+              ],
+            },
+          }),
+        ]);
+      }
 
-        return true;
-      },
+      return true;
+    },
     unblockUser: async (
       _: unknown,
       { username }: { username: string },
@@ -1228,9 +1277,9 @@ export const UserResolver = {
         throw new Error("User not found");
       }
 
-      const blockedUserIds = (await getBlockedUserIdsForViewer(ctx.user.sub)).filter(
-        (blockedUserId: string) => blockedUserId !== targetUser.id,
-      );
+      const blockedUserIds = (
+        await getBlockedUserIdsForViewer(ctx.user.sub)
+      ).filter((blockedUserId: string) => blockedUserId !== targetUser.id);
 
       await (prisma as any).user.update({
         where: { id: ctx.user.sub },
@@ -1274,9 +1323,7 @@ export const UserResolver = {
         profileBackgroundFileBase64.trim().length > 0;
 
       if (!username || !displayName || !institution) {
-        throw new Error(
-          "Username, display name, and institution are required",
-        );
+        throw new Error("Username, display name, and institution are required");
       }
 
       if (RESERVED_USERNAMES.has(username.toLowerCase())) {
@@ -1310,7 +1357,9 @@ export const UserResolver = {
           existingUser.subscriptionPlan?.trim().toLowerCase() === "pro";
 
         if (hasProfileBackgroundFile && !isProUser) {
-          throw new Error("Profile backgrounds are available to Pro users only");
+          throw new Error(
+            "Profile backgrounds are available to Pro users only",
+          );
         }
 
         if (hasProfileBackgroundFile) {
@@ -1371,10 +1420,15 @@ export const UserResolver = {
           uploadedProfileBackgroundUrl = buildS3FileUrl(bucket, region, key);
           updateData.profileBackground = uploadedProfileBackgroundUrl;
         } else if (hasProfileBackgroundArg) {
-          if (!profileBackground || profileBackground === DEFAULT_PROFILE_BACKGROUND) {
+          if (
+            !profileBackground ||
+            profileBackground === DEFAULT_PROFILE_BACKGROUND
+          ) {
             updateData.profileBackground = DEFAULT_PROFILE_BACKGROUND;
           } else if (!isProUser) {
-            throw new Error("Profile backgrounds are available to Pro users only");
+            throw new Error(
+              "Profile backgrounds are available to Pro users only",
+            );
           }
         }
 
@@ -1663,8 +1717,10 @@ export const UserResolver = {
         where: { followerId: user.id },
       });
     },
-    createdAt: (user: { createdAt?: unknown }) => toIsoStringOrNull(user.createdAt),
-    deletedAt: (user: { deletedAt?: unknown }) => toIsoStringOrNull(user.deletedAt),
+    createdAt: (user: { createdAt?: unknown }) =>
+      toIsoStringOrNull(user.createdAt),
+    deletedAt: (user: { deletedAt?: unknown }) =>
+      toIsoStringOrNull(user.deletedAt),
     disabledAt: (user: { disabledAt?: unknown }) =>
       toIsoStringOrNull(user.disabledAt),
     disabledUntil: (user: { disabledUntil?: unknown }) =>

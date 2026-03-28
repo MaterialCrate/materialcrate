@@ -1,7 +1,13 @@
-import React from "react";
+"use client";
+
+import React, { useCallback, useEffect, useMemo } from "react";
+import Image from "next/image";
 import {
   ArchiveMinus,
   DocumentText1,
+  Heart,
+  Like1,
+  Notification,
   type Icon as IconsaxIcon,
   MedalStar,
   MessageText1,
@@ -11,115 +17,276 @@ import {
 import Header from "../components/Header";
 
 type NotificationItem = {
-  id: number;
+  id: string | number;
   title: string;
   description: string;
+  icon?: string;
+  profilePicture?: string | null;
   time: string;
-  category: string;
   accent: string;
   unread?: boolean;
   imageLabel: string;
   imageTone: string;
   Icon: IconsaxIcon;
-  meta?: string;
 };
 
-const notificationGroups: Array<{
-  label: string;
-  items: NotificationItem[];
-}> = [
-  {
-    label: "Today",
-    items: [
-      {
-        id: 1,
-        title: "New comment",
-        description:
-          "Ayo asked for the PDF source you used in your reaction-rates upload.",
-        time: "2 min ago",
-        category: "Comments",
-        accent: "#E1761F",
-        unread: true,
-        imageLabel: "AY",
-        imageTone: "bg-[#FFE6CF] text-[#B76217]",
-        Icon: MessageText1,
-      },
-      {
-        id: 2,
-        title: "Your file is trending in Hub",
-        description:
-          "Lecture Notes: Wave Optics was saved 24 times in the last hour.",
-        time: "18 min ago",
-        category: "Performance",
-        accent: "#1D1D1D",
-        unread: true,
-        imageLabel: "WO",
-        imageTone: "bg-[#EFEFEF] text-[#202020]",
-        Icon: MedalStar,
-      },
-      {
-        id: 3,
-        title: "Archive reminder",
-        description:
-          "You have 7 saved materials still uncategorized. Move them into folders for faster access.",
-        time: "42 min ago",
-        category: "Saved",
-        accent: "#5F6FFF",
-        imageLabel: "SV",
-        imageTone: "bg-[#E8EBFF] text-[#4150D8]",
-        Icon: ArchiveMinus,
-      },
-    ],
+type ApiNotificationItem = {
+  id: string | number;
+  title: string;
+  description: string;
+  icon?: string;
+  profilePicture?: string | null;
+  unread?: boolean;
+  time: string;
+};
+
+const ICON_STYLES: Record<
+  string,
+  { accent: string; imageTone: string; Icon: IconsaxIcon }
+> = {
+  MessageText1: {
+    accent: "#E1761F",
+    imageTone: "bg-[#FFE6CF] text-[#B76217]",
+    Icon: MessageText1,
   },
-  {
-    label: "Earlier this week",
-    items: [
-      {
-        id: 4,
-        title: "Study group invite accepted",
-        description:
-          "3 classmates joined your Calculus crash-pack circle after your invite.",
-        time: "Yesterday, 6:14 PM",
-        category: "Community",
-        accent: "#1F9D75",
-        imageLabel: "CG",
-        imageTone: "bg-[#DBF5EC] text-[#197356]",
-        Icon: Profile2User,
-      },
-      {
-        id: 5,
-        title: "Document uploaded",
-        description:
-          "Your Biochemistry flashcards are now searchable and visible on your profile.",
-        time: "Tuesday, 10:32 AM",
-        category: "Uploads",
-        accent: "#D14D72",
-        imageLabel: "BC",
-        imageTone: "bg-[#FFE0E8] text-[#B33F61]",
-        Icon: DocumentText1,
-      },
-      {
-        id: 6,
-        title: "Weekly account check-in",
-        description:
-          "Review your profile, saved folders, and upload settings to keep your workspace clean.",
-        time: "Monday, 8:05 AM",
-        category: "System",
-        accent: "#7C5CFA",
-        imageLabel: "MC",
-        imageTone: "bg-[#EEE8FF] text-[#684AD9]",
-        Icon: Setting4,
-      },
-    ],
+  MedalStar: {
+    accent: "#1D1D1D",
+    imageTone: "bg-[#EFEFEF] text-[#202020]",
+    Icon: MedalStar,
   },
-];
+  ArchiveMinus: {
+    accent: "#5F6FFF",
+    imageTone: "bg-[#E8EBFF] text-[#4150D8]",
+    Icon: ArchiveMinus,
+  },
+  Profile2User: {
+    accent: "#1F9D75",
+    imageTone: "bg-[#DBF5EC] text-[#197356]",
+    Icon: Profile2User,
+  },
+  DocumentText1: {
+    accent: "#D14D72",
+    imageTone: "bg-[#FFE0E8] text-[#B33F61]",
+    Icon: DocumentText1,
+  },
+  Setting4: {
+    accent: "#7C5CFA",
+    imageTone: "bg-[#EEE8FF] text-[#684AD9]",
+    Icon: Setting4,
+  },
+  Like1: {
+    accent: "#D14D72",
+    imageTone: "bg-[#FFE0E8] text-[#B33F61]",
+    Icon: Like1,
+  },
+  Heart: {
+    accent: "#D14D72",
+    imageTone: "bg-[#FFE0E8] text-[#B33F61]",
+    Icon: Heart,
+  },
+  Notification: {
+    accent: "#1D1D1D",
+    imageTone: "bg-[#EFEFEF] text-[#202020]",
+    Icon: Notification,
+  },
+};
+
+const getImageLabel = (title: string) => {
+  const letters = title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("");
+
+  return letters || "NT";
+};
+
+const getGroupLabel = (time: string) => {
+  const parsed = new Date(time);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Earlier this week";
+  }
+
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const startOfItemDay = new Date(
+    parsed.getFullYear(),
+    parsed.getMonth(),
+    parsed.getDate(),
+  );
+
+  const diffDays = Math.floor(
+    (startOfToday.getTime() - startOfItemDay.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  if (diffDays <= 0) return "Today";
+  if (diffDays <= 7) return "Earlier this week";
+  return parsed.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+};
 
 export default function Page() {
+  const [notifications, setNotifications] = React.useState<
+    ApiNotificationItem[]
+  >([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const formatNotificationTime = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+
+    return parsed.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      setError(null);
+      const response = await fetch("/api/notifications?limit=100", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(body?.error || "Failed to fetch notifications");
+        return;
+      }
+
+      const items = Array.isArray(body?.notifications)
+        ? (body.notifications as ApiNotificationItem[])
+        : [];
+      setNotifications(items);
+    } catch {
+      setError("Failed to fetch notifications");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const notificationGroups = useMemo(() => {
+    const groupsMap = new Map<string, NotificationItem[]>();
+
+    for (const notification of notifications) {
+      const style =
+        ICON_STYLES[notification.icon ?? ""] ?? ICON_STYLES.Notification;
+      const groupLabel = getGroupLabel(notification.time);
+      const current = groupsMap.get(groupLabel) ?? [];
+
+      current.push({
+        id: notification.id,
+        title: notification.title,
+        description: notification.description,
+        profilePicture: notification.profilePicture ?? null,
+        time: formatNotificationTime(notification.time),
+        unread: Boolean(notification.unread),
+        imageLabel: getImageLabel(notification.title),
+        imageTone: style.imageTone,
+        accent: style.accent,
+        Icon: style.Icon,
+      });
+
+      groupsMap.set(groupLabel, current);
+    }
+
+    const orderedLabels = ["Today", "Earlier this week"];
+    const groupEntries = Array.from(groupsMap.entries()).sort(
+      ([left], [right]) => {
+        const leftIndex = orderedLabels.indexOf(left);
+        const rightIndex = orderedLabels.indexOf(right);
+        if (leftIndex === -1 && rightIndex === -1)
+          return left.localeCompare(right);
+        if (leftIndex === -1) return 1;
+        if (rightIndex === -1) return -1;
+        return leftIndex - rightIndex;
+      },
+    );
+
+    return groupEntries.map(([label, items]) => ({ label, items }));
+  }, [notifications]);
+
+  useEffect(() => {
+    void fetchNotifications();
+  }, [fetchNotifications]);
+
+  const markAllAsRead = async () => {
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ markAll: true }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        setError(body?.error || "Failed to mark notifications as read");
+        return;
+      }
+
+      setNotifications((previous) =>
+        previous.map((item) => ({
+          ...item,
+          unread: false,
+        })),
+      );
+    } catch {
+      setError("Failed to mark notifications as read");
+    }
+  };
+
+  const markOneAsRead = async (notificationId: string | number) => {
+    try {
+      const response = await fetch("/api/notifications", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        setError(body?.error || "Failed to mark notification as read");
+        return;
+      }
+
+      setNotifications((previous) =>
+        previous.map((item) =>
+          String(item.id) === String(notificationId)
+            ? {
+                ...item,
+                unread: false,
+              }
+            : item,
+        ),
+      );
+    } catch {
+      setError("Failed to mark notification as read");
+    }
+  };
+
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-4 pb-28 pt-20">
-      <Header title="Notifications" />
+      <Header title="Notifications" isLoading={isLoading} />
 
       <main className="space-y-5">
+        {error && <p className="text-xs text-[#A94442]">{error}</p>}
         {notificationGroups.map((group) => (
           <section key={group.label}>
             <div className="mb-2 flex items-center justify-between">
@@ -128,6 +295,9 @@ export default function Page() {
               </h2>
               <button
                 type="button"
+                onClick={() => {
+                  void markAllAsRead();
+                }}
                 className="text-xs font-medium text-[#8A8A8A]"
               >
                 Mark all as read
@@ -143,9 +313,20 @@ export default function Page() {
                   <div className="flex items-start gap-3">
                     <div className="relative shrink-0">
                       <div
-                        className={`flex h-13 w-13 items-center justify-center rounded-[18px] text-sm font-semibold ${item.imageTone}`}
+                        className={`relative flex h-13 w-13 items-center justify-center overflow-hidden rounded-[18px] text-sm font-semibold ${item.imageTone}`}
                       >
-                        {item.imageLabel}
+                        {item.profilePicture ? (
+                          <Image
+                            src={item.profilePicture}
+                            alt={item.title}
+                            fill
+                            sizes="52px"
+                            unoptimized
+                            className="object-cover"
+                          />
+                        ) : (
+                          item.imageLabel
+                        )}
                       </div>
                       <div
                         className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white"
@@ -173,6 +354,19 @@ export default function Page() {
                       <p className="text-sm leading-6 text-[#666666]">
                         {item.description}
                       </p>
+                      {/*
+                      {item.unread && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void markOneAsRead(item.id);
+                          }}
+                          className="mt-2 text-[11px] font-medium text-[#8A8A8A]"
+                        >
+                          Mark as read
+                        </button>
+                      )}
+                      */}
                     </div>
                   </div>
                 </article>

@@ -3,6 +3,10 @@ import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { prisma } from "../../config/prisma";
 import { s3 } from "../../config/s3";
+import {
+  createNotification,
+  NOTIFICATION_ICON,
+} from "../../services/notifications";
 
 type CreatePostArgs = {
   fileBase64: string;
@@ -79,9 +83,7 @@ const getInaccessibleAuthorIds = async (viewerId?: string) => {
     select: { id: true },
   });
 
-  return Array.from(
-    new Set(blockers.map((user) => user.id)),
-  );
+  return Array.from(new Set(blockers.map((user) => user.id)));
 };
 
 const getBlockedUserIdsForViewer = async (viewerId?: string) => {
@@ -243,11 +245,7 @@ const sanitizeAuthorIdentity = (author: any) => {
 
 export const PostResolver = {
   Query: {
-    post: async (
-      _: unknown,
-      { id }: { id: string },
-      ctx: GraphQLContext,
-    ) => {
+    post: async (_: unknown, { id }: { id: string }, ctx: GraphQLContext) => {
       const viewerId = ctx.user?.sub;
       const normalizedId = id?.trim();
       if (!normalizedId) {
@@ -309,23 +307,23 @@ export const PostResolver = {
     ) => {
       const viewerId = ctx.user?.sub;
       const normalizedAuthorUsername = String(authorUsername || "").trim();
-        const viewer = viewerId
-          ? await prisma.user.findUnique({
-              where: { id: viewerId },
-              select: { uninterestedPostIds: true, blockedUserIds: true },
-            })
-          : null;
-        const uninterestedPostIds = Array.isArray(viewer?.uninterestedPostIds)
-          ? viewer.uninterestedPostIds
-          : [];
-        const inaccessibleAuthorIds = normalizedAuthorUsername
-          ? await getInaccessibleAuthorIds(viewerId)
-          : Array.from(
-              new Set([
-                ...(await getInaccessibleAuthorIds(viewerId)),
-                ...(await getBlockedUserIdsForViewer(viewerId)),
-              ]),
-            );
+      const viewer = viewerId
+        ? await prisma.user.findUnique({
+            where: { id: viewerId },
+            select: { uninterestedPostIds: true, blockedUserIds: true },
+          })
+        : null;
+      const uninterestedPostIds = Array.isArray(viewer?.uninterestedPostIds)
+        ? viewer.uninterestedPostIds
+        : [];
+      const inaccessibleAuthorIds = normalizedAuthorUsername
+        ? await getInaccessibleAuthorIds(viewerId)
+        : Array.from(
+            new Set([
+              ...(await getInaccessibleAuthorIds(viewerId)),
+              ...(await getBlockedUserIdsForViewer(viewerId)),
+            ]),
+          );
       const posts = await prisma.post.findMany({
         where: normalizedAuthorUsername
           ? {
@@ -468,7 +466,9 @@ export const PostResolver = {
         skip: safeOffset,
       });
 
-      return comments.map((comment: any) => mapCommentForGraphQL(comment, viewerId));
+      return comments.map((comment: any) =>
+        mapCommentForGraphQL(comment, viewerId),
+      );
     },
   },
   Mutation: {
@@ -501,7 +501,8 @@ export const PostResolver = {
 
       const normalizedMime = mimeType.toLowerCase();
       const normalizedName = fileName.toLowerCase();
-      const isPdf = normalizedMime === "application/pdf" || normalizedName.endsWith(".pdf");
+      const isPdf =
+        normalizedMime === "application/pdf" || normalizedName.endsWith(".pdf");
       if (!isPdf) {
         throw new Error("Only PDF files are allowed");
       }
@@ -583,7 +584,11 @@ export const PostResolver = {
 
       return mapPostForGraphQL(createdPost, ctx.user.sub);
     },
-    updatePost: async (_: unknown, args: UpdatePostArgs, ctx: GraphQLContext) => {
+    updatePost: async (
+      _: unknown,
+      args: UpdatePostArgs,
+      ctx: GraphQLContext,
+    ) => {
       const viewerId = ctx.user?.sub;
       if (!viewerId) {
         throw new Error("Not authenticated");
@@ -638,7 +643,11 @@ export const PostResolver = {
 
         if (!latestVersion) {
           await (tx as any).postVersion.create({
-            data: buildPostVersionSnapshot(existingPost, nextVersionNumber, viewerId),
+            data: buildPostVersionSnapshot(
+              existingPost,
+              nextVersionNumber,
+              viewerId,
+            ),
           });
           nextVersionNumber += 1;
         }
@@ -748,7 +757,12 @@ export const PostResolver = {
 
       const existingPost = await prisma.post.findUnique({
         where: { id: normalizedPostId },
-        select: { id: true, authorId: true, commentsDisabled: true, deleted: true },
+        select: {
+          id: true,
+          authorId: true,
+          commentsDisabled: true,
+          deleted: true,
+        },
       });
 
       if (!existingPost || existingPost.deleted) {
@@ -820,7 +834,11 @@ export const PostResolver = {
 
       return true;
     },
-    deletePost: async (_: unknown, { postId }: { postId: string }, ctx: GraphQLContext) => {
+    deletePost: async (
+      _: unknown,
+      { postId }: { postId: string },
+      ctx: GraphQLContext,
+    ) => {
       const viewerId = ctx.user?.sub;
       if (!viewerId) {
         throw new Error("Not authenticated");
@@ -867,7 +885,12 @@ export const PostResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true, authorId: true, commentsDisabled: true, deleted: true },
+        select: {
+          id: true,
+          authorId: true,
+          commentsDisabled: true,
+          deleted: true,
+        },
       });
       if (!post || post.deleted) {
         throw new Error("Post not found");
@@ -902,6 +925,23 @@ export const PostResolver = {
             postId,
           },
         });
+
+        if (post.authorId && post.authorId !== viewerId) {
+          const actor = await prisma.user.findUnique({
+            where: { id: viewerId },
+            select: { displayName: true, username: true, profilePicture: true },
+          });
+          const actorLabel =
+            actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+
+          await createNotification({
+            userId: post.authorId,
+            title: "New like",
+            description: `${actorLabel} liked your post.`,
+            icon: NOTIFICATION_ICON.POST_LIKE,
+            profilePicture: actor?.profilePicture,
+          });
+        }
       }
 
       const updatedPost = await prisma.post.findUnique({
@@ -942,7 +982,7 @@ export const PostResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true, deleted: true },
+        select: { id: true, deleted: true, authorId: true },
       });
       if (!post || post.deleted) {
         throw new Error("Post not found");
@@ -972,6 +1012,25 @@ export const PostResolver = {
         include: buildCommentInclude(viewerId),
       });
 
+      if (post.authorId && post.authorId !== viewerId) {
+        const actor = await prisma.user.findUnique({
+          where: { id: viewerId },
+          select: { displayName: true, username: true, profilePicture: true },
+        });
+        const actorLabel =
+          actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+
+        await createNotification({
+          userId: post.authorId,
+          title: normalizedParentCommentId ? "New reply" : "New comment",
+          description: normalizedParentCommentId
+            ? `${actorLabel} replied to a thread on your post.`
+            : `${actorLabel} commented on your post.`,
+          icon: NOTIFICATION_ICON.COMMENT,
+          profilePicture: actor?.profilePicture,
+        });
+      }
+
       return mapCommentForGraphQL(comment, viewerId);
     },
     toggleCommentLike: async (
@@ -986,7 +1045,7 @@ export const PostResolver = {
 
       const comment = await (prisma as any).comment.findUnique({
         where: { id: commentId },
-        select: { id: true },
+        select: { id: true, authorId: true },
       });
       if (!comment) {
         throw new Error("Comment not found");
@@ -1017,6 +1076,23 @@ export const PostResolver = {
             commentId,
           },
         });
+
+        if (comment.authorId && comment.authorId !== viewerId) {
+          const actor = await prisma.user.findUnique({
+            where: { id: viewerId },
+            select: { displayName: true, username: true, profilePicture: true },
+          });
+          const actorLabel =
+            actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+
+          await createNotification({
+            userId: comment.authorId,
+            title: "Comment liked",
+            description: `${actorLabel} liked your comment.`,
+            icon: NOTIFICATION_ICON.COMMENT_LIKE,
+            profilePicture: actor?.profilePicture,
+          });
+        }
       }
 
       const updatedComment = await (prisma as any).comment.findUnique({
@@ -1093,7 +1169,8 @@ export const PostResolver = {
       }
     },
     likeCount: (post: any) => post.likeCount ?? post?._count?.likes ?? 0,
-    commentCount: (post: any) => post.commentCount ?? post?._count?.comments ?? 0,
+    commentCount: (post: any) =>
+      post.commentCount ?? post?._count?.comments ?? 0,
     commentsDisabled: (post: any) => Boolean(post.commentsDisabled),
     comments: async (
       post: { id: string },
@@ -1112,7 +1189,9 @@ export const PostResolver = {
         skip: safeOffset,
       });
 
-      return comments.map((comment: any) => mapCommentForGraphQL(comment, viewerId));
+      return comments.map((comment: any) =>
+        mapCommentForGraphQL(comment, viewerId),
+      );
     },
     viewerHasLiked: (post: any) => Boolean(post.viewerHasLiked),
     pinned: (post: any) => Boolean(post.pinned),
@@ -1172,7 +1251,8 @@ export const PostResolver = {
 
       return replies.map((reply: any) => mapCommentForGraphQL(reply, viewerId));
     },
-    replyCount: (comment: any) => comment.replyCount ?? comment?._count?.replies ?? 0,
+    replyCount: (comment: any) =>
+      comment.replyCount ?? comment?._count?.replies ?? 0,
     likeCount: (comment: any) =>
       comment.likeCount ?? comment?._count?.commentLikes ?? 0,
     viewerHasLiked: (comment: any) => Boolean(comment.viewerHasLiked),

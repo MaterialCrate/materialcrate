@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthSplashGate from "./components/AuthSplashGate";
 import ConditionalNavbar from "./components/ConditionalNavbar";
 import { SystemPopupProvider } from "./components/SystemPopup";
+import BrowserNotificationBridge from "./components/BrowserNotificationBridge";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -46,12 +47,11 @@ export default function RootLayout({
       className={`${inter.variable} ${libreBaskerville.variable} antialiased`}
     >
       <head>
-        <script
-          dangerouslySetInnerHTML={{ __html: themeInitScript }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="font-sans relative">
         <SystemPopupProvider>
+          <BrowserNotificationBridge />
           <AuthSplashGate>
             {children}
             <ConditionalNavbar />

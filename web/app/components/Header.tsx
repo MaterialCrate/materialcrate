@@ -27,7 +27,7 @@ export default function Header({
         <div className="text-lg font-medium text-[#202020]">
           <h1>{title}</h1>
         </div>
-        <div className="flex min-w-[24px] justify-end">
+        <div className="flex min-w-6 justify-end">
           {rightSlot ?? <span aria-hidden="true" className="h-6 w-6" />}
         </div>
       </header>

@@ -44,12 +44,29 @@ model User {
   followingRelations Follow[] @relation("UserFollowing")
   mutedUserRelations Mute[] @relation("UserMutedUsers")
   mutedByRelations Mute[] @relation("UserMutedBy")
+  notifications Notification[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([username])
   @@index([email])
   @@index([pendingEmail])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String
+  icon        String
+  profilePicture String?
+  unread      Boolean  @default(true)
+  time        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, time])
+  @@index([userId, unread])
 }
 
 enum SeoProvider {
