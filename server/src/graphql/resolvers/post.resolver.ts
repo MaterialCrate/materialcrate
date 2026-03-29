@@ -919,6 +919,24 @@ export const PostResolver = {
             },
           },
         });
+
+        if (post.authorId && post.authorId !== viewerId) {
+          const latestLikeNotification = await (prisma as any).notification.findFirst({
+            where: {
+              userId: post.authorId,
+              actorId: viewerId,
+              type: NOTIFICATION_TYPE.POST_LIKE,
+            },
+            select: { id: true },
+            orderBy: { time: "desc" },
+          });
+
+          if (latestLikeNotification?.id) {
+            await (prisma as any).notification.delete({
+              where: { id: latestLikeNotification.id },
+            });
+          }
+        }
       } else {
         await prisma.like.create({
           data: {
@@ -937,6 +955,7 @@ export const PostResolver = {
 
           await createNotification({
             userId: post.authorId,
+            actorId: viewerId,
             type: NOTIFICATION_TYPE.POST_LIKE,
             title: "New like",
             description: `${actorLabel} liked your post.`,
@@ -1074,6 +1093,24 @@ export const PostResolver = {
             },
           },
         });
+
+        if (comment.authorId && comment.authorId !== viewerId) {
+          const latestLikeNotification = await (prisma as any).notification.findFirst({
+            where: {
+              userId: comment.authorId,
+              actorId: viewerId,
+              type: NOTIFICATION_TYPE.COMMENT_LIKE,
+            },
+            select: { id: true },
+            orderBy: { time: "desc" },
+          });
+
+          if (latestLikeNotification?.id) {
+            await (prisma as any).notification.delete({
+              where: { id: latestLikeNotification.id },
+            });
+          }
+        }
       } else {
         await (prisma as any).commentLike.create({
           data: {
@@ -1092,6 +1129,7 @@ export const PostResolver = {
 
           await createNotification({
             userId: comment.authorId,
+            actorId: viewerId,
             type: NOTIFICATION_TYPE.COMMENT_LIKE,
             title: "Comment liked",
             description: `${actorLabel} liked your comment.`,

@@ -19,6 +19,15 @@ type ArchiveSavedPost = {
   postId: string;
 };
 
+type NotificationListItem = {
+  id: string | number;
+  unread?: boolean;
+  time?: string;
+};
+
+const NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY =
+  "mc.notifications.lastOpenedAt";
+
 export default function Home() {
   const router = useRouter();
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
@@ -50,6 +59,54 @@ export default function Home() {
   const [archiveBusyPostIds, setArchiveBusyPostIds] = useState<
     Record<string, boolean>
   >({});
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [hasUnopenedNotifications, setHasUnopenedNotifications] =
+    useState(false);
+
+  const refreshNotificationIndicators = async () => {
+    try {
+      const response = await fetch(
+        "/api/notifications?limit=100&unreadOnly=true",
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        return;
+      }
+
+      const notifications = Array.isArray(body?.notifications)
+        ? (body.notifications as NotificationListItem[])
+        : [];
+
+      setUnreadNotificationCount(notifications.length);
+
+      if (typeof window === "undefined") {
+        setHasUnopenedNotifications(notifications.length > 0);
+        return;
+      }
+
+      const lastOpenedAt = Number.parseInt(
+        window.localStorage.getItem(NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY) ||
+          "0",
+        10,
+      );
+
+      const newestUnreadAt = notifications.reduce((latest, notification) => {
+        const createdAt = Date.parse(notification.time || "");
+        return Number.isFinite(createdAt)
+          ? Math.max(latest, createdAt)
+          : latest;
+      }, 0);
+
+      setHasUnopenedNotifications(
+        notifications.length > 0 && newestUnreadAt > lastOpenedAt,
+      );
+    } catch {}
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -115,6 +172,28 @@ export default function Home() {
 
     void loadArchiveState();
     return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    void refreshNotificationIndicators();
+
+    const onWindowFocus = () => {
+      void refreshNotificationIndicators();
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshNotificationIndicators();
+      }
+    };
+
+    window.addEventListener("focus", onWindowFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", onWindowFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   const refreshArchiveState = async () => {
@@ -398,20 +477,39 @@ export default function Home() {
               ? "opacity-100 translate-x-0 scale-100 pointer-events-auto"
               : "opacity-0 translate-x-3 scale-95 pointer-events-none"
           }`}
-          onClick={() => router.push("/notifications")}
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.localStorage.setItem(
+                NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY,
+                String(Date.now()),
+              );
+            }
+            setHasUnopenedNotifications(false);
+            router.push("/notifications");
+          }}
         >
-          <Notification size={24} variant="Bold" />
+          <div className="relative">
+            <Notification size={24} variant="Bold" />
+            {unreadNotificationCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-red-500 rounded-full transition-opacity duration-200 flex items-center justify-center text-white text-xs">
+                {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+              </span>
+            )}
+          </div>
           <p>Notification</p>
         </button>
         <button
           title="more actions"
           type="button"
-          className={`w-12 h-12 bg-white drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out ${
+          className={`w-12 h-12 relative bg-white drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out ${
             moreOptionsOpen ? "rotate-180 scale-105" : "rotate-0 scale-100"
           }`}
           onClick={() => setMoreOptionsOpen((prev) => !prev)}
         >
           <More2 size={30} />
+          <span
+            className={`absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full transition-opacity duration-200 ${hasUnopenedNotifications && !moreOptionsOpen ? "opacity-100" : "opacity-0"}`}
+          />
         </button>
       </div>
       <Header />
