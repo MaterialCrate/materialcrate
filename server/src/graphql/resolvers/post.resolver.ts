@@ -921,7 +921,9 @@ export const PostResolver = {
         });
 
         if (post.authorId && post.authorId !== viewerId) {
-          const latestLikeNotification = await (prisma as any).notification.findFirst({
+          const latestLikeNotification = await (
+            prisma as any
+          ).notification.findFirst({
             where: {
               userId: post.authorId,
               actorId: viewerId,
@@ -1095,7 +1097,9 @@ export const PostResolver = {
         });
 
         if (comment.authorId && comment.authorId !== viewerId) {
-          const latestLikeNotification = await (prisma as any).notification.findFirst({
+          const latestLikeNotification = await (
+            prisma as any
+          ).notification.findFirst({
             where: {
               userId: comment.authorId,
               actorId: viewerId,
