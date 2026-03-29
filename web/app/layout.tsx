@@ -5,6 +5,7 @@ import AuthSplashGate from "./components/AuthSplashGate";
 import ConditionalNavbar from "./components/ConditionalNavbar";
 import { SystemPopupProvider } from "./components/SystemPopup";
 import BrowserNotificationBridge from "./components/BrowserNotificationBridge";
+import ScrollRestoration from "./components/ScrollRestoration";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -51,6 +52,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans relative">
         <SystemPopupProvider>
+          <ScrollRestoration />
           <BrowserNotificationBridge />
           <AuthSplashGate>
             {children}

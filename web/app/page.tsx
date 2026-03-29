@@ -520,7 +520,7 @@ export default function Home() {
           <p className="px-6 py-8 text-sm text-[#696969]">No posts yet.</p>
         ) : (
           posts.map((post, index) => (
-            <div key={post.id}>
+            <div key={post.id} data-scroll-item>
               <Post
                 post={post}
                 isArchived={Boolean(archiveSavedPostIdsByPostId[post.id])}
