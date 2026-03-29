@@ -16,10 +16,15 @@ type ScrollPosition = {
 type ScrollPositionsMap = Record<string, ScrollPosition>;
 
 function getTrackedItems() {
-  return Array.from(document.querySelectorAll<HTMLElement>("[data-scroll-item]"));
+  return Array.from(
+    document.querySelectorAll<HTMLElement>("[data-scroll-item]"),
+  );
 }
 
-function findVisibleItemAnchor(): { itemIndex: number | null; itemOffset: number } {
+function findVisibleItemAnchor(): {
+  itemIndex: number | null;
+  itemOffset: number;
+} {
   const trackedItems = getTrackedItems();
   if (trackedItems.length === 0) {
     return { itemIndex: null, itemOffset: 0 };
@@ -139,7 +144,10 @@ export default function ScrollRestoration() {
       }
 
       if (url.origin !== window.location.origin) return;
-      if (url.pathname === window.location.pathname && url.search === window.location.search) {
+      if (
+        url.pathname === window.location.pathname &&
+        url.search === window.location.search
+      ) {
         return;
       }
 
@@ -187,7 +195,8 @@ export default function ScrollRestoration() {
 
         if (hasValidAnchor) {
           const anchorItem = trackedItems[anchorIndex];
-          const anchorTop = window.scrollY + anchorItem.getBoundingClientRect().top;
+          const anchorTop =
+            window.scrollY + anchorItem.getBoundingClientRect().top;
           const anchoredY = Math.max(0, anchorTop + saved.itemOffset);
           window.scrollTo(saved.x, anchoredY);
         }
@@ -204,7 +213,10 @@ export default function ScrollRestoration() {
           saved.itemIndex !== null && trackedItems.length <= saved.itemIndex;
         const notAtTarget = Math.abs(window.scrollY - nextY) > 2;
 
-        if ((stillWaitingForAnchor || notAtTarget) && attempts < MAX_RESTORE_ATTEMPTS) {
+        if (
+          (stillWaitingForAnchor || notAtTarget) &&
+          attempts < MAX_RESTORE_ATTEMPTS
+        ) {
           window.requestAnimationFrame(restore);
         }
       };
