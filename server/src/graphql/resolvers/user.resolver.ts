@@ -404,6 +404,64 @@ export const UserResolver = {
 
       return !existing;
     },
+
+    pendingFollowRequestId: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) return null;
+
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) return null;
+
+      const targetUser = await (prisma as any).user.findFirst({
+        where: {
+          username: { equals: normalizedUsername, mode: "insensitive" },
+          deleted: false,
+          disabled: false,
+        },
+        select: { id: true },
+      });
+      if (!targetUser) return null;
+
+      const request = await (prisma as any).followRequest.findFirst({
+        where: {
+          requesterId: viewerId,
+          targetId: targetUser.id,
+          status: "PENDING",
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true },
+      });
+
+      return request?.id ?? null;
+    },
+
+    pendingFollowRequestForActor: async (
+      _: unknown,
+      { actorId }: { actorId: string },
+      ctx: any,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) return null;
+
+      const normalizedActorId = String(actorId || "").trim();
+      if (!normalizedActorId) return null;
+
+      const request = await (prisma as any).followRequest.findFirst({
+        where: {
+          requesterId: normalizedActorId,
+          targetId: viewerId,
+          status: "PENDING",
+          expiresAt: { gt: new Date() },
+        },
+        select: { id: true },
+      });
+
+      return request?.id ?? null;
+    },
   },
 
   Mutation: {
@@ -1044,7 +1102,7 @@ export const UserResolver = {
           deleted: false,
           disabled: false,
         },
-        select: { id: true },
+        select: { id: true, visibilityPublicProfile: true },
       });
 
       if (!targetUser) {
@@ -1055,6 +1113,63 @@ export const UserResolver = {
         throw new Error("You cannot follow yourself");
       }
 
+      const actor = await (prisma as any).user.findUnique({
+        where: { id: ctx.user.sub },
+        select: { displayName: true, username: true, profilePicture: true },
+      });
+      const actorLabel =
+        actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+
+      // Private profile: create a follow request instead of a direct follow
+      if (!targetUser.visibilityPublicProfile) {
+        // Check if already following
+        const existingFollow = await (prisma as any).follow.findUnique({
+          where: {
+            followerId_followingId: {
+              followerId: ctx.user.sub,
+              followingId: targetUser.id,
+            },
+          },
+        });
+        if (existingFollow) {
+          return { followed: true, pending: false };
+        }
+
+        // Upsert follow request (reset if previously declined/expired)
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        await (prisma as any).followRequest.upsert({
+          where: {
+            requesterId_targetId: {
+              requesterId: ctx.user.sub,
+              targetId: targetUser.id,
+            },
+          },
+          update: {
+            status: "PENDING",
+            expiresAt,
+          },
+          create: {
+            requesterId: ctx.user.sub,
+            targetId: targetUser.id,
+            status: "PENDING",
+            expiresAt,
+          },
+        });
+
+        await createNotification({
+          userId: targetUser.id,
+          actorId: ctx.user.sub,
+          type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
+          title: "Follow request",
+          description: `${actorLabel} wants to follow you.`,
+          icon: NOTIFICATION_ICON.FOLLOW_REQUEST,
+          profilePicture: actor?.profilePicture,
+        });
+
+        return { followed: false, pending: true };
+      }
+
+      // Public profile: direct follow
       await (prisma as any).follow.upsert({
         where: {
           followerId_followingId: {
@@ -1069,14 +1184,7 @@ export const UserResolver = {
         },
       });
 
-      const actor = await (prisma as any).user.findUnique({
-        where: { id: ctx.user.sub },
-        select: { displayName: true, username: true, profilePicture: true },
-      });
-
       if (targetUser.id !== ctx.user.sub) {
-        const actorLabel =
-          actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
         await createNotification({
           userId: targetUser.id,
           actorId: ctx.user.sub,
@@ -1088,7 +1196,7 @@ export const UserResolver = {
         });
       }
 
-      return true;
+      return { followed: true, pending: false };
     },
     unfollowUser: async (
       _: unknown,
@@ -1127,11 +1235,197 @@ export const UserResolver = {
         },
       });
 
+      // Also remove any pending follow request
+      await (prisma as any).followRequest.deleteMany({
+        where: {
+          requesterId: ctx.user.sub,
+          targetId: targetUser.id,
+        },
+      });
+
       await (prisma as any).notification.deleteMany({
         where: {
           userId: targetUser.id,
           actorId: ctx.user.sub,
-          type: NOTIFICATION_TYPE.FOLLOW,
+          type: {
+            in: [NOTIFICATION_TYPE.FOLLOW, NOTIFICATION_TYPE.FOLLOW_REQUEST],
+          },
+        },
+      });
+
+      return true;
+    },
+    acceptFollowRequest: async (
+      _: unknown,
+      { requestId }: { requestId: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedId = String(requestId || "").trim();
+      if (!normalizedId) {
+        throw new Error("requestId is required");
+      }
+
+      const request = await (prisma as any).followRequest.findUnique({
+        where: { id: normalizedId },
+        select: {
+          id: true,
+          requesterId: true,
+          targetId: true,
+          status: true,
+          expiresAt: true,
+        },
+      });
+
+      if (!request || request.targetId !== ctx.user.sub) {
+        throw new Error("Follow request not found");
+      }
+
+      if (request.status !== "PENDING") {
+        throw new Error("Follow request is no longer pending");
+      }
+
+      if (new Date(request.expiresAt) < new Date()) {
+        await (prisma as any).followRequest.update({
+          where: { id: normalizedId },
+          data: { status: "EXPIRED" },
+        });
+        throw new Error("Follow request has expired");
+      }
+
+      // Accept: create the follow, mark request accepted
+      await (prisma as any).follow.upsert({
+        where: {
+          followerId_followingId: {
+            followerId: request.requesterId,
+            followingId: request.targetId,
+          },
+        },
+        update: {},
+        create: {
+          followerId: request.requesterId,
+          followingId: request.targetId,
+        },
+      });
+
+      await (prisma as any).followRequest.update({
+        where: { id: normalizedId },
+        data: { status: "ACCEPTED" },
+      });
+
+      // Remove the follow request notification
+      await (prisma as any).notification.deleteMany({
+        where: {
+          userId: ctx.user.sub,
+          actorId: request.requesterId,
+          type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
+        },
+      });
+
+      // Notify the requester that their request was accepted
+      const actor = await (prisma as any).user.findUnique({
+        where: { id: ctx.user.sub },
+        select: { displayName: true, username: true, profilePicture: true },
+      });
+      const actorLabel =
+        actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+
+      await createNotification({
+        userId: request.requesterId,
+        actorId: ctx.user.sub,
+        type: NOTIFICATION_TYPE.FOLLOW,
+        title: "Follow request accepted",
+        description: `${actorLabel} accepted your follow request.`,
+        icon: NOTIFICATION_ICON.FOLLOW,
+        profilePicture: actor?.profilePicture,
+      });
+
+      return true;
+    },
+    declineFollowRequest: async (
+      _: unknown,
+      { requestId }: { requestId: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedId = String(requestId || "").trim();
+      if (!normalizedId) {
+        throw new Error("requestId is required");
+      }
+
+      const request = await (prisma as any).followRequest.findUnique({
+        where: { id: normalizedId },
+        select: { id: true, requesterId: true, targetId: true },
+      });
+
+      if (!request || request.targetId !== ctx.user.sub) {
+        throw new Error("Follow request not found");
+      }
+
+      await (prisma as any).followRequest.update({
+        where: { id: normalizedId },
+        data: { status: "DECLINED" },
+      });
+
+      // Remove the follow request notification
+      await (prisma as any).notification.deleteMany({
+        where: {
+          userId: ctx.user.sub,
+          actorId: request.requesterId,
+          type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
+        },
+      });
+
+      return true;
+    },
+    cancelFollowRequest: async (
+      _: unknown,
+      { username }: { username: string },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedUsername = String(username || "").trim();
+      if (!normalizedUsername) {
+        throw new Error("Username is required");
+      }
+
+      const targetUser = await (prisma as any).user.findFirst({
+        where: {
+          username: {
+            equals: normalizedUsername,
+            mode: "insensitive",
+          },
+          deleted: false,
+          disabled: false,
+        },
+        select: { id: true },
+      });
+
+      if (!targetUser) {
+        throw new Error("User not found");
+      }
+
+      await (prisma as any).followRequest.deleteMany({
+        where: {
+          requesterId: ctx.user.sub,
+          targetId: targetUser.id,
+        },
+      });
+
+      await (prisma as any).notification.deleteMany({
+        where: {
+          userId: targetUser.id,
+          actorId: ctx.user.sub,
+          type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
         },
       });
 

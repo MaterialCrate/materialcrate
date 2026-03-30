@@ -15,6 +15,7 @@ const USER_BY_USERNAME_QUERY = `
       displayName
       profilePicture
       profileBackground
+      visibilityPublicProfile
       followersCount
       followingCount
       subscriptionPlan
@@ -28,6 +29,7 @@ const USER_BY_USERNAME_QUERY = `
         username
       }
     }
+    pendingFollowRequestId(username: $username)
   }
 `;
 
@@ -42,7 +44,10 @@ export async function GET(_: Request, context: RouteContext) {
   const normalizedUsername = decodeURIComponent(username || "").trim();
 
   if (!normalizedUsername) {
-    return NextResponse.json({ error: "Username is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Username is required" },
+      { status: 400 },
+    );
   }
 
   const cookieStore = await cookies();
@@ -94,11 +99,16 @@ export async function GET(_: Request, context: RouteContext) {
       )
     : false;
 
+  const pendingFollowRequestId =
+    graphqlBody?.data?.pendingFollowRequestId ?? null;
+
   return NextResponse.json({
     user: {
       ...user,
       isFollowedByCurrentUser,
       isFollowingCurrentUser,
+      hasPendingFollowRequest: Boolean(pendingFollowRequestId),
+      pendingFollowRequestId,
     },
   });
 }

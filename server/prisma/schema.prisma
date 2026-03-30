@@ -46,6 +46,8 @@ model User {
   archive       Archive?
   followerRelations Follow[] @relation("UserFollowers")
   followingRelations Follow[] @relation("UserFollowing")
+  sentFollowRequests FollowRequest[] @relation("FollowRequestRequester")
+  receivedFollowRequests FollowRequest[] @relation("FollowRequestTarget")
   mutedUserRelations Mute[] @relation("UserMutedUsers")
   mutedByRelations Mute[] @relation("UserMutedBy")
   notifications Notification[]
@@ -277,6 +279,23 @@ model Follow {
   @@id([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model FollowRequest {
+  id          String   @id @default(cuid())
+  requesterId String
+  targetId    String
+  status      String   @default("PENDING")
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  requester User @relation("FollowRequestRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target    User @relation("FollowRequestTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, targetId])
+  @@index([requesterId])
+  @@index([targetId, status])
+  @@index([expiresAt])
 }
 
 model Mute {

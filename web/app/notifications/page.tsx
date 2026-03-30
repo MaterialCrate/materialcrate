@@ -20,6 +20,7 @@ import Alert from "../components/Alert";
 type NotificationItem = {
   id: string | number;
   type?: string;
+  followRequestId?: string | null;
   title: string;
   description: string;
   icon?: string;
@@ -35,6 +36,8 @@ type NotificationItem = {
 type ApiNotificationItem = {
   id: string | number;
   type?: string;
+  actorId?: string | null;
+  followRequestId?: string | null;
   title: string;
   description: string;
   icon?: string;
@@ -198,6 +201,7 @@ export default function Page() {
       current.push({
         id: notification.id,
         type: notification.type,
+        followRequestId: notification.followRequestId ?? null,
         title: notification.title,
         description: notification.description,
         profilePicture: notification.profilePicture ?? null,
@@ -292,6 +296,33 @@ export default function Page() {
     }
   };
 
+  const handleFollowRequestAction = async (
+    followRequestId: string,
+    notificationId: string | number,
+    action: "accept" | "decline",
+  ) => {
+    try {
+      setError(null);
+      const response = await fetch(
+        `/api/follow-requests/${encodeURIComponent(followRequestId)}`,
+        { method: action === "accept" ? "POST" : "DELETE" },
+      );
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(body?.error || `Failed to ${action} follow request`);
+        return;
+      }
+
+      // Remove the notification from the list
+      setNotifications((previous) =>
+        previous.filter((item) => String(item.id) !== String(notificationId)),
+      );
+    } catch {
+      setError(`Failed to ${action} follow request`);
+    }
+  };
+
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-4 pb-28 pt-20">
       <Header title="Notifications" isLoading={isLoading} />
@@ -368,6 +399,40 @@ export default function Page() {
                       <p className="text-sm leading-6 text-[#666666]">
                         {item.description}
                       </p>
+
+                      {item.type === "FOLLOW_REQUEST" &&
+                        item.followRequestId && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleFollowRequestAction(
+                                  item.followRequestId!,
+                                  item.id,
+                                  "accept",
+                                );
+                              }}
+                              className="rounded-full bg-[#131212] px-4 py-1.5 text-xs font-medium text-white"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleFollowRequestAction(
+                                  item.followRequestId!,
+                                  item.id,
+                                  "decline",
+                                );
+                              }}
+                              className="rounded-full border border-[#D4D4D4] bg-white px-4 py-1.5 text-xs font-medium text-[#262626]"
+                            >
+                              Decline
+                            </button>
+                          </div>
+                        )}
                     </div>
                   </div>
                 </article>

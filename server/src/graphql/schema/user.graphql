@@ -41,6 +41,11 @@ type AuthPayload {
   restoreDeadline: String
 }
 
+type FollowResult {
+  followed: Boolean!
+  pending: Boolean!
+}
+
 type Query {
   me: User
   user(id: ID!): User
@@ -48,6 +53,8 @@ type Query {
   searchUsers(query: String!, limit: Int = 12): [User!]!
   usernameAvailable(username: String!): Boolean!
   emailAvailable(email: String!): Boolean!
+  pendingFollowRequestId(username: String!): ID
+  pendingFollowRequestForActor(actorId: ID!): ID
 }
 
 type Mutation {
@@ -82,8 +89,11 @@ type Mutation {
     visibilityPublicComments: Boolean!
     visibilityOnlineStatus: Boolean!
   ): User!
-  followUser(username: String!): Boolean!
+  followUser(username: String!): FollowResult!
   unfollowUser(username: String!): Boolean!
+  acceptFollowRequest(requestId: ID!): Boolean!
+  declineFollowRequest(requestId: ID!): Boolean!
+  cancelFollowRequest(username: String!): Boolean!
   muteUser(username: String!): Boolean!
   unmuteUser(username: String!): Boolean!
   blockUser(username: String!): Boolean!

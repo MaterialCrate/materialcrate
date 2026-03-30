@@ -1,6 +1,7 @@
 type Notification {
   id: ID!
   type: String!
+  actorId: ID
   title: String!
   description: String!
   icon: String!

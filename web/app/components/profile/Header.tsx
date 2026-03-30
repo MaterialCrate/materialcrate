@@ -21,7 +21,7 @@ type ProfileHeaderProps = {
   subscriptionPlan?: string | null;
   isOwner?: boolean;
   postsLabel?: string;
-  followLabel?: "Follow" | "Following" | "Follow back";
+  followLabel?: "Follow" | "Following" | "Follow back" | "Requested";
   isFollowLoading?: boolean;
   onFollowClick?: () => void;
   onFollowListOpen?: (tab: "followers" | "following") => void;
@@ -50,7 +50,9 @@ export default function Header({
   const profileBackgroundPresentation =
     getProfileBackgroundPresentation(profileBackground);
   const hasCustomBackground = !isDefaultProfileBackground(profileBackground);
-  const primaryTextClass = hasCustomBackground ? "text-white" : "text-[#1F1F1F]";
+  const primaryTextClass = hasCustomBackground
+    ? "text-white"
+    : "text-[#1F1F1F]";
   const secondaryTextClass = hasCustomBackground
     ? "text-white/80"
     : "text-[#333333]";
@@ -58,7 +60,9 @@ export default function Header({
   const iconButtonClass = hasCustomBackground
     ? "flex h-10 w-10 items-center justify-center rounded-full border border-white/18 bg-black/28 backdrop-blur-md"
     : "flex h-10 w-10 items-center justify-center rounded-full border border-black/8 bg-white/82 backdrop-blur";
-  const statLabelClass = hasCustomBackground ? "text-white/78" : "text-[#343434]";
+  const statLabelClass = hasCustomBackground
+    ? "text-white/78"
+    : "text-[#343434]";
   const followMutedClass = hasCustomBackground
     ? "border-white/18 bg-white/88 text-[#202020] backdrop-blur"
     : "border-[#979797] bg-white text-[#202020]";
@@ -152,7 +156,9 @@ export default function Header({
             onClick={() => onFollowListOpen?.("followers")}
           >
             <p className={`text-xs ${statLabelClass}`}>Followers</p>
-            <p className={`text-xl font-semibold ${primaryTextClass}`}>{followers}</p>
+            <p className={`text-xl font-semibold ${primaryTextClass}`}>
+              {followers}
+            </p>
           </button>
           <button
             type="button"
@@ -160,7 +166,9 @@ export default function Header({
             onClick={() => onFollowListOpen?.("following")}
           >
             <p className={`text-xs ${statLabelClass}`}>Following</p>
-            <p className={`text-xl font-semibold ${primaryTextClass}`}>{following}</p>
+            <p className={`text-xl font-semibold ${primaryTextClass}`}>
+              {following}
+            </p>
           </button>
         </div>
         {isOwner ? (
@@ -198,7 +206,7 @@ export default function Header({
             onClick={onFollowClick}
             disabled={isFollowLoading}
             className={`px-5 py-2 rounded-full border text-sm font-medium ${
-              followLabel === "Following"
+              followLabel === "Following" || followLabel === "Requested"
                 ? followMutedClass
                 : followPrimaryClass
             } disabled:opacity-60`}

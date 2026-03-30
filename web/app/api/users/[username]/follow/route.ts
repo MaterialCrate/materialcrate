@@ -6,13 +6,22 @@ const GRAPHQL_ENDPOINT =
 
 const FOLLOW_USER_MUTATION = `
   mutation FollowUser($username: String!) {
-    followUser(username: $username)
+    followUser(username: $username) {
+      followed
+      pending
+    }
   }
 `;
 
 const UNFOLLOW_USER_MUTATION = `
   mutation UnfollowUser($username: String!) {
     unfollowUser(username: $username)
+  }
+`;
+
+const CANCEL_FOLLOW_REQUEST_MUTATION = `
+  mutation CancelFollowRequest($username: String!) {
+    cancelFollowRequest(username: $username)
   }
 `;
 
@@ -47,13 +56,17 @@ async function mutateFollow(username: string, query: string) {
   if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
     return NextResponse.json(
       {
-        error: graphqlBody?.errors?.[0]?.message || "Failed to update follow state",
+        error:
+          graphqlBody?.errors?.[0]?.message || "Failed to update follow state",
       },
       { status: 400 },
     );
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({
+    ok: true,
+    ...(graphqlBody?.data?.followUser ?? {}),
+  });
 }
 
 export async function POST(_: Request, context: RouteContext) {
@@ -61,18 +74,30 @@ export async function POST(_: Request, context: RouteContext) {
   const normalizedUsername = decodeURIComponent(username || "").trim();
 
   if (!normalizedUsername) {
-    return NextResponse.json({ error: "Username is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Username is required" },
+      { status: 400 },
+    );
   }
 
   return mutateFollow(normalizedUsername, FOLLOW_USER_MUTATION);
 }
 
-export async function DELETE(_: Request, context: RouteContext) {
+export async function DELETE(request: Request, context: RouteContext) {
   const { username } = await context.params;
   const normalizedUsername = decodeURIComponent(username || "").trim();
 
   if (!normalizedUsername) {
-    return NextResponse.json({ error: "Username is required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Username is required" },
+      { status: 400 },
+    );
+  }
+
+  // Check if the request is to cancel a follow request
+  const url = new URL(request.url);
+  if (url.searchParams.get("cancelRequest") === "true") {
+    return mutateFollow(normalizedUsername, CANCEL_FOLLOW_REQUEST_MUTATION);
   }
 
   return mutateFollow(normalizedUsername, UNFOLLOW_USER_MUTATION);

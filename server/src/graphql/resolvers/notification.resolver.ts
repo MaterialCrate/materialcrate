@@ -71,6 +71,7 @@ const resolveNotificationProfilePicture = async (
 const toNotificationGraphQL = async (notification: any) => ({
   id: notification.id,
   type: notification.type ?? NOTIFICATION_TYPE.SYSTEM,
+  actorId: notification.actorId ?? null,
   title: notification.title,
   description: notification.description,
   icon: notification.icon,

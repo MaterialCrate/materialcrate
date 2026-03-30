@@ -27,8 +27,10 @@ type ProfileUser = {
   subscriptionPlan?: string | null;
   institution?: string | null;
   program?: string | null;
+  visibilityPublicProfile?: boolean;
   isFollowedByCurrentUser?: boolean;
   isFollowingCurrentUser?: boolean;
+  hasPendingFollowRequest?: boolean;
 };
 
 type ProfilePageProps = {
@@ -113,7 +115,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
           }
 
           if (!isCancelled) {
-            setProfile(user);
+            setProfile(user as ProfileUser);
             setIsLoadingProfile(false);
           }
           return;
@@ -203,8 +205,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   }, [profile?.username]);
 
   const isOwner =
-    normalizeUsername(user?.username) !== "" &&
-    normalizeUsername(user?.username) === normalizeUsername(profile?.username);
+    normalizeUsername(user?.username as string) !== "" &&
+    normalizeUsername(user?.username as string) ===
+      normalizeUsername(profile?.username as string);
   const displayName =
     profile?.displayName?.trim() || profile?.username?.trim() || "Unknown User";
   const profileUsername = profile?.username
@@ -214,12 +217,18 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const followerCount = profile?.followersCount ?? 0;
   const followingCount = profile?.followingCount ?? 0;
   const postsHeading = isOwner ? "My Posts" : "Posts";
-  const followLabel: "Follow" | "Following" | "Follow back" =
+  const isPrivateProfile = profile?.visibilityPublicProfile === false;
+  const isFollower = Boolean(profile?.isFollowedByCurrentUser);
+  const hasPendingRequest = Boolean(profile?.hasPendingFollowRequest);
+  const canViewContent = isOwner || !isPrivateProfile || isFollower;
+  const followLabel: "Follow" | "Following" | "Follow back" | "Requested" =
     profile?.isFollowedByCurrentUser
       ? "Following"
-      : profile?.isFollowingCurrentUser
-        ? "Follow back"
-        : "Follow";
+      : hasPendingRequest
+        ? "Requested"
+        : profile?.isFollowingCurrentUser
+          ? "Follow back"
+          : "Follow";
 
   const handleFollowToggle = async () => {
     if (!profile?.username) {
@@ -236,20 +245,56 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     }
 
     const shouldUnfollow = Boolean(profile.isFollowedByCurrentUser);
+    const shouldCancelRequest =
+      Boolean(profile.hasPendingFollowRequest) && !shouldUnfollow;
     const previousFollowed = Boolean(profile.isFollowedByCurrentUser);
+    const previousPending = Boolean(profile.hasPendingFollowRequest);
     const previousFollowerCount = profile.followersCount ?? 0;
 
     setIsUpdatingFollow(true);
     setError("");
+
+    if (shouldCancelRequest) {
+      // Cancel pending follow request
+      setProfile((current) =>
+        current ? { ...current, hasPendingFollowRequest: false } : current,
+      );
+
+      try {
+        const response = await fetch(
+          `/api/users/${encodeURIComponent(profile.username)}/follow?cancelRequest=true`,
+          { method: "DELETE" },
+        );
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(body?.error || "Failed to cancel follow request");
+        }
+      } catch (err) {
+        setProfile((current) =>
+          current
+            ? { ...current, hasPendingFollowRequest: previousPending }
+            : current,
+        );
+        setError("Failed to cancel follow request");
+        console.error("Error cancelling follow request:", err);
+      } finally {
+        setIsUpdatingFollow(false);
+      }
+      return;
+    }
+
+    // Normal follow/unfollow
+    // For private profiles, optimistically show "Requested" instead of "Following"
+    const isTargetPrivate = isPrivateProfile && !shouldUnfollow;
     setProfile((current) =>
       current
         ? {
             ...current,
-            isFollowedByCurrentUser: !shouldUnfollow,
-            followersCount: Math.max(
-              0,
-              previousFollowerCount + (shouldUnfollow ? -1 : 1),
-            ),
+            isFollowedByCurrentUser: isTargetPrivate ? false : !shouldUnfollow,
+            hasPendingFollowRequest: isTargetPrivate ? true : previousPending,
+            followersCount: isTargetPrivate
+              ? previousFollowerCount
+              : Math.max(0, previousFollowerCount + (shouldUnfollow ? -1 : 1)),
           }
         : current,
     );
@@ -266,12 +311,27 @@ export default function ProfilePage({ username }: ProfilePageProps) {
       if (!response.ok) {
         throw new Error(body?.error || "Failed to update follow state");
       }
+
+      // If the response indicates it was a pending request (private profile)
+      if (body?.pending) {
+        setProfile((current) =>
+          current
+            ? {
+                ...current,
+                isFollowedByCurrentUser: false,
+                hasPendingFollowRequest: true,
+                followersCount: previousFollowerCount,
+              }
+            : current,
+        );
+      }
     } catch (err) {
       setProfile((current) =>
         current
           ? {
               ...current,
               isFollowedByCurrentUser: previousFollowed,
+              hasPendingFollowRequest: previousPending,
               followersCount: previousFollowerCount,
             }
           : current,
@@ -465,6 +525,32 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         <p className="px-6 py-8 text-sm text-[#696969]">
           {error || "Profile not found."}
         </p>
+      ) : !canViewContent ? (
+        <div className="px-6 py-12 text-center">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#F0F0F0]">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#999"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-6 w-6"
+            >
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-[#262626]">
+            This account is private
+          </p>
+          <p className="mt-1 text-sm text-[#696969]">
+            {hasPendingRequest
+              ? "Your follow request is pending."
+              : "Follow this account to see their posts and achievements."}
+          </p>
+        </div>
       ) : (
         <>
           {selectedTab === "achievements" ? (
