@@ -64,6 +64,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const normalizedVisibilityPublicPosts = body.visibilityPublicProfile
+    ? body.visibilityPublicPosts
+    : false;
+
   const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
     method: "POST",
     headers: {
@@ -74,7 +78,7 @@ export async function POST(req: Request) {
       query: UPDATE_VISIBILITY_SETTINGS_MUTATION,
       variables: {
         visibilityPublicProfile: body.visibilityPublicProfile,
-        visibilityPublicPosts: body.visibilityPublicPosts,
+        visibilityPublicPosts: normalizedVisibilityPublicPosts,
         visibilityPublicComments: body.visibilityPublicComments,
         visibilityOnlineStatus: body.visibilityOnlineStatus,
       },

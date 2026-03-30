@@ -21,6 +21,19 @@ type VisibilityOption = {
   description: string;
 };
 
+const normalizeVisibilitySettings = (
+  value: VisibilitySettings,
+): VisibilitySettings => {
+  if (!value.visibilityPublicProfile && value.visibilityPublicPosts) {
+    return {
+      ...value,
+      visibilityPublicPosts: false,
+    };
+  }
+
+  return value;
+};
+
 const DEFAULT_VISIBILITY_SETTINGS: VisibilitySettings = {
   visibilityPublicProfile: true,
   visibilityPublicPosts: true,
@@ -91,7 +104,7 @@ export default function Page() {
 
         if (!mounted) return;
 
-        setVisibility({
+        const loadedVisibility = normalizeVisibilitySettings({
           visibilityPublicProfile:
             typeof body.user.visibilityPublicProfile === "boolean"
               ? body.user.visibilityPublicProfile
@@ -109,6 +122,8 @@ export default function Page() {
               ? body.user.visibilityOnlineStatus
               : DEFAULT_VISIBILITY_SETTINGS.visibilityOnlineStatus,
         });
+
+        setVisibility(loadedVisibility);
       } catch (caughtError: unknown) {
         if (!mounted) return;
         setError("Error loading visibility settings");
@@ -135,12 +150,18 @@ export default function Page() {
     nextState: boolean,
   ) => {
     if (isSavingKey) return;
+    if (
+      key === "visibilityPublicPosts" &&
+      !visibility.visibilityPublicProfile
+    ) {
+      return;
+    }
 
     const previousVisibility = visibility;
-    const nextVisibility = {
+    const nextVisibility = normalizeVisibilitySettings({
       ...previousVisibility,
       [key]: nextState,
-    };
+    });
 
     setVisibility(nextVisibility);
     setIsSavingKey(key);
@@ -195,38 +216,55 @@ export default function Page() {
         </p>
       </div>
       <div className="space-y-3">
-        {visibilityOptions.map((option) => (
-          <div
-            key={option.label}
-            className="flex items-start justify-between gap-4 rounded-[20px] border border-black/6 bg-white px-4 py-3"
-          >
-            <div className="flex items-start gap-3">
-              <div className="rounded-[14px] bg-[#F6EFE5] p-2.5">
-                {visibility[option.key] ? (
-                  <Eye size={18} color="#A95A13" variant="Bulk" />
-                ) : (
-                  <EyeSlash size={18} color="#A95A13" variant="Bulk" />
-                )}
+        {visibilityOptions.map((option) => {
+          const isPublicPostsLocked =
+            option.key === "visibilityPublicPosts" &&
+            !visibility.visibilityPublicProfile;
+
+          return (
+            <div
+              key={option.label}
+              className={`flex items-start justify-between gap-4 rounded-[20px] border border-black/6 px-4 py-3 ${
+                isPublicPostsLocked ? "bg-[#F3F3F3]" : "bg-white"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="rounded-[14px] bg-[#F6EFE5] p-2.5">
+                  {visibility[option.key] ? (
+                    <Eye size={18} color="#A95A13" variant="Bulk" />
+                  ) : (
+                    <EyeSlash size={18} color="#A95A13" variant="Bulk" />
+                  )}
+                </div>
+                <div>
+                  <p
+                    className={`text-sm font-medium ${
+                      isPublicPostsLocked ? "text-[#888888]" : "text-[#3D3D3D]"
+                    }`}
+                  >
+                    {option.label}
+                  </p>
+                  <p
+                    className={`mt-0.5 text-xs ${
+                      isPublicPostsLocked ? "text-[#9B9B9B]" : "text-[#6B6B6B]"
+                    }`}
+                  >
+                    {option.description}
+                  </p>
+                </div>
               </div>
               <div>
-                <p className="text-sm font-medium text-[#3D3D3D]">
-                  {option.label}
-                </p>
-                <p className="mt-0.5 text-xs text-[#6B6B6B]">
-                  {option.description}
-                </p>
+                <ToggleSwitch
+                  state={visibility[option.key]}
+                  disabled={isPublicPostsLocked || isSavingKey !== null}
+                  onChange={(newState) =>
+                    void handleToggleChange(option.key, newState)
+                  }
+                />
               </div>
             </div>
-            <div>
-              <ToggleSwitch
-                state={visibility[option.key]}
-                onChange={(newState) =>
-                  void handleToggleChange(option.key, newState)
-                }
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
