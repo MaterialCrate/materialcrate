@@ -123,6 +123,29 @@ const getPrivatePostAuthorIds = async (viewerId?: string) => {
   return privateAuthors.map((u: any) => u.id);
 };
 
+const getPrivateCommentAuthorIds = async (viewerId?: string) => {
+  const privateCommentAuthors = await (prisma as any).user.findMany({
+    where: {
+      visibilityPublicComments: false,
+      deleted: false,
+      disabled: false,
+      ...(viewerId
+        ? {
+            id: { not: viewerId },
+            NOT: {
+              followerRelations: {
+                some: { followerId: viewerId },
+              },
+            },
+          }
+        : {}),
+    },
+    select: { id: true },
+  });
+
+  return privateCommentAuthors.map((u: any) => u.id);
+};
+
 const buildVisiblePostWhere = (
   uninterestedPostIds?: string[],
   inaccessibleAuthorIds?: string[],
@@ -484,6 +507,7 @@ export const PostResolver = {
       const viewerId = ctx.user?.sub;
       const safeLimit = Math.max(1, Math.min(limit, 100));
       const safeOffset = Math.max(0, offset);
+      const hiddenCommentAuthorIds = await getPrivateCommentAuthorIds(viewerId);
 
       const post = await prisma.post.findUnique({
         where: { id: postId },
@@ -494,7 +518,30 @@ export const PostResolver = {
       }
 
       const comments = await (prisma as any).comment.findMany({
-        where: { postId, parentId: parentCommentId },
+        where: {
+          postId,
+          parentId: parentCommentId,
+          ...(hiddenCommentAuthorIds.length > 0
+            ? {
+                OR: [
+                  {
+                    authorId: {
+                      notIn: hiddenCommentAuthorIds,
+                    },
+                  },
+                  ...(viewerId
+                    ? [
+                        {
+                          post: {
+                            authorId: viewerId,
+                          },
+                        },
+                      ]
+                    : []),
+                ],
+              }
+            : {}),
+        },
         include: buildCommentInclude(viewerId),
         orderBy: { createdAt: "desc" },
         take: safeLimit,
@@ -1105,9 +1152,21 @@ export const PostResolver = {
 
       const comment = await (prisma as any).comment.findUnique({
         where: { id: commentId },
-        select: { id: true, authorId: true },
+        select: { id: true, authorId: true, postId: true },
       });
       if (!comment) {
+        throw new Error("Comment not found");
+      }
+
+      const hiddenCommentAuthorIds = await getPrivateCommentAuthorIds(viewerId);
+      const commentPost = await (prisma as any).post.findUnique({
+        where: { id: comment.postId },
+        select: { authorId: true },
+      });
+      if (
+        hiddenCommentAuthorIds.includes(comment.authorId) &&
+        commentPost?.authorId !== viewerId
+      ) {
         throw new Error("Comment not found");
       }
 
@@ -1262,9 +1321,33 @@ export const PostResolver = {
       const viewerId = ctx.user?.sub;
       const safeLimit = Math.max(1, Math.min(limit, 100));
       const safeOffset = Math.max(0, offset);
+      const hiddenCommentAuthorIds = await getPrivateCommentAuthorIds(viewerId);
 
       const comments = await (prisma as any).comment.findMany({
-        where: { postId: post.id, parentId: null },
+        where: {
+          postId: post.id,
+          parentId: null,
+          ...(hiddenCommentAuthorIds.length > 0
+            ? {
+                OR: [
+                  {
+                    authorId: {
+                      notIn: hiddenCommentAuthorIds,
+                    },
+                  },
+                  ...(viewerId
+                    ? [
+                        {
+                          post: {
+                            authorId: viewerId,
+                          },
+                        },
+                      ]
+                    : []),
+                ],
+              }
+            : {}),
+        },
         include: buildCommentInclude(viewerId),
         orderBy: { createdAt: "desc" },
         take: safeLimit,
@@ -1312,6 +1395,17 @@ export const PostResolver = {
         return null;
       }
 
+      const hiddenCommentAuthorIds = await getPrivateCommentAuthorIds(
+        ctx.user?.sub,
+      );
+      if (
+        hiddenCommentAuthorIds.length > 0 &&
+        hiddenCommentAuthorIds.includes(parentComment.authorId) &&
+        parentComment.post?.authorId !== ctx.user?.sub
+      ) {
+        return null;
+      }
+
       return mapCommentForGraphQL(parentComment, ctx.user?.sub);
     },
     replies: async (
@@ -1322,9 +1416,32 @@ export const PostResolver = {
       const viewerId = ctx.user?.sub;
       const safeLimit = Math.max(1, Math.min(limit, 100));
       const safeOffset = Math.max(0, offset);
+      const hiddenCommentAuthorIds = await getPrivateCommentAuthorIds(viewerId);
 
       const replies = await (prisma as any).comment.findMany({
-        where: { parentId: comment.id },
+        where: {
+          parentId: comment.id,
+          ...(hiddenCommentAuthorIds.length > 0
+            ? {
+                OR: [
+                  {
+                    authorId: {
+                      notIn: hiddenCommentAuthorIds,
+                    },
+                  },
+                  ...(viewerId
+                    ? [
+                        {
+                          post: {
+                            authorId: viewerId,
+                          },
+                        },
+                      ]
+                    : []),
+                ],
+              }
+            : {}),
+        },
         include: buildCommentInclude(viewerId),
         orderBy: { createdAt: "asc" },
         take: safeLimit,
