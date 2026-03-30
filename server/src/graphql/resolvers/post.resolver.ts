@@ -100,6 +100,29 @@ const getBlockedUserIdsForViewer = async (viewerId?: string) => {
   return Array.isArray(viewer?.blockedUserIds) ? viewer.blockedUserIds : [];
 };
 
+const getPrivatePostAuthorIds = async (viewerId?: string) => {
+  const privateAuthors = await (prisma as any).user.findMany({
+    where: {
+      visibilityPublicPosts: false,
+      deleted: false,
+      disabled: false,
+      ...(viewerId
+        ? {
+            id: { not: viewerId },
+            NOT: {
+              followerRelations: {
+                some: { followerId: viewerId },
+              },
+            },
+          }
+        : {}),
+    },
+    select: { id: true },
+  });
+
+  return privateAuthors.map((u: any) => u.id);
+};
+
 const buildVisiblePostWhere = (
   uninterestedPostIds?: string[],
   inaccessibleAuthorIds?: string[],
@@ -253,13 +276,16 @@ export const PostResolver = {
         throw new Error("Post id is required");
       }
 
+      const [blockedIds, privateIds] = await Promise.all([
+        getInaccessibleAuthorIds(viewerId),
+        getPrivatePostAuthorIds(viewerId),
+      ]);
+      const allHiddenIds = Array.from(new Set([...blockedIds, ...privateIds]));
+
       const post = await prisma.post.findFirst({
         where: {
           id: normalizedId,
-          ...buildVisiblePostWhere(
-            undefined,
-            await getInaccessibleAuthorIds(viewerId),
-          ),
+          ...buildVisiblePostWhere(undefined, allHiddenIds),
         },
         include: buildPostInclude(viewerId),
       });
@@ -317,13 +343,15 @@ export const PostResolver = {
       const uninterestedPostIds = Array.isArray(viewer?.uninterestedPostIds)
         ? viewer.uninterestedPostIds
         : [];
+      const [blockedByIds, blockedIds, privatePostIds] = await Promise.all([
+        getInaccessibleAuthorIds(viewerId),
+        getBlockedUserIdsForViewer(viewerId),
+        getPrivatePostAuthorIds(viewerId),
+      ]);
       const inaccessibleAuthorIds = normalizedAuthorUsername
-        ? await getInaccessibleAuthorIds(viewerId)
+        ? Array.from(new Set([...blockedByIds]))
         : Array.from(
-            new Set([
-              ...(await getInaccessibleAuthorIds(viewerId)),
-              ...(await getBlockedUserIdsForViewer(viewerId)),
-            ]),
+            new Set([...blockedByIds, ...blockedIds, ...privatePostIds]),
           );
       const posts = await prisma.post.findMany({
         where: normalizedAuthorUsername
@@ -368,7 +396,13 @@ export const PostResolver = {
 
       const safeLimit = Math.max(1, Math.min(limit, 25));
       const numericYear = Number.parseInt(normalizedQuery, 10);
-      const inaccessibleAuthorIds = await getInaccessibleAuthorIds(viewerId);
+      const [blockedIds, privateIds] = await Promise.all([
+        getInaccessibleAuthorIds(viewerId),
+        getPrivatePostAuthorIds(viewerId),
+      ]);
+      const inaccessibleAuthorIds = Array.from(
+        new Set([...blockedIds, ...privateIds]),
+      );
 
       const posts = await prisma.post.findMany({
         where: {

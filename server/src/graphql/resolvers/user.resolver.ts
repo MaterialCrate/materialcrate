@@ -1957,8 +1957,16 @@ export const UserResolver = {
     visibilityPublicProfile: (user: {
       visibilityPublicProfile?: boolean | null;
     }) => user.visibilityPublicProfile ?? true,
-    visibilityPublicPosts: (user: { visibilityPublicPosts?: boolean | null }) =>
-      user.visibilityPublicPosts ?? true,
+    visibilityPublicPosts: (user: {
+      visibilityPublicProfile?: boolean | null;
+      visibilityPublicPosts?: boolean | null;
+    }) => {
+      if (user.visibilityPublicProfile === false) {
+        return false;
+      }
+
+      return user.visibilityPublicPosts ?? true;
+    },
     visibilityPublicComments: (user: {
       visibilityPublicComments?: boolean | null;
     }) => user.visibilityPublicComments ?? true,
