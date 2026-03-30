@@ -4,6 +4,10 @@ type User {
   displayName: String!
   profilePicture: String
   profileBackground: String!
+  visibilityPublicProfile: Boolean!
+  visibilityPublicPosts: Boolean!
+  visibilityPublicComments: Boolean!
+  visibilityOnlineStatus: Boolean!
   followers: [User!]!
   following: [User!]!
   mutedUsers: [User!]!
@@ -72,6 +76,12 @@ type Mutation {
   restoreDeletedAccount: User!
   disableMyAccount(until: String): Boolean!
   reactivateMyAccount: Boolean!
+  updateVisibilitySettings(
+    visibilityPublicProfile: Boolean!
+    visibilityPublicPosts: Boolean!
+    visibilityPublicComments: Boolean!
+    visibilityOnlineStatus: Boolean!
+  ): User!
   followUser(username: String!): Boolean!
   unfollowUser(username: String!): Boolean!
   muteUser(username: String!): Boolean!

@@ -15,6 +15,10 @@ const ME_QUERY = `
       displayName
       profilePicture
       profileBackground
+      visibilityPublicProfile
+      visibilityPublicPosts
+      visibilityPublicComments
+      visibilityOnlineStatus
       linkedSEOs
       subscriptionPlan
       subscriptionStartedAt
@@ -37,6 +41,10 @@ const LEGACY_ME_QUERY = `
       displayName
       profilePicture
       profileBackground
+      visibilityPublicProfile
+      visibilityPublicPosts
+      visibilityPublicComments
+      visibilityOnlineStatus
       linkedSEOs
       subscriptionPlan
       subscriptionStartedAt
@@ -74,13 +82,16 @@ export async function GET() {
   const primary = await fetchMe(token, ME_QUERY);
   const missingFieldError = Array.isArray(primary.body?.errors)
     ? primary.body.errors.some((error: { message?: string }) =>
-        /Cannot query field "(pendingEmail|emailVerified)"/.test(
+        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus)"/.test(
           error?.message ?? "",
         ),
       )
     : false;
 
-  if ((!primary.response.ok || primary.body?.errors?.length) && missingFieldError) {
+  if (
+    (!primary.response.ok || primary.body?.errors?.length) &&
+    missingFieldError
+  ) {
     console.warn("[auth/me] Falling back to legacy query", {
       status: primary.response.status,
       errors: primary.body?.errors ?? null,
@@ -100,6 +111,10 @@ export async function GET() {
         ...legacy.body?.data?.me,
         pendingEmail: null,
         emailVerified: true,
+        visibilityPublicProfile: true,
+        visibilityPublicPosts: true,
+        visibilityPublicComments: true,
+        visibilityOnlineStatus: true,
       },
     });
   }

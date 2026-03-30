@@ -1,44 +1,197 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeSlash } from "iconsax-reactjs";
+import Alert from "@/app/components/Alert";
 import Header from "@/app/components/Header";
 import ToggleSwitch from "@/app/components/ToggleSwitch";
+import { useAuth } from "@/app/lib/auth-client";
+
+type VisibilitySettings = {
+  visibilityPublicProfile: boolean;
+  visibilityPublicPosts: boolean;
+  visibilityPublicComments: boolean;
+  visibilityOnlineStatus: boolean;
+};
+
+type VisibilityOption = {
+  key: keyof VisibilitySettings;
+  label: string;
+  description: string;
+};
+
+const DEFAULT_VISIBILITY_SETTINGS: VisibilitySettings = {
+  visibilityPublicProfile: true,
+  visibilityPublicPosts: true,
+  visibilityPublicComments: true,
+  visibilityOnlineStatus: true,
+};
+
+const visibilityOptions: VisibilityOption[] = [
+  {
+    key: "visibilityPublicProfile",
+    label: "Public profile",
+    description: "Allow other people to discover and view your profile.",
+  },
+  {
+    key: "visibilityPublicPosts",
+    label: "Public posts",
+    description: "Show your posts outside your direct audience.",
+  },
+  {
+    key: "visibilityPublicComments",
+    label: "Public comments",
+    description: "Let your comment activity be visible to others.",
+  },
+  {
+    key: "visibilityOnlineStatus",
+    label: "Online status",
+    description: "Show when you are active in the app.",
+  },
+];
 
 export default function Page() {
-  const visibilityOptions = [
-    {
-      label: "Public profile",
-      description: "Allow other people to discover and view your profile.",
-      state: true,
-    },
-    {
-      label: "Public posts",
-      description: "Show your posts outside your direct audience.",
-      state: false,
-    },
-    {
-      label: "Public comments",
-      description: "Let your comment activity be visible to others.",
-      state: true,
-    },
-    {
-      label: "Online status",
-      description: "Show when you are active in the app.",
-      state: true,
-    },
-  ];
+  const router = useRouter();
+  const { user, isLoading: isLoadingAuth } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [visibility, setVisibility] = useState<VisibilitySettings>(
+    DEFAULT_VISIBILITY_SETTINGS,
+  );
+  const [isSavingKey, setIsSavingKey] = useState<
+    keyof VisibilitySettings | null
+  >(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoadingAuth && !user) {
+      router.replace("/login");
+    }
+  }, [isLoadingAuth, router, user]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadVisibility = async () => {
+      if (isLoadingAuth || !user) {
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/auth/me", { method: "GET" });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok || !body?.user) {
+          throw new Error("Failed to load visibility settings");
+        }
+
+        if (!mounted) return;
+
+        setVisibility({
+          visibilityPublicProfile:
+            typeof body.user.visibilityPublicProfile === "boolean"
+              ? body.user.visibilityPublicProfile
+              : DEFAULT_VISIBILITY_SETTINGS.visibilityPublicProfile,
+          visibilityPublicPosts:
+            typeof body.user.visibilityPublicPosts === "boolean"
+              ? body.user.visibilityPublicPosts
+              : DEFAULT_VISIBILITY_SETTINGS.visibilityPublicPosts,
+          visibilityPublicComments:
+            typeof body.user.visibilityPublicComments === "boolean"
+              ? body.user.visibilityPublicComments
+              : DEFAULT_VISIBILITY_SETTINGS.visibilityPublicComments,
+          visibilityOnlineStatus:
+            typeof body.user.visibilityOnlineStatus === "boolean"
+              ? body.user.visibilityOnlineStatus
+              : DEFAULT_VISIBILITY_SETTINGS.visibilityOnlineStatus,
+        });
+      } catch (caughtError: unknown) {
+        if (!mounted) return;
+        setError("Error loading visibility settings");
+        console.error("Error loading visibility settings", {
+          error:
+            caughtError instanceof Error ? caughtError.message : caughtError,
+        });
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadVisibility();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isLoadingAuth, user]);
+
+  const handleToggleChange = async (
+    key: keyof VisibilitySettings,
+    nextState: boolean,
+  ) => {
+    if (isSavingKey) return;
+
+    const previousVisibility = visibility;
+    const nextVisibility = {
+      ...previousVisibility,
+      [key]: nextState,
+    };
+
+    setVisibility(nextVisibility);
+    setIsSavingKey(key);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/settings/privacy/visibility", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(nextVisibility),
+      });
+
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to save visibility settings");
+      }
+
+      setSuccess("Visibility settings updated.");
+    } catch (caughtError: unknown) {
+      setVisibility(previousVisibility);
+      setError("Error saving visibility settings");
+      console.error("Error saving visibility settings", {
+        error: caughtError instanceof Error ? caughtError.message : caughtError,
+      });
+    } finally {
+      setIsSavingKey(null);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
-      <Header title="Account Visibility" isLoading={false} />
+      <Alert message={success} type="success" />
+      <Alert message={error} type="error" />
+      <Header
+        title="Account Visibility"
+        isLoading={isLoading || isSavingKey !== null}
+      />
       <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
           Privacy
         </p>
-        <h2 className="mt-1 text-lg font-semibold">Control what people can see.</h2>
+        <h2 className="mt-1 text-lg font-semibold">
+          Control what people can see.
+        </h2>
         <p className="mt-1 text-xs text-white/72">
-          Visibility settings shape how discoverable your profile and activity are.
+          Visibility settings shape how discoverable your profile and activity
+          are.
         </p>
       </div>
       <div className="space-y-3">
@@ -49,25 +202,29 @@ export default function Page() {
           >
             <div className="flex items-start gap-3">
               <div className="rounded-[14px] bg-[#F6EFE5] p-2.5">
-                {option.state ? (
+                {visibility[option.key] ? (
                   <Eye size={18} color="#A95A13" variant="Bulk" />
                 ) : (
                   <EyeSlash size={18} color="#A95A13" variant="Bulk" />
                 )}
               </div>
               <div>
-                <p className="text-sm font-medium text-[#3D3D3D]">{option.label}</p>
+                <p className="text-sm font-medium text-[#3D3D3D]">
+                  {option.label}
+                </p>
                 <p className="mt-0.5 text-xs text-[#6B6B6B]">
                   {option.description}
                 </p>
               </div>
             </div>
-            <ToggleSwitch
-              state={option.state}
-              onChange={(newState) =>
-                console.log("Profile visibility:", newState)
-              }
-            />
+            <div>
+              <ToggleSwitch
+                state={visibility[option.key]}
+                onChange={(newState) =>
+                  void handleToggleChange(option.key, newState)
+                }
+              />
+            </div>
           </div>
         ))}
       </div>

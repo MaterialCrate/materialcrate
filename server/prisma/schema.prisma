@@ -13,6 +13,10 @@ model User {
   displayName   String
   profilePicture String?
   profileBackground String @default("bg-linear-to-br from-[#E1761F] via-[#ffecdc] to-stone-200")
+  visibilityPublicProfile  Boolean @default(true)
+  visibilityPublicPosts    Boolean @default(true)
+  visibilityPublicComments Boolean @default(true)
+  visibilityOnlineStatus   Boolean @default(true)
   email         String
   pendingEmail  String?
   password      String

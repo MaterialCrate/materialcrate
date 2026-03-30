@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ToggleProps {
   state: boolean;
@@ -7,6 +7,10 @@ interface ToggleProps {
 
 export default function Toggle({ state, onChange }: ToggleProps) {
   const [enabled, setEnabled] = useState(state);
+
+  useEffect(() => {
+    setEnabled(state);
+  }, [state]);
 
   return (
     <button

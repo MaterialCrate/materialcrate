@@ -988,6 +988,35 @@ export const UserResolver = {
 
       return true;
     },
+    updateVisibilitySettings: async (
+      _: unknown,
+      {
+        visibilityPublicProfile,
+        visibilityPublicPosts,
+        visibilityPublicComments,
+        visibilityOnlineStatus,
+      }: {
+        visibilityPublicProfile: boolean;
+        visibilityPublicPosts: boolean;
+        visibilityPublicComments: boolean;
+        visibilityOnlineStatus: boolean;
+      },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      return (prisma as any).user.update({
+        where: { id: ctx.user.sub },
+        data: {
+          visibilityPublicProfile,
+          visibilityPublicPosts,
+          visibilityPublicComments,
+          visibilityOnlineStatus,
+        },
+      });
+    },
     followUser: async (
       _: unknown,
       { username }: { username: string },
@@ -1627,6 +1656,15 @@ export const UserResolver = {
       pendingEmail?: string | null;
       emailVerificationTokenExpiresAt?: Date | string | null;
     }) => getVisiblePendingEmail(user),
+    visibilityPublicProfile: (user: { visibilityPublicProfile?: boolean | null }) =>
+      user.visibilityPublicProfile ?? true,
+    visibilityPublicPosts: (user: { visibilityPublicPosts?: boolean | null }) =>
+      user.visibilityPublicPosts ?? true,
+    visibilityPublicComments: (user: {
+      visibilityPublicComments?: boolean | null;
+    }) => user.visibilityPublicComments ?? true,
+    visibilityOnlineStatus: (user: { visibilityOnlineStatus?: boolean | null }) =>
+      user.visibilityOnlineStatus ?? true,
     profilePicture: async (user: { profilePicture?: string | null }) => {
       const rawProfilePicture = user.profilePicture?.trim();
       if (!rawProfilePicture) {
