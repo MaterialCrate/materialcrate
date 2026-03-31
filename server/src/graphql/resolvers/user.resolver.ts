@@ -2064,6 +2064,14 @@ export const UserResolver = {
 
       return mutes.map((entry: { muted: unknown }) => entry.muted);
     },
+    blockedUsers: async (user: { id: string; blockedUserIds?: string[] }) => {
+      const ids = Array.isArray(user.blockedUserIds) ? user.blockedUserIds : [];
+      if (ids.length === 0) return [];
+
+      return (prisma as any).user.findMany({
+        where: { id: { in: ids }, deleted: false, disabled: false },
+      });
+    },
     followersCount: async (user: { id: string }) => {
       return (prisma as any).follow.count({
         where: { followingId: user.id },

@@ -11,6 +11,7 @@ type User {
   followers: [User!]!
   following: [User!]!
   mutedUsers: [User!]!
+  blockedUsers: [User!]!
   followersCount: Int!
   followingCount: Int!
   email: String!
