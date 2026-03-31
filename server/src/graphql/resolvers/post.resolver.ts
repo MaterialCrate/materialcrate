@@ -352,11 +352,21 @@ export const PostResolver = {
     },
     posts: async (
       _: unknown,
-      { authorUsername }: { authorUsername?: string | null },
+      {
+        authorUsername,
+        limit = 50,
+        offset = 0,
+      }: {
+        authorUsername?: string | null;
+        limit?: number;
+        offset?: number;
+      },
       ctx: GraphQLContext,
     ) => {
       const viewerId = ctx.user?.sub;
       const normalizedAuthorUsername = String(authorUsername || "").trim();
+      const safeLimit = Math.max(1, Math.min(limit, 100));
+      const safeOffset = Math.max(0, offset);
       const viewer = viewerId
         ? await prisma.user.findUnique({
             where: { id: viewerId },
@@ -401,6 +411,8 @@ export const PostResolver = {
         orderBy: (normalizedAuthorUsername
           ? [{ pinned: "desc" }, { createdAt: "desc" }]
           : { createdAt: "desc" }) as any,
+        take: safeLimit,
+        skip: safeOffset,
       });
 
       return posts.map((post) => mapPostForGraphQL(post, viewerId));

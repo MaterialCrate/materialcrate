@@ -5,8 +5,8 @@ const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
 const POSTS_QUERY = `
-  query Posts($authorUsername: String) {
-    posts(authorUsername: $authorUsername) {
+  query Posts($authorUsername: String, $limit: Int!, $offset: Int!) {
+    posts(authorUsername: $authorUsername, limit: $limit, offset: $offset) {
       id
       fileUrl
       thumbnailUrl
@@ -32,7 +32,7 @@ const POSTS_QUERY = `
 `;
 
 const AUTHENTICATED_POSTS_QUERY = `
-  query Posts($authorUsername: String) {
+  query Posts($authorUsername: String, $limit: Int!, $offset: Int!) {
     me {
       username
       blockedUserIds
@@ -43,7 +43,7 @@ const AUTHENTICATED_POSTS_QUERY = `
         username
       }
     }
-    posts(authorUsername: $authorUsername) {
+    posts(authorUsername: $authorUsername, limit: $limit, offset: $offset) {
       id
       fileUrl
       thumbnailUrl
@@ -73,6 +73,15 @@ export async function GET(request: Request) {
   const token = cookieStore.get("mc_session")?.value;
   const { searchParams } = new URL(request.url);
   const authorUsername = searchParams.get("author")?.trim() || null;
+  const parsedLimit = Number.parseInt(searchParams.get("limit") || "50", 10);
+  const parsedOffset = Number.parseInt(searchParams.get("offset") || "0", 10);
+  const safeLimit = Number.isFinite(parsedLimit)
+    ? Math.min(Math.max(parsedLimit, 1), 100)
+    : 50;
+  const safeOffset = Number.isFinite(parsedOffset)
+    ? Math.max(parsedOffset, 0)
+    : 0;
+  const queryLimit = safeLimit + 1;
 
   const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
     method: "POST",
@@ -82,7 +91,11 @@ export async function GET(request: Request) {
     },
     body: JSON.stringify({
       query: token ? AUTHENTICATED_POSTS_QUERY : POSTS_QUERY,
-      variables: { authorUsername },
+      variables: {
+        authorUsername,
+        limit: queryLimit,
+        offset: safeOffset,
+      },
     }),
   });
 
@@ -124,9 +137,8 @@ export async function GET(request: Request) {
     ).filter(Boolean),
   );
 
-  const posts = (Array.isArray(graphqlBody?.data?.posts)
-    ? graphqlBody.data.posts
-    : []
+  const mappedPosts = (
+    Array.isArray(graphqlBody?.data?.posts) ? graphqlBody.data.posts : []
   ).map((post: Record<string, unknown>) => {
     const author = (post.author ?? null) as {
       id?: string | null;
@@ -148,5 +160,8 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json({ posts });
+  const hasMore = mappedPosts.length > safeLimit;
+  const posts = hasMore ? mappedPosts.slice(0, safeLimit) : mappedPosts;
+
+  return NextResponse.json({ posts, hasMore });
 }

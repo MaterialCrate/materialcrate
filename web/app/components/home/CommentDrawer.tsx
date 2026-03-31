@@ -43,7 +43,21 @@ const REPLIES_BATCH_SIZE = 10;
 const COMMENTS_BATCH_SIZE = 50;
 
 function formatTimeAgo(timestamp: string) {
-  const value = new Date(timestamp).getTime();
+  const trimmed = timestamp?.trim();
+  if (!trimmed) return "Just now";
+
+  let value = Number.NaN;
+  const numericTimestamp = Number(trimmed);
+
+  if (Number.isFinite(numericTimestamp)) {
+    value =
+      numericTimestamp < 1_000_000_000_000
+        ? numericTimestamp * 1000
+        : numericTimestamp;
+  } else {
+    value = new Date(trimmed).getTime();
+  }
+
   if (Number.isNaN(value)) return "Just now";
 
   const seconds = Math.max(0, Math.floor((Date.now() - value) / 1000));
@@ -108,8 +122,9 @@ export default function CommentDrawer({
     Record<string, boolean>
   >({});
   const isOwner =
-    Boolean(user?.username?.trim()) &&
-    user?.username?.trim().toLowerCase() ===
+    Boolean(typeof user?.username === "string" && user.username.trim()) &&
+    typeof user?.username === "string" &&
+    user.username.trim().toLowerCase() ===
       post?.author?.username?.trim().toLowerCase();
   const commentsLocked = Boolean(post?.commentsDisabled) && !isOwner;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DocumentUpload, More2, Notification } from "iconsax-reactjs";
 import Post, {
@@ -13,6 +13,7 @@ import OptionsDrawer from "./components/home/PostOptions";
 import PdfViewerModal from "./components/home/PdfViewerModal";
 import Header from "./components/home/Header";
 import ArchiveDrawer from "./components/home/ArchiveDrawer";
+import Spinner from "./components/Spinner";
 
 type ArchiveSavedPost = {
   id: string;
@@ -27,6 +28,7 @@ type NotificationListItem = {
 
 const NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY =
   "mc.notifications.lastOpenedAt";
+const FEED_PAGE_SIZE = 15;
 
 export default function Home() {
   const router = useRouter();
@@ -54,6 +56,9 @@ export default function Home() {
   );
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
+  const [isLoadingMorePosts, setIsLoadingMorePosts] = useState(false);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [nextOffset, setNextOffset] = useState(0);
   const [archiveSavedPostIdsByPostId, setArchiveSavedPostIdsByPostId] =
     useState<Record<string, string>>({});
   const [archiveBusyPostIds, setArchiveBusyPostIds] = useState<
@@ -62,6 +67,7 @@ export default function Home() {
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [hasUnopenedNotifications, setHasUnopenedNotifications] =
     useState(false);
+  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
 
   const refreshNotificationIndicators = async () => {
     try {
@@ -113,17 +119,25 @@ export default function Home() {
 
     async function loadPosts() {
       try {
-        const response = await fetch("/api/posts", {
-          method: "GET",
-          signal: controller.signal,
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/posts?limit=${FEED_PAGE_SIZE}&offset=0`,
+          {
+            method: "GET",
+            signal: controller.signal,
+            cache: "no-store",
+          },
+        );
 
         const body = await response.json().catch(() => ({}));
-        setPosts(Array.isArray(body?.posts) ? body.posts : []);
+        const initialPosts = Array.isArray(body?.posts) ? body.posts : [];
+        setPosts(initialPosts);
+        setNextOffset(initialPosts.length);
+        setHasMorePosts(Boolean(body?.hasMore));
       } catch {
         if (!controller.signal.aborted) {
           setPosts([]);
+          setNextOffset(0);
+          setHasMorePosts(false);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -195,6 +209,66 @@ export default function Home() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
+
+  const loadMorePosts = useCallback(async () => {
+    if (isLoadingPosts || isLoadingMorePosts || !hasMorePosts) {
+      return;
+    }
+
+    setIsLoadingMorePosts(true);
+    try {
+      const response = await fetch(
+        `/api/posts?limit=${FEED_PAGE_SIZE}&offset=${nextOffset}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+
+      const body = await response.json().catch(() => ({}));
+      const incomingPosts = Array.isArray(body?.posts) ? body.posts : [];
+
+      setPosts((current) => {
+        const seenIds = new Set(current.map((post) => post.id));
+        const dedupedIncoming = incomingPosts.filter(
+          (post: HomePost) => !seenIds.has(post.id),
+        );
+        return [...current, ...dedupedIncoming];
+      });
+      setNextOffset((current) => current + incomingPosts.length);
+      setHasMorePosts(Boolean(body?.hasMore));
+    } catch {
+      setHasMorePosts(false);
+    } finally {
+      setIsLoadingMorePosts(false);
+    }
+  }, [hasMorePosts, isLoadingMorePosts, isLoadingPosts, nextOffset]);
+
+  useEffect(() => {
+    const trigger = loadMoreTriggerRef.current;
+    if (!trigger) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMorePosts();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "0px 0px 240px 0px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(trigger);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [loadMorePosts]);
 
   const refreshArchiveState = async () => {
     try {
@@ -360,6 +434,7 @@ export default function Home() {
           }
 
           setPosts((current) => [savedPost, ...current]);
+          setNextOffset((current) => current + 1);
         }}
       />
       <CommentDrawer
@@ -519,78 +594,86 @@ export default function Home() {
         ) : posts.length === 0 ? (
           <p className="px-6 py-8 text-sm text-[#696969]">No posts yet.</p>
         ) : (
-          posts.map((post, index) => (
-            <div key={post.id} data-scroll-item>
-              <Post
-                post={post}
-                isArchived={Boolean(archiveSavedPostIdsByPostId[post.id])}
-                isArchiveBusy={Boolean(archiveBusyPostIds[post.id])}
-                onCommentClick={(selectedPost) => {
-                  setActiveCommentPostId(selectedPost.id);
-                  setActiveCommentPost(selectedPost);
-                  setIsCommentDrawerOpen(true);
-                  setMoreOptionsOpen(false);
-                  setIsUploadDrawerOpen(false);
-                  setEditingPost(null);
-                  setIsPostOptionsDrawerOpen(false);
-                  setIsArchiveDrawerOpen(false);
-                  setActiveOptionsPost(null);
-                  setActiveOptionsAnchor(null);
-                  setActiveArchivePost(null);
-                }}
-                onOptionsClick={(selectedPost, anchor) => {
-                  setActiveOptionsPost(selectedPost);
-                  setActiveOptionsAnchor(anchor);
-                  setIsPostOptionsDrawerOpen(true);
-                  setMoreOptionsOpen(false);
-                  setIsUploadDrawerOpen(false);
-                  setEditingPost(null);
-                  setIsCommentDrawerOpen(false);
-                  setIsArchiveDrawerOpen(false);
-                  setActiveCommentPostId(null);
-                  setActiveCommentPost(null);
-                  setActivePdfPost(null);
-                  setActiveArchivePost(null);
-                }}
-                onFileClick={(selectedPost) => {
-                  setActivePdfPost(selectedPost);
-                  setMoreOptionsOpen(false);
-                  setIsUploadDrawerOpen(false);
-                  setEditingPost(null);
-                  setIsCommentDrawerOpen(false);
-                  setActiveCommentPostId(null);
-                  setActiveCommentPost(null);
-                  setIsPostOptionsDrawerOpen(false);
-                  setActiveOptionsPost(null);
-                  setActiveOptionsAnchor(null);
-                  setIsArchiveDrawerOpen(false);
-                  setActiveArchivePost(null);
-                }}
-                onArchiveClick={(selectedPost) => {
-                  setActiveArchivePost(selectedPost);
-                  setIsArchiveDrawerOpen(true);
-                  setMoreOptionsOpen(false);
-                  setIsUploadDrawerOpen(false);
-                  setEditingPost(null);
-                  setIsCommentDrawerOpen(false);
-                  setActiveCommentPostId(null);
-                  setActiveCommentPost(null);
-                  setIsPostOptionsDrawerOpen(false);
-                  setActiveOptionsPost(null);
-                  setActiveOptionsAnchor(null);
-                  setActivePdfPost(null);
-                }}
-                onArchiveRemoveClick={(selectedPost) => {
-                  void handleArchiveRemove(selectedPost);
-                }}
-              />
-              {index < posts.length - 1 && (
-                <div className="px-6">
-                  <div className="h-px w-full bg-black/20 mt-4" />
-                </div>
-              )}
-            </div>
-          ))
+          <>
+            {posts.map((post, index) => (
+              <div key={post.id} data-scroll-item>
+                <Post
+                  post={post}
+                  isArchived={Boolean(archiveSavedPostIdsByPostId[post.id])}
+                  isArchiveBusy={Boolean(archiveBusyPostIds[post.id])}
+                  onCommentClick={(selectedPost) => {
+                    setActiveCommentPostId(selectedPost.id);
+                    setActiveCommentPost(selectedPost);
+                    setIsCommentDrawerOpen(true);
+                    setMoreOptionsOpen(false);
+                    setIsUploadDrawerOpen(false);
+                    setEditingPost(null);
+                    setIsPostOptionsDrawerOpen(false);
+                    setIsArchiveDrawerOpen(false);
+                    setActiveOptionsPost(null);
+                    setActiveOptionsAnchor(null);
+                    setActiveArchivePost(null);
+                  }}
+                  onOptionsClick={(selectedPost, anchor) => {
+                    setActiveOptionsPost(selectedPost);
+                    setActiveOptionsAnchor(anchor);
+                    setIsPostOptionsDrawerOpen(true);
+                    setMoreOptionsOpen(false);
+                    setIsUploadDrawerOpen(false);
+                    setEditingPost(null);
+                    setIsCommentDrawerOpen(false);
+                    setIsArchiveDrawerOpen(false);
+                    setActiveCommentPostId(null);
+                    setActiveCommentPost(null);
+                    setActivePdfPost(null);
+                    setActiveArchivePost(null);
+                  }}
+                  onFileClick={(selectedPost) => {
+                    setActivePdfPost(selectedPost);
+                    setMoreOptionsOpen(false);
+                    setIsUploadDrawerOpen(false);
+                    setEditingPost(null);
+                    setIsCommentDrawerOpen(false);
+                    setActiveCommentPostId(null);
+                    setActiveCommentPost(null);
+                    setIsPostOptionsDrawerOpen(false);
+                    setActiveOptionsPost(null);
+                    setActiveOptionsAnchor(null);
+                    setIsArchiveDrawerOpen(false);
+                    setActiveArchivePost(null);
+                  }}
+                  onArchiveClick={(selectedPost) => {
+                    setActiveArchivePost(selectedPost);
+                    setIsArchiveDrawerOpen(true);
+                    setMoreOptionsOpen(false);
+                    setIsUploadDrawerOpen(false);
+                    setEditingPost(null);
+                    setIsCommentDrawerOpen(false);
+                    setActiveCommentPostId(null);
+                    setActiveCommentPost(null);
+                    setIsPostOptionsDrawerOpen(false);
+                    setActiveOptionsPost(null);
+                    setActiveOptionsAnchor(null);
+                    setActivePdfPost(null);
+                  }}
+                  onArchiveRemoveClick={(selectedPost) => {
+                    void handleArchiveRemove(selectedPost);
+                  }}
+                />
+                {index < posts.length - 1 && (
+                  <div className="px-6">
+                    <div className="h-px w-full bg-black/20 mt-4" />
+                  </div>
+                )}
+              </div>
+            ))}
+            {isLoadingMorePosts && (
+              <div className="px-6 py-4">
+                <Spinner />
+              </div>
+            )}
+            {hasMorePosts && <div ref={loadMoreTriggerRef} className="h-1" />}
+          </>
         )}
       </main>
     </div>
