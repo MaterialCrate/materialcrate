@@ -14,7 +14,7 @@ const CREATE_POST_MUTATION = `
     $fileName: String!
     $mimeType: String!
     $title: String!
-    $courseCode: String!
+    $categories: [String!]!
     $description: String
     $year: Int
   ) {
@@ -24,7 +24,7 @@ const CREATE_POST_MUTATION = `
       fileName: $fileName
       mimeType: $mimeType
       title: $title
-      courseCode: $courseCode
+      categories: $categories
       description: $description
       year: $year
     ) {
@@ -32,7 +32,7 @@ const CREATE_POST_MUTATION = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       commentsDisabled
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const file = formData.get("file");
   const title = formData.get("title");
-  const category = formData.get("category");
+  const rawCategories = formData.getAll("categories");
   const description = formData.get("description");
   const thumbnailBase64 = formData.get("thumbnailBase64");
   const yearValue = formData.get("year");
@@ -59,17 +59,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "File is required" }, { status: 400 });
   }
 
-  if (typeof title !== "string" || typeof category !== "string") {
-    return NextResponse.json(
-      { error: "Title and category are required" },
-      { status: 400 },
-    );
+  if (typeof title !== "string") {
+    return NextResponse.json({ error: "Title is required" }, { status: 400 });
   }
 
-  const normalizedCategory = normalizeAllowedCategory(category);
-  if (!normalizedCategory) {
+  const normalizedCategories = rawCategories
+    .map((c) => (typeof c === "string" ? normalizeAllowedCategory(c) : null))
+    .filter(Boolean) as string[];
+
+  if (normalizedCategories.length === 0 || normalizedCategories.length > 3) {
     return NextResponse.json(
-      { error: "Please select a valid category from the suggestion list" },
+      { error: "Please select between 1 and 3 valid categories" },
       { status: 400 },
     );
   }
@@ -106,8 +106,9 @@ export async function POST(req: Request) {
         fileName: file.name,
         mimeType: file.type || "application/pdf",
         title: title.trim(),
-        courseCode: normalizedCategory,
-        description: typeof description === "string" ? description.trim() : null,
+        categories: normalizedCategories,
+        description:
+          typeof description === "string" ? description.trim() : null,
         year: Number.isFinite(parsedYear) ? parsedYear : null,
       },
     }),

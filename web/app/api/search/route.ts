@@ -22,7 +22,7 @@ const SEARCH_QUERY = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       commentsDisabled
@@ -68,7 +68,7 @@ const AUTHENTICATED_SEARCH_QUERY = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       commentsDisabled
@@ -184,3 +184,4 @@ export async function GET(request: Request) {
     documents,
   });
 }
+

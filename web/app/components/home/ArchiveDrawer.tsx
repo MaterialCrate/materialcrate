@@ -72,7 +72,9 @@ export default function ArchiveDrawer({
         if (!isCancelled) {
           setFeedbackType("error");
           setFeedbackMessage(
-            error instanceof Error ? error.message : "Failed to load saved files",
+            error instanceof Error
+              ? error.message
+              : "Failed to load saved files",
           );
           setFolders([]);
         }
@@ -121,17 +123,13 @@ export default function ArchiveDrawer({
 
         setHasSavedCurrentPost(true);
         setFeedbackType("success");
-        setFeedbackMessage(
-          folderId ? "File saved to folder." : "File saved.",
-        );
+        setFeedbackMessage(folderId ? "File saved to folder." : "File saved.");
         onSaved?.();
         return true;
       } catch (error) {
         setFeedbackType("error");
         setFeedbackMessage(
-          error instanceof Error
-            ? error.message
-            : "Failed to save file",
+          error instanceof Error ? error.message : "Failed to save file",
         );
         return false;
       } finally {
@@ -227,7 +225,7 @@ export default function ArchiveDrawer({
               {post?.title ?? "No file selected"}
             </p>
             <p className="mt-1 text-xs text-[#767676]">
-              {post?.courseCode ?? ""}
+              {post?.categories?.join(", ") ?? ""}
             </p>
           </div>
 

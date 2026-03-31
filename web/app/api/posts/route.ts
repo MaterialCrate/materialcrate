@@ -11,7 +11,7 @@ const POSTS_QUERY = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       pinned
@@ -48,7 +48,7 @@ const AUTHENTICATED_POSTS_QUERY = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       pinned
@@ -165,3 +165,4 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ posts, hasMore });
 }
+

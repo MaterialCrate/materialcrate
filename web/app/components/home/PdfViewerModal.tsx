@@ -129,7 +129,7 @@ export default function PdfViewerModal({
               {post.title}
             </p>
             <p className="mt-1 text-sm text-[#707070]">
-              {post.courseCode}
+              {post.categories.join(", ")}
               {pdfState.pageCount > 0 && ` • ${pdfState.pageCount} pages`}
             </p>
           </div>

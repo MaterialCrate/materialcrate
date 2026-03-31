@@ -13,7 +13,7 @@ const TOGGLE_POST_COMMENTS_MUTATION = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       pinned
@@ -78,3 +78,4 @@ export async function POST(req: Request) {
     post: graphqlBody?.data?.togglePostComments ?? null,
   });
 }
+

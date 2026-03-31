@@ -11,7 +11,7 @@ const POST_QUERY = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       pinned
@@ -47,7 +47,7 @@ const AUTHENTICATED_POST_QUERY = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       pinned

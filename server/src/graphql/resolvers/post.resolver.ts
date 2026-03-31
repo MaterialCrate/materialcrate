@@ -15,7 +15,7 @@ type CreatePostArgs = {
   fileName: string;
   mimeType: string;
   title: string;
-  courseCode: string;
+  categories: string[];
   description?: string;
   year?: number;
 };
@@ -23,7 +23,7 @@ type CreatePostArgs = {
 type UpdatePostArgs = {
   postId: string;
   title: string;
-  courseCode: string;
+  categories: string[];
   description?: string;
   year?: number;
 };
@@ -44,6 +44,19 @@ type GraphQLContext = {
 
 const sanitizeFileName = (name: string) =>
   name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_");
+
+const normalizeCategories = (categories: unknown): string[] => {
+  if (!Array.isArray(categories)) {
+    return [];
+  }
+
+  const normalized = categories
+    .map((category) => (typeof category === "string" ? category.trim() : ""))
+    .filter(Boolean)
+    .map((category) => category.toLowerCase());
+
+  return Array.from(new Set(normalized));
+};
 
 const buildS3FileUrl = (bucket: string, region: string, key: string) =>
   `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
@@ -205,7 +218,7 @@ const buildPostVersionSnapshot = (
   post: {
     id: string;
     title: string;
-    courseCode: string;
+    categories: string[];
     description?: string | null;
     year?: number | null;
     fileUrl: string;
@@ -217,7 +230,7 @@ const buildPostVersionSnapshot = (
   postId: post.id,
   versionNumber,
   title: post.title,
-  courseCode: post.courseCode,
+  categories: post.categories,
   description: post.description ?? null,
   year: post.year ?? null,
   fileUrl: post.fileUrl,
@@ -450,9 +463,8 @@ export const PostResolver = {
               },
             },
             {
-              courseCode: {
-                contains: normalizedQuery,
-                mode: "insensitive",
+              categories: {
+                has: normalizedQuery.toLowerCase(),
               },
             },
             {
@@ -584,13 +596,19 @@ export const PostResolver = {
         fileName,
         mimeType,
         title,
-        courseCode,
+        categories,
         description,
         year,
       } = args;
 
-      if (!fileBase64 || !fileName || !mimeType || !title || !courseCode) {
+      const normalizedCategories = normalizeCategories(categories);
+
+      if (!fileBase64 || !fileName || !mimeType || !title) {
         throw new Error("Missing required post fields");
+      }
+
+      if (normalizedCategories.length < 1 || normalizedCategories.length > 3) {
+        throw new Error("Posts must have between 1 and 3 categories");
       }
 
       const normalizedMime = mimeType.toLowerCase();
@@ -655,7 +673,7 @@ export const PostResolver = {
             fileUrl,
             thumbnailUrl,
             title: title.trim(),
-            courseCode: courseCode.trim(),
+            categories: normalizedCategories,
             description: description?.trim() || null,
             year: Number.isFinite(year) ? year : null,
             authorId: ctx.user.sub,
@@ -690,7 +708,7 @@ export const PostResolver = {
 
       const normalizedPostId = args.postId?.trim();
       const normalizedTitle = args.title?.trim();
-      const normalizedCourseCode = args.courseCode?.trim();
+      const normalizedCategories = normalizeCategories(args.categories);
       const normalizedDescription = args.description?.trim() || null;
       const normalizedYear = Number.isFinite(args.year) ? args.year : null;
 
@@ -698,8 +716,12 @@ export const PostResolver = {
         throw new Error("Post id is required");
       }
 
-      if (!normalizedTitle || !normalizedCourseCode) {
-        throw new Error("Title and course code are required");
+      if (!normalizedTitle || normalizedCategories.length < 1) {
+        throw new Error("Title and at least one category are required");
+      }
+
+      if (normalizedCategories.length > 3) {
+        throw new Error("Posts can have at most 3 categories");
       }
 
       const existingPost = await prisma.post.findUnique({
@@ -710,7 +732,7 @@ export const PostResolver = {
           deleted: true,
           pinned: true,
           title: true,
-          courseCode: true,
+          categories: true,
           description: true,
           year: true,
           fileUrl: true,
@@ -750,7 +772,7 @@ export const PostResolver = {
           where: { id: normalizedPostId },
           data: {
             title: normalizedTitle,
-            courseCode: normalizedCourseCode,
+            categories: normalizedCategories,
             description: normalizedDescription,
             year: normalizedYear,
           },

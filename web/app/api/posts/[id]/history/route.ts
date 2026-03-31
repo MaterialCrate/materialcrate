@@ -11,7 +11,7 @@ const POST_HISTORY_QUERY = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       pinned
@@ -33,7 +33,7 @@ const POST_HISTORY_QUERY = `
       postId
       versionNumber
       title
-      courseCode
+      categories
       description
       year
       fileUrl

@@ -13,7 +13,7 @@ const PIN_POST_MUTATION = `
       fileUrl
       thumbnailUrl
       title
-      courseCode
+      categories
       description
       year
       pinned
@@ -76,3 +76,4 @@ export async function POST(req: Request) {
     post: graphqlBody?.data?.pinPostToProfile ?? null,
   });
 }
+

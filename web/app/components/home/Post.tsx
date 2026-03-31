@@ -22,7 +22,7 @@ export type HomePost = {
   fileUrl: string;
   thumbnailUrl?: string | null;
   title: string;
-  courseCode: string;
+  categories: string[];
   description?: string | null;
   year?: number | null;
   pinned?: boolean;
@@ -117,7 +117,9 @@ export default function Post({
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const optionsButtonRef = React.useRef<HTMLButtonElement | null>(null);
-  const alertTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const alertTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const authorFullName = post.author?.displayName?.trim() || "Unknown user";
   const authorUsername = post.author?.username
     ? `@${post.author.username}`
@@ -376,8 +378,8 @@ export default function Post({
           />
           <div className="space-y-1 text-left h-full">
             <p className="text-[#202020] font-medium text-sm">{post.title}</p>
-            <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
-              <p>{post.courseCode}</p>
+            <div className="text-[#8C8C8C] text-xs font-medium flex items-start gap-1.5">
+              <p className="">{post.categories.join(", ")}</p>
               {post.year && (
                 <>
                   <p>&bull;</p>

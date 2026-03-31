@@ -33,7 +33,7 @@ export default function UploadDrawer({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState<string>("");
   const [categoryQuery, setCategoryQuery] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] =
     useState<boolean>(false);
   const [year, setYear] = useState<string>("");
@@ -64,9 +64,11 @@ export default function UploadDrawer({
     setSelectedFile(null);
     setThumbnailBase64(null);
     setTitle(post?.title ?? "");
-    const normalizedCategory = normalizeAllowedCategory(post?.courseCode ?? "");
-    setSelectedCategory(normalizedCategory ?? "");
-    setCategoryQuery(normalizedCategory ?? post?.courseCode ?? "");
+    const restored = (post?.categories ?? [])
+      .map((c) => normalizeAllowedCategory(c))
+      .filter(Boolean) as string[];
+    setSelectedCategories(restored);
+    setCategoryQuery("");
     setIsCategoryDropdownOpen(false);
     setYear(post?.year ? String(post.year) : "");
     setDescription(post?.description ?? "");
@@ -114,15 +116,15 @@ export default function UploadDrawer({
 
   const disabled =
     title.length < 3 ||
-    !selectedCategory ||
+    selectedCategories.length === 0 ||
     isPublishing ||
     isGeneratingThumbnail ||
     (!isEditMode && !selectedFile);
 
   const filteredCategoryOptions = POST_CATEGORIES.filter((categoryOption) => {
+    if (selectedCategories.includes(categoryOption)) return false;
     const trimmedQuery = categoryQuery.trim().toLowerCase();
     if (!trimmedQuery) return true;
-
     return categoryOption.toLowerCase().includes(trimmedQuery);
   }).slice(0, 12);
 
@@ -142,7 +144,7 @@ export default function UploadDrawer({
           body: JSON.stringify({
             postId: post.id,
             title: title.trim(),
-            category: selectedCategory,
+            categories: selectedCategories,
             description: description.trim(),
             year: year || null,
           }),
@@ -156,7 +158,9 @@ export default function UploadDrawer({
           formData.append("thumbnailBase64", thumbnailBase64);
         }
         formData.append("title", title.trim());
-        formData.append("category", selectedCategory);
+        for (const cat of selectedCategories) {
+          formData.append("categories", cat);
+        }
         formData.append("description", description.trim());
         if (year) {
           formData.append("year", year);
@@ -192,7 +196,7 @@ export default function UploadDrawer({
       setThumbnailBase64(null);
       setTitle("");
       setCategoryQuery("");
-      setSelectedCategory("");
+      setSelectedCategories([]);
       setIsCategoryDropdownOpen(false);
       setYear("");
       setDescription("");
@@ -350,58 +354,90 @@ export default function UploadDrawer({
           </div>
           <div className="space-y-1">
             <p className="text-[#5B5B5B] text-sm">
-              Category<span className="text-red-500">*</span>
+              Categories<span className="text-red-500">*</span>
+              <span className="text-[#B1B1B1] text-xs ml-1">
+                ({selectedCategories.length}/3)
+              </span>
             </p>
-            <div className="relative">
-              <input
-                ref={categoryInputRef}
-                placeholder="Type to search categories"
-                value={categoryQuery}
-                onFocus={() => setIsCategoryDropdownOpen(true)}
-                onBlur={() => {
-                  setTimeout(() => {
-                    setIsCategoryDropdownOpen(false);
-                  }, 100);
-                }}
-                onChange={(e) => {
-                  const nextValue = e.target.value;
-                  setCategoryQuery(nextValue);
-                  const normalizedCategory =
-                    normalizeAllowedCategory(nextValue);
-                  setSelectedCategory(normalizedCategory ?? "");
-                  setIsCategoryDropdownOpen(true);
-                }}
-                required
-                maxLength={80}
-                autoComplete="off"
-                style={{ fontSize: "0.75rem" }}
-                className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs focus:outline-none"
-              />
-              {isCategoryDropdownOpen && filteredCategoryOptions.length > 0 && (
-                <div className="absolute z-20 mt-2 max-h-52 w-full overflow-y-auto rounded-lg border border-[#E4E4E4] bg-white shadow-md">
-                  {filteredCategoryOptions.map((categoryOption) => (
+            {selectedCategories.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedCategories.map((cat) => (
+                  <span
+                    key={cat}
+                    className="inline-flex items-center gap-1 rounded-full bg-[#FFF3E7] px-3 py-1 text-xs font-medium text-[#E1761F]"
+                  >
+                    {cat}
                     <button
-                      key={categoryOption}
                       type="button"
-                      className="w-full border-b border-[#F3F3F3] px-3 py-2 text-left text-xs text-[#202020] last:border-b-0 hover:bg-[#F7F7F7]"
-                      onMouseDown={(event) => {
-                        event.preventDefault();
-                        setCategoryQuery(categoryOption);
-                        setSelectedCategory(categoryOption);
-                        setIsCategoryDropdownOpen(false);
-                        categoryInputRef.current?.blur();
-                      }}
+                      aria-label={`Remove ${cat}`}
+                      className="ml-0.5"
+                      onClick={() =>
+                        setSelectedCategories((prev) =>
+                          prev.filter((c) => c !== cat),
+                        )
+                      }
                     >
-                      {categoryOption}
+                      <CloseCircle size={14} color="#E1761F" />
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {categoryQuery && !selectedCategory && (
-              <p className="text-[10px] text-[#E00505] font-medium">
-                Please select a category from the suggestion list.
-              </p>
+                  </span>
+                ))}
+              </div>
+            )}
+            {selectedCategories.length < 3 && (
+              <div className="relative">
+                <input
+                  ref={categoryInputRef}
+                  placeholder={
+                    selectedCategories.length === 0
+                      ? "Type to search categories"
+                      : "Add another category"
+                  }
+                  value={categoryQuery}
+                  onFocus={() => setIsCategoryDropdownOpen(true)}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setIsCategoryDropdownOpen(false);
+                    }, 100);
+                  }}
+                  onChange={(e) => {
+                    setCategoryQuery(e.target.value);
+                    setIsCategoryDropdownOpen(true);
+                  }}
+                  maxLength={80}
+                  autoComplete="off"
+                  style={{ fontSize: "0.75rem" }}
+                  className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs focus:outline-none"
+                />
+                {isCategoryDropdownOpen &&
+                  filteredCategoryOptions.length > 0 && (
+                    <div className="absolute z-20 mt-2 max-h-52 w-full overflow-y-auto rounded-lg border border-[#E4E4E4] bg-white shadow-md">
+                      {filteredCategoryOptions.map((categoryOption) => (
+                        <button
+                          key={categoryOption}
+                          type="button"
+                          className="w-full border-b border-[#F3F3F3] px-3 py-2 text-left text-xs text-[#202020] last:border-b-0 hover:bg-[#F7F7F7]"
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            setSelectedCategories((prev) => [
+                              ...prev,
+                              categoryOption,
+                            ]);
+                            setCategoryQuery("");
+                            setIsCategoryDropdownOpen(false);
+                            categoryInputRef.current?.blur();
+                          }}
+                        >
+                          {categoryOption}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                {categoryQuery && !normalizeAllowedCategory(categoryQuery) && (
+                  <p className="text-[10px] text-[#E00505] font-medium mt-1">
+                    Please select a category from the suggestion list.
+                  </p>
+                )}
+              </div>
             )}
           </div>
           <div className="space-y-1">

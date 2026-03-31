@@ -74,7 +74,7 @@ export default function SavedFileCard({
                 {savedPost.post.title}
               </p>
               <p className="mt-1 text-xs text-[#767676]">
-                {savedPost.post.courseCode}
+                {savedPost.post.categories.join(", ")}
                 {savedPost.post.year && ` • ${savedPost.post.year}`}
               </p>
             </div>

@@ -30,7 +30,7 @@ const ARCHIVE_QUERY = `
           fileUrl
           thumbnailUrl
           title
-          courseCode
+          categories
           description
           year
           commentsDisabled
@@ -71,7 +71,7 @@ const SAVE_POST_MUTATION = `
         fileUrl
         thumbnailUrl
         title
-        courseCode
+        categories
         description
         year
         commentsDisabled
@@ -238,3 +238,4 @@ export async function DELETE(req: Request) {
     ok: Boolean(graphqlBody?.data?.removeArchivedPost),
   });
 }
+

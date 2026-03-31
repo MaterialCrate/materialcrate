@@ -3,7 +3,7 @@ type Post {
   fileUrl: String!
   thumbnailUrl: String
   title: String!
-  courseCode: String!
+  categories: [String!]!
   description: String
   year: Int
   author: User
@@ -21,7 +21,7 @@ type PostVersion {
   postId: ID!
   versionNumber: Int!
   title: String!
-  courseCode: String!
+  categories: [String!]!
   description: String
   year: Int
   fileUrl: String!
@@ -66,14 +66,14 @@ extend type Mutation {
     fileName: String!
     mimeType: String!
     title: String!
-    courseCode: String!
+    categories: [String!]!
     description: String
     year: Int
   ): Post!
   updatePost(
     postId: ID!
     title: String!
-    courseCode: String!
+    categories: [String!]!
     description: String
     year: Int
   ): Post!

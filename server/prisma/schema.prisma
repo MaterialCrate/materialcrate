@@ -107,7 +107,7 @@ model Post {
   deleted    Boolean  @default(false)
   deletedAt  DateTime?
   title      String
-  courseCode String
+  categories String[]
   description String?
   year       Int?
   authorId   String?
@@ -121,7 +121,7 @@ model Post {
   updatedAt  DateTime @updatedAt
 
   @@index([authorId])
-  @@index([courseCode])
+  @@index([categories])
   @@index([deleted, deletedAt])
 }
 
@@ -130,7 +130,7 @@ model PostVersion {
   postId        String
   versionNumber Int
   title         String
-  courseCode    String
+  categories    String[]
   description   String?
   year          Int?
   fileUrl       String

@@ -11,7 +11,7 @@ type PostHistoryVersion = {
   postId: string;
   versionNumber: number;
   title: string;
-  courseCode: string;
+  categories: string[];
   description?: string | null;
   year?: number | null;
   fileUrl: string;
@@ -70,8 +70,8 @@ const getChangedFields = (
   if (version.title !== previousVersion.title) {
     changes.push("Title");
   }
-  if (version.courseCode !== previousVersion.courseCode) {
-    changes.push("Course code");
+  if (version.categories.join("|") !== previousVersion.categories.join("|")) {
+    changes.push("Categories");
   }
   if (
     normalizeText(version.description) !==
@@ -175,7 +175,7 @@ export default function PostHistoryPage() {
                     {post.title}
                   </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#7A7A7A]">
-                    <span>{post.courseCode}</span>
+                    <span>{post.categories.join(", ")}</span>
                     {post.year ? <span>{post.year}</span> : null}
                     <span>
                       {versions.length} saved version
@@ -260,10 +260,10 @@ export default function PostHistoryPage() {
                         <div className="flex flex-wrap gap-6">
                           <div>
                             <p className="text-[11px] uppercase tracking-[0.16em] text-[#9A9A9A]">
-                              Course Code
+                              Categories
                             </p>
                             <p className="mt-1 text-sm text-[#202020]">
-                              {version.courseCode}
+                              {version.categories.join(", ")}
                             </p>
                           </div>
                           <div>
