@@ -28,6 +28,14 @@ const ME_QUERY = `
       followingCount
       institution
       program
+      emailNotificationsAccountActivity
+      emailNotificationsWeeklySummary
+      emailNotificationsProductUpdates
+      emailNotificationsMarketing
+      pushNotificationsLikes
+      pushNotificationsComments
+      pushNotificationsFollows
+      pushNotificationsMentions
     }
   }
 `;
@@ -49,6 +57,10 @@ const LEGACY_ME_QUERY = `
       emailNotificationsWeeklySummary
       emailNotificationsProductUpdates
       emailNotificationsMarketing
+      pushNotificationsLikes
+      pushNotificationsComments
+      pushNotificationsFollows
+      pushNotificationsMentions
       linkedSEOs
       subscriptionPlan
       subscriptionStartedAt
@@ -123,6 +135,10 @@ export async function GET() {
         emailNotificationsWeeklySummary: true,
         emailNotificationsProductUpdates: true,
         emailNotificationsMarketing: true,
+        pushNotificationsLikes: true,
+        pushNotificationsComments: true,
+        pushNotificationsFollows: true,
+        pushNotificationsMentions: true,
       },
     });
   }

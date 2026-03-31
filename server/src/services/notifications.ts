@@ -18,6 +18,14 @@ export const NOTIFICATION_TYPE = {
   SYSTEM: "SYSTEM",
 } as const;
 
+const PUSH_NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
+  [NOTIFICATION_TYPE.POST_LIKE]: "pushNotificationsLikes",
+  [NOTIFICATION_TYPE.COMMENT_LIKE]: "pushNotificationsLikes",
+  [NOTIFICATION_TYPE.COMMENT]: "pushNotificationsComments",
+  [NOTIFICATION_TYPE.FOLLOW]: "pushNotificationsFollows",
+  [NOTIFICATION_TYPE.FOLLOW_REQUEST]: "pushNotificationsFollows",
+};
+
 type CreateNotificationInput = {
   userId: string;
   actorId?: string | null;
@@ -44,11 +52,13 @@ export const createNotification = async ({
     throw new Error("Notification userId is required");
   }
 
+  const normalizedType = type.trim() || NOTIFICATION_TYPE.SYSTEM;
+
   return (prisma as any).notification.create({
     data: {
       userId: normalizedUserId,
       actorId: actorId?.trim() || null,
-      type: type.trim() || NOTIFICATION_TYPE.SYSTEM,
+      type: normalizedType,
       title: title.trim(),
       description: description.trim(),
       icon: icon.trim(),
@@ -56,4 +66,19 @@ export const createNotification = async ({
       unread,
     },
   });
+};
+
+export const shouldSendPushNotification = async (
+  userId: string,
+  type: string,
+): Promise<boolean> => {
+  const prefField = PUSH_NOTIFICATION_TYPE_TO_PREF[type];
+  if (!prefField) return true;
+
+  const user = await (prisma as any).user.findUnique({
+    where: { id: userId },
+    select: { [prefField]: true },
+  });
+
+  return !user || user[prefField] !== false;
 };

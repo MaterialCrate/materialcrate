@@ -4,9 +4,32 @@ import { useEffect, useMemo, useRef } from "react";
 
 type NotificationItem = {
   id: string;
+  type: string;
   title: string;
   description: string;
   unread: boolean;
+};
+
+type PushPrefs = {
+  pushNotificationsLikes: boolean;
+  pushNotificationsComments: boolean;
+  pushNotificationsFollows: boolean;
+  pushNotificationsMentions: boolean;
+};
+
+const PUSH_TYPE_TO_PREF: Record<string, keyof PushPrefs> = {
+  POST_LIKE: "pushNotificationsLikes",
+  COMMENT_LIKE: "pushNotificationsLikes",
+  COMMENT: "pushNotificationsComments",
+  FOLLOW: "pushNotificationsFollows",
+  FOLLOW_REQUEST: "pushNotificationsFollows",
+};
+
+const DEFAULT_PUSH_PREFS: PushPrefs = {
+  pushNotificationsLikes: true,
+  pushNotificationsComments: true,
+  pushNotificationsFollows: true,
+  pushNotificationsMentions: true,
 };
 
 const SEEN_IDS_STORAGE_KEY = "mc-browser-notification-seen";
@@ -48,6 +71,7 @@ const saveSeenIdsToStorage = (seenIds: Set<string>) => {
 
 export default function BrowserNotificationBridge() {
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const pushPrefsRef = useRef<PushPrefs>(DEFAULT_PUSH_PREFS);
   const canUseNotifications = useMemo(
     () => typeof window !== "undefined" && "Notification" in window,
     [],
@@ -66,12 +90,48 @@ export default function BrowserNotificationBridge() {
       } catch {}
     };
 
+    const fetchPushPrefs = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { method: "GET" });
+        const body = await response.json().catch(() => ({}));
+        if (response.ok && body?.user) {
+          pushPrefsRef.current = {
+            pushNotificationsLikes:
+              typeof body.user.pushNotificationsLikes === "boolean"
+                ? body.user.pushNotificationsLikes
+                : true,
+            pushNotificationsComments:
+              typeof body.user.pushNotificationsComments === "boolean"
+                ? body.user.pushNotificationsComments
+                : true,
+            pushNotificationsFollows:
+              typeof body.user.pushNotificationsFollows === "boolean"
+                ? body.user.pushNotificationsFollows
+                : true,
+            pushNotificationsMentions:
+              typeof body.user.pushNotificationsMentions === "boolean"
+                ? body.user.pushNotificationsMentions
+                : true,
+          };
+        }
+      } catch {}
+    };
+
+    const shouldShowBrowserNotification = (type: string): boolean => {
+      const prefKey = PUSH_TYPE_TO_PREF[type];
+      if (!prefKey) return true;
+      return pushPrefsRef.current[prefKey];
+    };
+
     const syncUnreadNotifications = async () => {
       try {
-        const response = await fetch("/api/notifications?limit=20&unreadOnly=true", {
-          method: "GET",
-          cache: "no-store",
-        });
+        const response = await fetch(
+          "/api/notifications?limit=20&unreadOnly=true",
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
 
         if (!response.ok) {
           return;
@@ -91,22 +151,28 @@ export default function BrowserNotificationBridge() {
             continue;
           }
 
+          seenIdsRef.current.add(item.id);
+
+          if (!shouldShowBrowserNotification(item.type)) {
+            continue;
+          }
+
           new window.Notification(item.title, {
             body: item.description,
             tag: `mc-${item.id}`,
           });
-
-          seenIdsRef.current.add(item.id);
         }
 
         saveSeenIdsToStorage(seenIdsRef.current);
       } catch {}
     };
 
-    void requestPermission().then(() => syncUnreadNotifications());
+    void requestPermission()
+      .then(() => fetchPushPrefs())
+      .then(() => syncUnreadNotifications());
 
     const intervalId = window.setInterval(() => {
-      void syncUnreadNotifications();
+      void fetchPushPrefs().then(() => syncUnreadNotifications());
     }, 30000);
 
     const onVisibilityChange = () => {

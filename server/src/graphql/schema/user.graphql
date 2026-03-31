@@ -12,6 +12,10 @@ type User {
   emailNotificationsWeeklySummary: Boolean!
   emailNotificationsProductUpdates: Boolean!
   emailNotificationsMarketing: Boolean!
+  pushNotificationsLikes: Boolean!
+  pushNotificationsComments: Boolean!
+  pushNotificationsFollows: Boolean!
+  pushNotificationsMentions: Boolean!
   followers: [User!]!
   following: [User!]!
   mutedUsers: [User!]!
@@ -99,6 +103,12 @@ type Mutation {
     emailNotificationsWeeklySummary: Boolean!
     emailNotificationsProductUpdates: Boolean!
     emailNotificationsMarketing: Boolean!
+  ): User!
+  updatePushNotificationSettings(
+    pushNotificationsLikes: Boolean!
+    pushNotificationsComments: Boolean!
+    pushNotificationsFollows: Boolean!
+    pushNotificationsMentions: Boolean!
   ): User!
   followUser(username: String!): FollowResult!
   unfollowUser(username: String!): Boolean!

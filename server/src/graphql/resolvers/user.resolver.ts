@@ -1108,6 +1108,35 @@ export const UserResolver = {
         },
       });
     },
+    updatePushNotificationSettings: async (
+      _: unknown,
+      {
+        pushNotificationsLikes,
+        pushNotificationsComments,
+        pushNotificationsFollows,
+        pushNotificationsMentions,
+      }: {
+        pushNotificationsLikes: boolean;
+        pushNotificationsComments: boolean;
+        pushNotificationsFollows: boolean;
+        pushNotificationsMentions: boolean;
+      },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      return (prisma as any).user.update({
+        where: { id: ctx.user.sub },
+        data: {
+          pushNotificationsLikes,
+          pushNotificationsComments,
+          pushNotificationsFollows,
+          pushNotificationsMentions,
+        },
+      });
+    },
     followUser: async (
       _: unknown,
       { username }: { username: string },
