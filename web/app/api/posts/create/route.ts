@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { normalizeAllowedCategory } from "@/app/lib/post-categories";
 
 export const runtime = "nodejs";
 
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const file = formData.get("file");
   const title = formData.get("title");
-  const courseCode = formData.get("courseCode");
+  const category = formData.get("category");
   const description = formData.get("description");
   const thumbnailBase64 = formData.get("thumbnailBase64");
   const yearValue = formData.get("year");
@@ -58,9 +59,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "File is required" }, { status: 400 });
   }
 
-  if (typeof title !== "string" || typeof courseCode !== "string") {
+  if (typeof title !== "string" || typeof category !== "string") {
     return NextResponse.json(
-      { error: "Title and course code are required" },
+      { error: "Title and category are required" },
+      { status: 400 },
+    );
+  }
+
+  const normalizedCategory = normalizeAllowedCategory(category);
+  if (!normalizedCategory) {
+    return NextResponse.json(
+      { error: "Please select a valid category from the suggestion list" },
       { status: 400 },
     );
   }
@@ -97,7 +106,7 @@ export async function POST(req: Request) {
         fileName: file.name,
         mimeType: file.type || "application/pdf",
         title: title.trim(),
-        courseCode: courseCode.trim(),
+        courseCode: normalizedCategory,
         description: typeof description === "string" ? description.trim() : null,
         year: Number.isFinite(parsedYear) ? parsedYear : null,
       },

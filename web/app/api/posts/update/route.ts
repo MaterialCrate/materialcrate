@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { normalizeAllowedCategory } from "@/app/lib/post-categories";
 
 export const runtime = "nodejs";
 
@@ -55,16 +56,20 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const postId = typeof body?.postId === "string" ? body.postId.trim() : "";
   const title = typeof body?.title === "string" ? body.title.trim() : "";
-  const courseCode =
-    typeof body?.courseCode === "string" ? body.courseCode.trim() : "";
+  const category = typeof body?.category === "string" ? body.category.trim() : "";
   const description =
     typeof body?.description === "string" ? body.description.trim() : null;
   const rawYear =
     typeof body?.year === "string" ? body.year.trim() : body?.year;
 
-  if (!postId || !title || !courseCode) {
+  const normalizedCategory = normalizeAllowedCategory(category);
+
+  if (!postId || !title || !normalizedCategory) {
     return NextResponse.json(
-      { error: "Post id, title and course code are required" },
+      {
+        error:
+          "Post id, title and a valid category from the suggestion list are required",
+      },
       { status: 400 },
     );
   }
@@ -94,7 +99,7 @@ export async function POST(req: Request) {
       variables: {
         postId,
         title,
-        courseCode,
+        courseCode: normalizedCategory,
         description,
         year: parsedYear,
       },

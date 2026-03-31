@@ -9,6 +9,10 @@ import {
   DocumentText,
 } from "iconsax-reactjs";
 import { createPdfThumbnailBase64 } from "@/app/lib/pdf-thumbnail";
+import {
+  POST_CATEGORIES,
+  normalizeAllowedCategory,
+} from "@/app/lib/post-categories";
 import ActionButton from "../ActionButton";
 import Alert from "../Alert";
 import type { HomePost } from "./Post";
@@ -28,10 +32,14 @@ export default function UploadDrawer({
 }: UploadDrawerProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState<string>("");
-  const [courseCode, setCourseCode] = useState<string>("");
+  const [categoryQuery, setCategoryQuery] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] =
+    useState<boolean>(false);
   const [year, setYear] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const categoryInputRef = useRef<HTMLInputElement>(null);
   const [alertMessage, setAlertMessage] = useState<string>("");
   const [alertType, setAlertType] = useState<"success" | "error" | "info">(
     "error",
@@ -56,7 +64,10 @@ export default function UploadDrawer({
     setSelectedFile(null);
     setThumbnailBase64(null);
     setTitle(post?.title ?? "");
-    setCourseCode(post?.courseCode ?? "");
+    const normalizedCategory = normalizeAllowedCategory(post?.courseCode ?? "");
+    setSelectedCategory(normalizedCategory ?? "");
+    setCategoryQuery(normalizedCategory ?? post?.courseCode ?? "");
+    setIsCategoryDropdownOpen(false);
     setYear(post?.year ? String(post.year) : "");
     setDescription(post?.description ?? "");
 
@@ -103,10 +114,17 @@ export default function UploadDrawer({
 
   const disabled =
     title.length < 3 ||
-    courseCode.length < 3 ||
+    !selectedCategory ||
     isPublishing ||
     isGeneratingThumbnail ||
     (!isEditMode && !selectedFile);
+
+  const filteredCategoryOptions = POST_CATEGORIES.filter((categoryOption) => {
+    const trimmedQuery = categoryQuery.trim().toLowerCase();
+    if (!trimmedQuery) return true;
+
+    return categoryOption.toLowerCase().includes(trimmedQuery);
+  }).slice(0, 12);
 
   async function handlePublish() {
     if (disabled) return;
@@ -124,7 +142,7 @@ export default function UploadDrawer({
           body: JSON.stringify({
             postId: post.id,
             title: title.trim(),
-            courseCode: courseCode.trim(),
+            category: selectedCategory,
             description: description.trim(),
             year: year || null,
           }),
@@ -138,7 +156,7 @@ export default function UploadDrawer({
           formData.append("thumbnailBase64", thumbnailBase64);
         }
         formData.append("title", title.trim());
-        formData.append("courseCode", courseCode.trim());
+        formData.append("category", selectedCategory);
         formData.append("description", description.trim());
         if (year) {
           formData.append("year", year);
@@ -173,7 +191,9 @@ export default function UploadDrawer({
       setSelectedFile(null);
       setThumbnailBase64(null);
       setTitle("");
-      setCourseCode("");
+      setCategoryQuery("");
+      setSelectedCategory("");
+      setIsCategoryDropdownOpen(false);
       setYear("");
       setDescription("");
       if (fileInputRef.current) {
@@ -330,17 +350,59 @@ export default function UploadDrawer({
           </div>
           <div className="space-y-1">
             <p className="text-[#5B5B5B] text-sm">
-              Course code<span className="text-red-500">*</span>
+              Category<span className="text-red-500">*</span>
             </p>
-            <input
-              placeholder="E.g. 'CS 101' (at least 3 characters)"
-              value={courseCode}
-              onChange={(e) => setCourseCode(e.target.value)}
-              required
-              maxLength={8}
-              style={{ fontSize: "0.75rem" }}
-              className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs  focus:outline-none"
-            />
+            <div className="relative">
+              <input
+                ref={categoryInputRef}
+                placeholder="Type to search categories"
+                value={categoryQuery}
+                onFocus={() => setIsCategoryDropdownOpen(true)}
+                onBlur={() => {
+                  setTimeout(() => {
+                    setIsCategoryDropdownOpen(false);
+                  }, 100);
+                }}
+                onChange={(e) => {
+                  const nextValue = e.target.value;
+                  setCategoryQuery(nextValue);
+                  const normalizedCategory =
+                    normalizeAllowedCategory(nextValue);
+                  setSelectedCategory(normalizedCategory ?? "");
+                  setIsCategoryDropdownOpen(true);
+                }}
+                required
+                maxLength={80}
+                autoComplete="off"
+                style={{ fontSize: "0.75rem" }}
+                className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs focus:outline-none"
+              />
+              {isCategoryDropdownOpen && filteredCategoryOptions.length > 0 && (
+                <div className="absolute z-20 mt-2 max-h-52 w-full overflow-y-auto rounded-lg border border-[#E4E4E4] bg-white shadow-md">
+                  {filteredCategoryOptions.map((categoryOption) => (
+                    <button
+                      key={categoryOption}
+                      type="button"
+                      className="w-full border-b border-[#F3F3F3] px-3 py-2 text-left text-xs text-[#202020] last:border-b-0 hover:bg-[#F7F7F7]"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        setCategoryQuery(categoryOption);
+                        setSelectedCategory(categoryOption);
+                        setIsCategoryDropdownOpen(false);
+                        categoryInputRef.current?.blur();
+                      }}
+                    >
+                      {categoryOption}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {categoryQuery && !selectedCategory && (
+              <p className="text-[10px] text-[#E00505] font-medium">
+                Please select a category from the suggestion list.
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <p className="text-[#5B5B5B] text-sm">Year</p>
