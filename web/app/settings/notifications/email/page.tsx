@@ -1,42 +1,195 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SmsNotification } from "iconsax-reactjs";
+import Alert from "@/app/components/Alert";
 import Header from "@/app/components/Header";
 import ToggleSwitch from "@/app/components/ToggleSwitch";
+import { useAuth } from "@/app/lib/auth-client";
+
+type EmailNotificationSettings = {
+  emailNotificationsAccountActivity: boolean;
+  emailNotificationsWeeklySummary: boolean;
+  emailNotificationsProductUpdates: boolean;
+  emailNotificationsMarketing: boolean;
+};
+
+type EmailOption = {
+  key: keyof EmailNotificationSettings;
+  label: string;
+  description: string;
+};
+
+const DEFAULT_EMAIL_NOTIFICATION_SETTINGS: EmailNotificationSettings = {
+  emailNotificationsAccountActivity: true,
+  emailNotificationsWeeklySummary: true,
+  emailNotificationsProductUpdates: true,
+  emailNotificationsMarketing: true,
+};
+
+const emailOptions: EmailOption[] = [
+  {
+    key: "emailNotificationsAccountActivity",
+    label: "Account activity",
+    description: "Important updates about your account and sign-ins.",
+  },
+  {
+    key: "emailNotificationsWeeklySummary",
+    label: "Weekly summary",
+    description: "A recap of views, engagement, and activity.",
+  },
+  {
+    key: "emailNotificationsProductUpdates",
+    label: "Product updates",
+    description: "New features, improvements, and app announcements.",
+  },
+  {
+    key: "emailNotificationsMarketing",
+    label: "Marketing emails",
+    description: "Occasional tips, promos, and campaigns.",
+  },
+];
 
 export default function Page() {
-  const emailOptions = [
-    {
-      label: "Account activity",
-      description: "Important updates about your account and sign-ins.",
-      state: true,
-    },
-    {
-      label: "Weekly summary",
-      description: "A recap of views, engagement, and activity.",
-      state: false,
-    },
-    {
-      label: "Product updates",
-      description: "New features, improvements, and app announcements.",
-      state: true,
-    },
-    {
-      label: "Marketing emails",
-      description: "Occasional tips, promos, and campaigns.",
-      state: false,
-    },
-  ];
+  const router = useRouter();
+  const { user, isLoading: isLoadingAuth } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [emailNotifications, setEmailNotifications] =
+    useState<EmailNotificationSettings>(DEFAULT_EMAIL_NOTIFICATION_SETTINGS);
+  const [isSavingKey, setIsSavingKey] = useState<
+    keyof EmailNotificationSettings | null
+  >(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoadingAuth && !user) {
+      router.replace("/login");
+    }
+  }, [isLoadingAuth, router, user]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadEmailNotifications = async () => {
+      if (isLoadingAuth || !user) {
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch("/api/auth/me", { method: "GET" });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok || !body?.user) {
+          throw new Error("Failed to load email notification settings");
+        }
+
+        if (!mounted) return;
+
+        setEmailNotifications({
+          emailNotificationsAccountActivity:
+            typeof body.user.emailNotificationsAccountActivity === "boolean"
+              ? body.user.emailNotificationsAccountActivity
+              : DEFAULT_EMAIL_NOTIFICATION_SETTINGS.emailNotificationsAccountActivity,
+          emailNotificationsWeeklySummary:
+            typeof body.user.emailNotificationsWeeklySummary === "boolean"
+              ? body.user.emailNotificationsWeeklySummary
+              : DEFAULT_EMAIL_NOTIFICATION_SETTINGS.emailNotificationsWeeklySummary,
+          emailNotificationsProductUpdates:
+            typeof body.user.emailNotificationsProductUpdates === "boolean"
+              ? body.user.emailNotificationsProductUpdates
+              : DEFAULT_EMAIL_NOTIFICATION_SETTINGS.emailNotificationsProductUpdates,
+          emailNotificationsMarketing:
+            typeof body.user.emailNotificationsMarketing === "boolean"
+              ? body.user.emailNotificationsMarketing
+              : DEFAULT_EMAIL_NOTIFICATION_SETTINGS.emailNotificationsMarketing,
+        });
+      } catch (caughtError: unknown) {
+        if (!mounted) return;
+        setError("Error loading email notification settings");
+        console.error("Error loading email notification settings", {
+          error:
+            caughtError instanceof Error ? caughtError.message : caughtError,
+        });
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadEmailNotifications();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isLoadingAuth, user]);
+
+  const handleToggleChange = async (
+    key: keyof EmailNotificationSettings,
+    nextState: boolean,
+  ) => {
+    if (isSavingKey) return;
+
+    const previousEmailNotifications = emailNotifications;
+    const nextEmailNotifications = {
+      ...previousEmailNotifications,
+      [key]: nextState,
+    };
+
+    setEmailNotifications(nextEmailNotifications);
+    setIsSavingKey(key);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/settings/notifications/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(nextEmailNotifications),
+      });
+
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          body?.error || "Failed to save email notification settings",
+        );
+      }
+
+      setSuccess("Email notification settings updated.");
+    } catch (caughtError: unknown) {
+      setEmailNotifications(previousEmailNotifications);
+      setError("Error saving email notification settings");
+      console.error("Error saving email notification settings", {
+        error: caughtError instanceof Error ? caughtError.message : caughtError,
+      });
+    } finally {
+      setIsSavingKey(null);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
-      <Header title="Email Notifications" isLoading={false} />
+      <Alert message={success} type="success" />
+      <Alert message={error} type="error" />
+      <Header
+        title="Email Notifications"
+        isLoading={isLoading || isSavingKey !== null}
+      />
       <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
           Notifications
         </p>
-        <h2 className="mt-1 text-lg font-semibold">Inbox updates, only when useful.</h2>
+        <h2 className="mt-1 text-lg font-semibold">
+          Inbox updates, only when useful.
+        </h2>
         <p className="mt-1 text-xs text-white/72">
           Pick the emails that should reach you outside the app.
         </p>
@@ -52,16 +205,21 @@ export default function Page() {
                 <SmsNotification size={18} color="#A95A13" variant="Bulk" />
               </div>
               <div>
-              <p className="text-sm font-medium text-[#3D3D3D]">{option.label}</p>
-              <p className="text-xs text-[#6B6B6B]">{option.description}</p>
+                <p className="text-sm font-medium text-[#3D3D3D]">
+                  {option.label}
+                </p>
+                <p className="text-xs text-[#6B6B6B]">{option.description}</p>
               </div>
             </div>
-            <ToggleSwitch
-              state={option.state}
-              onChange={(newState) =>
-                console.log("Email notification setting:", option.label, newState)
-              }
-            />
+            <div>
+              <ToggleSwitch
+                state={emailNotifications[option.key]}
+                disabled={isSavingKey !== null}
+                onChange={(newState) =>
+                  void handleToggleChange(option.key, newState)
+                }
+              />
+            </div>
           </div>
         ))}
       </div>

@@ -17,6 +17,10 @@ model User {
   visibilityPublicPosts    Boolean @default(true)
   visibilityPublicComments Boolean @default(true)
   visibilityOnlineStatus   Boolean @default(true)
+  emailNotificationsAccountActivity Boolean @default(true)
+  emailNotificationsWeeklySummary   Boolean @default(true)
+  emailNotificationsProductUpdates  Boolean @default(true)
+  emailNotificationsMarketing       Boolean @default(true)
   email         String
   pendingEmail  String?
   password      String

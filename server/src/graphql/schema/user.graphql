@@ -8,6 +8,10 @@ type User {
   visibilityPublicPosts: Boolean!
   visibilityPublicComments: Boolean!
   visibilityOnlineStatus: Boolean!
+  emailNotificationsAccountActivity: Boolean!
+  emailNotificationsWeeklySummary: Boolean!
+  emailNotificationsProductUpdates: Boolean!
+  emailNotificationsMarketing: Boolean!
   followers: [User!]!
   following: [User!]!
   mutedUsers: [User!]!
@@ -89,6 +93,12 @@ type Mutation {
     visibilityPublicPosts: Boolean!
     visibilityPublicComments: Boolean!
     visibilityOnlineStatus: Boolean!
+  ): User!
+  updateEmailNotificationSettings(
+    emailNotificationsAccountActivity: Boolean!
+    emailNotificationsWeeklySummary: Boolean!
+    emailNotificationsProductUpdates: Boolean!
+    emailNotificationsMarketing: Boolean!
   ): User!
   followUser(username: String!): FollowResult!
   unfollowUser(username: String!): Boolean!

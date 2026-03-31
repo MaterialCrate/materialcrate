@@ -45,6 +45,10 @@ const LEGACY_ME_QUERY = `
       visibilityPublicPosts
       visibilityPublicComments
       visibilityOnlineStatus
+      emailNotificationsAccountActivity
+      emailNotificationsWeeklySummary
+      emailNotificationsProductUpdates
+      emailNotificationsMarketing
       linkedSEOs
       subscriptionPlan
       subscriptionStartedAt
@@ -82,7 +86,7 @@ export async function GET() {
   const primary = await fetchMe(token, ME_QUERY);
   const missingFieldError = Array.isArray(primary.body?.errors)
     ? primary.body.errors.some((error: { message?: string }) =>
-        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus)"/.test(
+        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus|emailNotificationsAccountActivity|emailNotificationsWeeklySummary|emailNotificationsProductUpdates|emailNotificationsMarketing)"/.test(
           error?.message ?? "",
         ),
       )
@@ -115,6 +119,10 @@ export async function GET() {
         visibilityPublicPosts: true,
         visibilityPublicComments: true,
         visibilityOnlineStatus: true,
+        emailNotificationsAccountActivity: true,
+        emailNotificationsWeeklySummary: true,
+        emailNotificationsProductUpdates: true,
+        emailNotificationsMarketing: true,
       },
     });
   }

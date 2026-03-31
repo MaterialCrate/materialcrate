@@ -1079,6 +1079,35 @@ export const UserResolver = {
         },
       });
     },
+    updateEmailNotificationSettings: async (
+      _: unknown,
+      {
+        emailNotificationsAccountActivity,
+        emailNotificationsWeeklySummary,
+        emailNotificationsProductUpdates,
+        emailNotificationsMarketing,
+      }: {
+        emailNotificationsAccountActivity: boolean;
+        emailNotificationsWeeklySummary: boolean;
+        emailNotificationsProductUpdates: boolean;
+        emailNotificationsMarketing: boolean;
+      },
+      ctx: any,
+    ) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      return (prisma as any).user.update({
+        where: { id: ctx.user.sub },
+        data: {
+          emailNotificationsAccountActivity,
+          emailNotificationsWeeklySummary,
+          emailNotificationsProductUpdates,
+          emailNotificationsMarketing,
+        },
+      });
+    },
     followUser: async (
       _: unknown,
       { username }: { username: string },
@@ -1973,6 +2002,18 @@ export const UserResolver = {
     visibilityOnlineStatus: (user: {
       visibilityOnlineStatus?: boolean | null;
     }) => user.visibilityOnlineStatus ?? true,
+    emailNotificationsAccountActivity: (user: {
+      emailNotificationsAccountActivity?: boolean | null;
+    }) => user.emailNotificationsAccountActivity ?? true,
+    emailNotificationsWeeklySummary: (user: {
+      emailNotificationsWeeklySummary?: boolean | null;
+    }) => user.emailNotificationsWeeklySummary ?? true,
+    emailNotificationsProductUpdates: (user: {
+      emailNotificationsProductUpdates?: boolean | null;
+    }) => user.emailNotificationsProductUpdates ?? true,
+    emailNotificationsMarketing: (user: {
+      emailNotificationsMarketing?: boolean | null;
+    }) => user.emailNotificationsMarketing ?? true,
     profilePicture: async (user: { profilePicture?: string | null }) => {
       const rawProfilePicture = user.profilePicture?.trim();
       if (!rawProfilePicture) {
