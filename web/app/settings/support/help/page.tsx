@@ -42,7 +42,7 @@ export default function Page() {
         <p className="mt-2 text-sm text-[#6A625A]">
           Find answers, troubleshoot issues, and get the assistance you need.
           Browse FAQs, step-by-step guides, and contact support for personalized
-          help with your account, products, or services.  
+          help with your account, products, or services.
         </p>
       </div>
       <div className="space-y-3">

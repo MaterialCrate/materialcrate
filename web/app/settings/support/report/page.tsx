@@ -28,11 +28,7 @@ const MAX_TITLE_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 1000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES = 3;
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-]);
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 type AttachedImage = {
   file: File;
@@ -145,9 +141,7 @@ export default function Page() {
       setImages([]);
       setSuccessMessage("Report submitted. We'll look into it shortly.");
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Something went wrong.",
-      );
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setIsSubmitting(false);
     }
@@ -170,12 +164,10 @@ export default function Page() {
           <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
             Report
           </p>
-          <h2 className="mt-1 text-lg font-semibold">
-            Something not right?
-          </h2>
+          <h2 className="mt-1 text-lg font-semibold">Something not right?</h2>
           <p className="mt-1 text-xs text-white/72">
-            Describe the issue and we&apos;ll work on a fix. Screenshots help
-            us resolve problems faster.
+            Describe the issue and we&apos;ll work on a fix. Screenshots help us
+            resolve problems faster.
           </p>
         </div>
 
@@ -290,11 +282,7 @@ export default function Page() {
                     onClick={() => handleImageRemove(index)}
                     className="absolute right-1 top-1 rounded-full bg-black/50"
                   >
-                    <CloseCircle
-                      size={20}
-                      color="#FFFFFF"
-                      variant="Bold"
-                    />
+                    <CloseCircle size={20} color="#FFFFFF" variant="Bold" />
                   </button>
                 </div>
               ))}
