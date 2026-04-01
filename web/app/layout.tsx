@@ -6,6 +6,7 @@ import ConditionalNavbar from "./components/ConditionalNavbar";
 import { SystemPopupProvider } from "./components/SystemPopup";
 import BrowserNotificationBridge from "./components/BrowserNotificationBridge";
 import ScrollRestoration from "./components/ScrollRestoration";
+import ThemeSync from "./components/ThemeSync";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
 
 const themeInitScript = `
   try {
-    var savedTheme = localStorage.getItem("mc-theme") || "system";
+    var savedTheme = localStorage.getItem("mc-theme") || "light";
     if (savedTheme === "dark" || savedTheme === "sepia") {
       document.documentElement.dataset.theme = savedTheme;
     } else {
@@ -54,6 +55,7 @@ export default function RootLayout({
         <SystemPopupProvider>
           <ScrollRestoration />
           <BrowserNotificationBridge />
+          <ThemeSync />
           <AuthSplashGate>
             {children}
             <ConditionalNavbar />

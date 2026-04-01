@@ -1137,6 +1137,26 @@ export const UserResolver = {
         },
       });
     },
+    updateTheme: async (_: unknown, { theme }: { theme: string }, ctx: any) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const VALID_THEMES = ["system", "light", "dark", "sepia"];
+      const normalizedTheme = String(theme || "")
+        .trim()
+        .toLowerCase();
+      if (!VALID_THEMES.includes(normalizedTheme)) {
+        throw new Error(
+          "Invalid theme. Must be one of: system, light, dark, sepia",
+        );
+      }
+
+      return (prisma as any).user.update({
+        where: { id: ctx.user.sub },
+        data: { theme: normalizedTheme },
+      });
+    },
     followUser: async (
       _: unknown,
       { username }: { username: string },

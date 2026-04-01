@@ -4,6 +4,7 @@ type User {
   displayName: String!
   profilePicture: String
   profileBackground: String!
+  theme: String!
   visibilityPublicProfile: Boolean!
   visibilityPublicPosts: Boolean!
   visibilityPublicComments: Boolean!
@@ -110,6 +111,7 @@ type Mutation {
     pushNotificationsFollows: Boolean!
     pushNotificationsMentions: Boolean!
   ): User!
+  updateTheme(theme: String!): User!
   followUser(username: String!): FollowResult!
   unfollowUser(username: String!): Boolean!
   acceptFollowRequest(requestId: ID!): Boolean!

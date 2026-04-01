@@ -36,6 +36,7 @@ const ME_QUERY = `
       pushNotificationsComments
       pushNotificationsFollows
       pushNotificationsMentions
+      theme
     }
   }
 `;
@@ -70,6 +71,7 @@ const LEGACY_ME_QUERY = `
       followingCount
       institution
       program
+      theme
     }
   }
 `;
@@ -139,6 +141,7 @@ export async function GET() {
         pushNotificationsComments: true,
         pushNotificationsFollows: true,
         pushNotificationsMentions: true,
+        theme: "light",
       },
     });
   }

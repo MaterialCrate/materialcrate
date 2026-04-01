@@ -3,6 +3,7 @@
 import React from "react";
 import { MonitorMobbile, Moon, Sun1 } from "iconsax-reactjs";
 import Header from "@/app/components/Header";
+import { useAuth, refreshAuth } from "@/app/lib/auth-client";
 
 type ThemeOption = {
   key: "system" | "light" | "dark" | "sepia";
@@ -60,21 +61,31 @@ const applyThemeToDocument = (theme: ThemeOption["key"]) => {
 };
 
 export default function Page() {
+  const { user, isLoading } = useAuth();
   const [selectedTheme, setSelectedTheme] =
-    React.useState<ThemeOption["key"]>("system");
+    React.useState<ThemeOption["key"]>("light");
+  const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    const savedTheme =
-      (window.localStorage.getItem(STORAGE_KEY) as ThemeOption["key"] | null) ??
-      "system";
-    setSelectedTheme(savedTheme);
-    applyThemeToDocument(savedTheme);
+    const serverTheme = (user?.theme as ThemeOption["key"] | undefined) ?? null;
+    const localTheme = window.localStorage.getItem(STORAGE_KEY) as
+      | ThemeOption["key"]
+      | null;
+    const initialTheme = serverTheme ?? localTheme ?? "light";
+
+    setSelectedTheme(initialTheme);
+    applyThemeToDocument(initialTheme);
+
+    if (serverTheme && serverTheme !== localTheme) {
+      window.localStorage.setItem(STORAGE_KEY, serverTheme);
+    }
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handlePreferenceChange = () => {
       const currentTheme =
-        (window.localStorage.getItem(STORAGE_KEY) as ThemeOption["key"] | null) ??
-        "system";
+        (window.localStorage.getItem(STORAGE_KEY) as
+          | ThemeOption["key"]
+          | null) ?? "system";
 
       if (currentTheme === "system") {
         applyThemeToDocument(currentTheme);
@@ -84,36 +95,49 @@ export default function Page() {
     mediaQuery.addEventListener("change", handlePreferenceChange);
     return () =>
       mediaQuery.removeEventListener("change", handlePreferenceChange);
-  }, []);
+  }, [user]);
 
-  const applyTheme = (theme: ThemeOption["key"]) => {
+  const applyTheme = async (theme: ThemeOption["key"]) => {
     setSelectedTheme(theme);
     window.localStorage.setItem(STORAGE_KEY, theme);
     applyThemeToDocument(theme);
+
+    setSaving(true);
+    try {
+      await fetch("/api/settings/appearance/theme", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme }),
+      });
+      refreshAuth();
+    } catch {
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-30">
-      <Header title="Theme" isLoading={false} />
+    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
+      <Header title="Theme" isLoading={isLoading || saving} />
       <p className="mb-4 text-sm text-[#5B5B5B]">
         Choose how Material Crate looks across the app.
       </p>
       <div className="space-y-3">
-      {THEME_OPTIONS.map((option) => {
+        {THEME_OPTIONS.map((option) => {
           const isActive = selectedTheme === option.key;
           return (
             <button
               key={option.key}
               type="button"
               onClick={() => applyTheme(option.key)}
-              className={`w-full rounded-[24px] border px-4 py-4 text-left transition-colors ${
+              className={`w-full rounded-3xl border px-4 py-4 text-left transition-colors ${
                 isActive
                   ? "border-[#E1761F] bg-[#FFF4EA]"
                   : "border-black/8 bg-white"
               }`}
             >
               <div className="mb-4 overflow-hidden rounded-[18px] border border-black/8">
-                <div className={`h-22 bg-gradient-to-br ${option.preview} p-3`}>
+                <div className={`h-22 bg-linear-to-br ${option.preview} p-3`}>
                   <div className="flex h-full flex-col justify-between rounded-[14px] border border-white/35 bg-white/25 p-3 backdrop-blur-[2px]">
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full bg-white/75" />
