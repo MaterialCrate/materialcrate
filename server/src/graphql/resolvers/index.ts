@@ -3,6 +3,7 @@ import { ArchiveResolver } from "./archive.resolver";
 import { PostResolver } from "./post.resolver";
 import { WorkspaceResolver } from "./workspace.resolver";
 import { NotificationResolver } from "./notification.resolver";
+import { ReportResolver } from "./report.resolver";
 
 export const resolvers = {
   Query: {
@@ -11,6 +12,7 @@ export const resolvers = {
     ...PostResolver.Query,
     ...WorkspaceResolver.Query,
     ...NotificationResolver.Query,
+    ...ReportResolver.Query,
   },
   Mutation: {
     ...UserResolver.Mutation,
@@ -18,6 +20,7 @@ export const resolvers = {
     ...PostResolver.Mutation,
     ...WorkspaceResolver.Mutation,
     ...NotificationResolver.Mutation,
+    ...ReportResolver.Mutation,
   },
   Post: {
     ...PostResolver.Post,

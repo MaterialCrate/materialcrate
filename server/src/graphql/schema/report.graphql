@@ -1,0 +1,28 @@
+type Report {
+  id: ID!
+  category: String!
+  title: String!
+  description: String!
+  imageUrls: [String!]!
+  userAgent: String
+  deviceInfo: String
+  resolved: Boolean!
+  createdAt: String!
+}
+
+extend type Query {
+  myReports(limit: Int = 20, offset: Int = 0): [Report!]!
+}
+
+extend type Mutation {
+  createReport(
+    category: String!
+    title: String!
+    description: String!
+    userAgent: String
+    deviceInfo: String
+    imageBase64s: [String!]
+    imageFileNames: [String!]
+    imageMimeTypes: [String!]
+  ): Report!
+}

@@ -1,11 +1,32 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Camera, CloseCircle, DocumentText } from "iconsax-reactjs";
 import Alert from "@/app/components/Alert";
 import Header from "@/app/components/Header";
 import ActionButton from "@/app/components/ActionButton";
+
+function getDeviceInfo(): string {
+  const parts: string[] = [];
+
+  const { platform, maxTouchPoints } = navigator;
+  parts.push(`Platform: ${platform}`);
+
+  const width = window.screen.width;
+  const height = window.screen.height;
+  const dpr = window.devicePixelRatio ?? 1;
+  parts.push(`Screen: ${width}x${height} @${dpr}x`);
+
+  if (maxTouchPoints > 0) {
+    parts.push(`Touch: ${maxTouchPoints} points`);
+  }
+
+  const lang = navigator.language;
+  if (lang) parts.push(`Lang: ${lang}`);
+
+  return parts.join("; ");
+}
 
 type ProblemCategory =
   | "bug"
@@ -36,7 +57,6 @@ type AttachedImage = {
 };
 
 export default function Page() {
-  const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [title, setTitle] = useState("");
@@ -114,6 +134,8 @@ export default function Page() {
       formData.append("title", title.trim());
       formData.append("description", description.trim());
       formData.append("category", category);
+      formData.append("userAgent", navigator.userAgent);
+      formData.append("deviceInfo", getDeviceInfo());
 
       for (const img of images) {
         formData.append("images", img.file);
@@ -130,7 +152,6 @@ export default function Page() {
         throw new Error(body?.error || "Failed to submit report.");
       }
 
-      // Clean up previews
       for (const img of images) {
         URL.revokeObjectURL(img.previewUrl);
       }
@@ -156,10 +177,9 @@ export default function Page() {
 
       <form
         id="report-form"
-        className="flex flex-col gap-5 px-5 pt-24 pb-10"
+        className="flex flex-col gap-5 px-5 pt-20 pb-10"
         onSubmit={handleSubmit}
       >
-        {/* Hero banner */}
         <div className="w-full rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
           <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
             Report
@@ -171,7 +191,6 @@ export default function Page() {
           </p>
         </div>
 
-        {/* Category */}
         <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
           <h3 className="text-sm font-semibold text-[#1F1F1F]">Category</h3>
           <p className="mt-0.5 text-xs text-[#888888]">
@@ -195,7 +214,6 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Title & Description */}
         <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
           <h3 className="text-sm font-semibold text-[#1F1F1F]">Details</h3>
 
@@ -232,7 +250,6 @@ export default function Page() {
           </div>
         </div>
 
-        {/* Screenshots */}
         <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
@@ -270,8 +287,7 @@ export default function Page() {
                   key={img.previewUrl}
                   className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-black/6"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={img.previewUrl}
                     alt={`Screenshot ${index + 1}`}
                     className="h-full w-full object-cover"
@@ -290,7 +306,6 @@ export default function Page() {
           )}
         </div>
 
-        {/* What we collect notice */}
         <div className="flex items-start gap-3 rounded-[20px] bg-[#FFF4EA] px-4 py-3.5">
           <DocumentText
             size={18}
@@ -305,7 +320,6 @@ export default function Page() {
           </p>
         </div>
 
-        {/* Submit */}
         <ActionButton
           type="submit"
           form="report-form"
