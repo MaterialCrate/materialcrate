@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Camera, CloseCircle, DocumentText } from "iconsax-reactjs";
 import Alert from "@/app/components/Alert";
@@ -58,6 +58,7 @@ type AttachedImage = {
 
 export default function Page() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const latestImagesRef = useRef<AttachedImage[]>([]);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -67,16 +68,49 @@ export default function Page() {
   const [successMessage, setSuccessMessage] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    latestImagesRef.current = images;
+  }, [images]);
+
   const isFormValid =
     title.trim().length >= 5 &&
     description.trim().length >= 20 &&
     category !== "";
 
+  const handleOpenImagePicker = useCallback(() => {
+    const input = fileInputRef.current;
+    console.log("[SupportReport] Add button clicked", {
+      hasInputRef: Boolean(input),
+      disabled: images.length >= MAX_IMAGES || isSubmitting,
+      attachedCount: images.length,
+    });
+
+    if (!input || input.disabled) {
+      return;
+    }
+
+    try {
+      if (typeof input.showPicker === "function") {
+        input.showPicker();
+        return;
+      }
+    } catch (err) {
+      console.error("[SupportReport] showPicker() failed, falling back to click()", err);
+    }
+
+    input.click();
+  }, [images.length, isSubmitting]);
+
   const handleImageAdd = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = e.target.files;
-      e.target.value = "";
-      if (!files) return;
+
+      console.log("[SupportReport] onChange fired", {
+        hasFiles: Boolean(files),
+        fileCount: files?.length ?? 0,
+      });
+
+      if (!files || files.length === 0) return;
 
       const remaining = MAX_IMAGES - images.length;
       if (remaining <= 0) {
@@ -103,9 +137,24 @@ export default function Page() {
           file,
           previewUrl: URL.createObjectURL(file),
         });
+
+        console.log("[SupportReport] Added image", {
+          name: file.name,
+          type: file.type,
+          sizeBytes: file.size,
+        });
       }
 
-      setImages((prev) => [...prev, ...newImages]);
+      setImages((prev) => {
+        const next = [...prev, ...newImages];
+        console.log("[SupportReport] Total attached images", {
+          total: next.length,
+          names: next.map((img) => img.file.name),
+        });
+        return next;
+      });
+
+      e.target.value = "";
       setError("");
     },
     [images.length],
@@ -119,6 +168,14 @@ export default function Page() {
       }
       return prev.filter((_, i) => i !== index);
     });
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const image of latestImagesRef.current) {
+        URL.revokeObjectURL(image.previewUrl);
+      }
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -262,9 +319,13 @@ export default function Page() {
             </div>
             <button
               type="button"
+              onClick={handleOpenImagePicker}
               disabled={images.length >= MAX_IMAGES || isSubmitting}
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 rounded-full border border-black/8 bg-[#F8F8F8] px-3 py-1.5 text-xs font-medium text-[#5B5B5B] transition-colors hover:bg-[#F0ECE6] disabled:opacity-40"
+              className={`flex items-center gap-1.5 rounded-full border border-black/8 bg-[#F8F8F8] px-3 py-1.5 text-xs font-medium text-[#5B5B5B] transition-colors ${
+                images.length >= MAX_IMAGES || isSubmitting
+                  ? "opacity-40"
+                  : "hover:bg-[#F0ECE6]"
+              }`}
             >
               <Camera size={14} color="#5B5B5B" variant="Bulk" />
               Add
@@ -272,12 +333,14 @@ export default function Page() {
           </div>
           <input
             ref={fileInputRef}
+            id="support-report-images"
             type="file"
             accept="image/jpeg,image/png,image/webp"
             multiple
-            className="hidden"
+            className="sr-only"
             onChange={handleImageAdd}
             aria-label="Attach screenshots"
+            disabled={images.length >= MAX_IMAGES || isSubmitting}
           />
 
           {images.length > 0 && (
@@ -290,6 +353,9 @@ export default function Page() {
                   <Image
                     src={img.previewUrl}
                     alt={`Screenshot ${index + 1}`}
+                    fill
+                    unoptimized
+                    sizes="96px"
                     className="h-full w-full object-cover"
                   />
                   <button
