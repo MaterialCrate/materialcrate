@@ -24,7 +24,7 @@ const supportItems = [
     title: "Community guidelines",
     detail: "Read the rules and best practices for our community.",
     icon: ShieldSearch,
-    href: "",
+    href: "/settings/support/guidelines",
   },
 ];
 
