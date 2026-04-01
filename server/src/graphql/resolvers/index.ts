@@ -4,6 +4,7 @@ import { PostResolver } from "./post.resolver";
 import { WorkspaceResolver } from "./workspace.resolver";
 import { NotificationResolver } from "./notification.resolver";
 import { ReportResolver } from "./report.resolver";
+import { SupportResolver } from "./support.resolver";
 
 export const resolvers = {
   Query: {
@@ -21,6 +22,7 @@ export const resolvers = {
     ...WorkspaceResolver.Mutation,
     ...NotificationResolver.Mutation,
     ...ReportResolver.Mutation,
+    ...SupportResolver.Mutation,
   },
   Post: {
     ...PostResolver.Post,

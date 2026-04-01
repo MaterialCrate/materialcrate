@@ -16,9 +16,9 @@ const supportItems = [
   },
   {
     title: "Ask for help",
-    detail: "Get support and answers to your questions..",
+    detail: "Get support and answers to your questions.",
     icon: MessageQuestion,
-    href: "",
+    href: "/settings/support/ask",
   },
   {
     title: "Community guidelines",

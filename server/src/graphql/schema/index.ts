@@ -8,4 +8,5 @@ export const typeDefs = [
   readFileSync(join("src/graphql/schema/workspace.graphql"), "utf8"),
   readFileSync(join("src/graphql/schema/notification.graphql"), "utf8"),
   readFileSync(join("src/graphql/schema/report.graphql"), "utf8"),
+  readFileSync(join("src/graphql/schema/support.graphql"), "utf8"),
 ];

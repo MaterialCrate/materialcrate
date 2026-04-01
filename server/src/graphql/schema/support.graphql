@@ -1,0 +1,11 @@
+type SupportMessageResult {
+  success: Boolean!
+}
+
+extend type Mutation {
+  sendSupportMessage(
+    topic: String!
+    subject: String!
+    message: String!
+  ): SupportMessageResult!
+}
