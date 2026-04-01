@@ -1,4 +1,3 @@
-import { DocumentText1 } from "iconsax-reactjs";
 import Header from "@/app/components/Header";
 
 export default function Page() {
@@ -6,9 +5,6 @@ export default function Page() {
     <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F4F0EA_100%)] px-6 pt-30">
       <Header title="Terms of Service" isLoading={false} />
       <div className="mb-5 rounded-[28px] bg-[#1F1F1F] px-5 py-5 text-white">
-        <div className="mb-4 inline-flex rounded-2xl bg-white/10 p-3">
-          <DocumentText1 size={22} color="#FFFFFF" variant="Bulk" />
-        </div>
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
           Legal
         </p>
@@ -35,7 +31,7 @@ export default function Page() {
         ].map((section) => (
           <div
             key={section.heading}
-            className="rounded-[24px] border border-black/6 bg-white p-4"
+            className="rounded-3xl border border-black/6 bg-white p-4"
           >
             <p className="text-sm font-medium text-[#2E2E2E]">
               {section.heading}

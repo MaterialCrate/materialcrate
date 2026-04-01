@@ -1,4 +1,4 @@
-import { ShieldSearch, Warning2 } from "iconsax-reactjs";
+import { Warning2 } from "iconsax-reactjs";
 import Header from "@/app/components/Header";
 
 const guidelineSections = [
