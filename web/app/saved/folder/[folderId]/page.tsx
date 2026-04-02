@@ -391,6 +391,11 @@ export default function SavedFolderPage() {
                         onOpenPost={(postId) =>
                           router.push(`/post/${encodeURIComponent(postId)}`)
                         }
+                        onUseInHub={(selectedSavedPost) =>
+                          router.push(
+                            `/hub?postId=${encodeURIComponent(selectedSavedPost.postId)}`,
+                          )
+                        }
                         onRemove={(selectedSavedPost) =>
                           void handleRemoveSavedFile(selectedSavedPost)
                         }

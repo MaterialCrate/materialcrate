@@ -14,6 +14,7 @@ import {
   Location,
   LocationSlash,
   Clock,
+  Clipboard,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import { useSystemPopup } from "@/app/components/SystemPopup";
@@ -115,10 +116,16 @@ export default function OptionsOptions({
         },
       ];
 
-  const secondaryAction = {
-    label: "View history",
-    icon: <Clock size={20} color="#111111" variant="Bold" />,
-  };
+  const secondaryActions = [
+    {
+      label: "Open in Hub",
+      icon: <Clipboard size={20} color="#111111" variant="Bold" />,
+    },
+    {
+      label: "View history",
+      icon: <Clock size={20} color="#111111" variant="Bold" />,
+    },
+  ];
 
   const destructiveAction = isOwner
     ? {
@@ -487,26 +494,37 @@ export default function OptionsOptions({
           </div>
 
           <div className="overflow-hidden rounded-[26px] bg-[#F7F7F7] active:opacity-40 transition-opacity duration-300">
-            {secondaryAction && (
+            {secondaryActions.map((action, index) => (
               <button
-                key={secondaryAction.label}
+                key={action.label}
                 type="button"
                 disabled={!post}
                 onClick={() => {
                   if (!post?.id) return;
+
+                  if (action.label === "Open in Hub") {
+                    router.push(`/hub?postId=${encodeURIComponent(post.id)}`);
+                    onClose();
+                    return;
+                  }
+
                   router.push(`/post/${encodeURIComponent(post.id)}/history`);
                   onClose();
                 }}
-                className="flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 disabled:opacity-60"
+                className={`flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 disabled:opacity-60 ${
+                  index < secondaryActions.length - 1
+                    ? "border-b border-black/6"
+                    : ""
+                }`}
               >
-                <span>{secondaryAction.icon}</span>
+                <span>{action.icon}</span>
                 <span className="min-w-0">
                   <span className="block text-sm text-[#111111]">
-                    {secondaryAction.label}
+                    {action.label}
                   </span>
                 </span>
               </button>
-            )}
+            ))}
           </div>
 
           <div className="overflow-hidden rounded-[26px] bg-[#FFF1F1] active:opacity-40 transition-opacity duration-300">

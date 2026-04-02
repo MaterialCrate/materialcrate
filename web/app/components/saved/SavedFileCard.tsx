@@ -28,12 +28,14 @@ export default function SavedFileCard({
   savedPost,
   onOpenFile,
   onOpenPost,
+  onUseInHub,
   onRemove,
   isRemoving = false,
 }: {
   savedPost: SavedPostRecord;
   onOpenFile: (post: HomePost) => void;
   onOpenPost: (postId: string) => void;
+  onUseInHub?: (savedPost: SavedPostRecord) => void;
   onRemove: (savedPost: SavedPostRecord) => void;
   isRemoving?: boolean;
 }) {
@@ -92,7 +94,16 @@ export default function SavedFileCard({
             <div className="flex justify-end">
               <span className="text-xs text-[#8C8C8C]">Attachment saved</span>
             </div>
-            <div className="flex justify-end">
+            <div className="flex items-center justify-end gap-3">
+              {onUseInHub ? (
+                <button
+                  type="button"
+                  className="text-sm font-medium text-[#7f6d5a]"
+                  onClick={() => onUseInHub(savedPost)}
+                >
+                  Use in Hub
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="inline-flex items-center gap-1 text-sm font-medium text-[#202020]"

@@ -25,7 +25,7 @@ const sections = [
 
 export default function Page() {
   return (
-    <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F4F0EA_100%)] px-6 pt-30">
+    <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F4F0EA_100%)] px-6 pt-20 pb-5">
       <Header title="Terms of Service" isLoading={false} />
       <div className="mb-5 rounded-[28px] bg-[#1F1F1F] px-5 py-5 text-white">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">

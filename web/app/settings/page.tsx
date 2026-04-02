@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   ArrowRight2,
   Brush2,
@@ -14,6 +14,8 @@ import {
 import { useRouter } from "next/navigation";
 import ActionButton from "../components/ActionButton";
 import Header from "../components/Header";
+import { refreshAuth } from "@/app/lib/auth-client";
+import Alert from "../components/Alert";
 
 const settingPages = [
   {
@@ -128,10 +130,37 @@ const settingPages = [
 
 export default function Settings() {
   const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to logout");
+      }
+
+      await refreshAuth();
+      router.replace("/login");
+      router.refresh();
+    } catch (error: unknown) {
+      setError("An unknown error occurred");
+      console.error("Failed to logout:", error);
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="min-h-dvh bg-[#F7F7F7] px-4 pb-8 pt-20">
-      <Header title="Settings" isLoading={false} />
+      {error && <Alert message={error} type="error" />}
+      <Header title="Settings" isLoading={isLoggingOut} />
       <div className="w-full space-y-3">
         {settingPages.map((section) => (
           <div
@@ -181,9 +210,11 @@ export default function Settings() {
       <ActionButton
         className="mt-6 flex w-full items-center justify-center gap-2"
         type="button"
+        onClick={handleLogout}
+        disabled={isLoggingOut}
       >
         <Logout size={20} color="#FFFFFF" />
-        <p className="text-white font-medium">Logout</p>
+        <p className="font-medium text-white">Logout</p>
       </ActionButton>
     </div>
   );

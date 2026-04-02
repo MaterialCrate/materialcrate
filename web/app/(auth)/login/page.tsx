@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import Email from "@/app/components/register/Email";
 import Password from "@/app/components/register/Password";
 import Alert from "@/app/components/Alert";
@@ -182,7 +183,12 @@ export default function Page() {
           />
         )}
         <div className="absolute flex flex-col items-center gap-5 px-12">
-          <div className="w-12 h-12 bg-[#E1761F]" />
+          <Image
+            src="/logo.svg"
+            alt="MaterialCrate Logo"
+            width={50}
+            height={50}
+          />
           <h1 className="font-serif text-4xl text-center">
             {step === 1 ? "Welcome Back" : "Enter your password"}
           </h1>

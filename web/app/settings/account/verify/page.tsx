@@ -47,13 +47,13 @@ export default function Page() {
       <Header title="Verify New Email" isLoading={false} />
       <div className="overflow-hidden rounded-3xl border border-black/6 bg-white shadow-[0_16px_40px_rgba(0,0,0,0.04)]">
         <Verification
-          email={user.pendingEmail}
+          email={user.pendingEmail as string}
           title="Confirm your new email"
           description={
             <>
               Enter the 4-digit code we sent to{" "}
               <span className="font-semibold text-[#202020]">
-                {user.pendingEmail}
+                {user.pendingEmail as string}
               </span>{" "}
               to finish updating your sign-in email.
             </>

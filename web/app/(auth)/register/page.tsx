@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import Email from "@/app/components/register/Email";
 import Password from "@/app/components/register/Password";
 import Verification from "@/app/components/register/Verification";
@@ -62,11 +63,8 @@ export default function Page() {
         }
       } catch (caughtError: unknown) {
         if (!isCancelled) {
-          setError(
-            caughtError instanceof Error
-              ? caughtError.message
-              : "Could not load social profile details",
-          );
+          setError("Could not load social profile details");
+          console.error("Failed to prefill social profile:", caughtError);
         }
       } finally {
         if (!isCancelled) {
@@ -114,11 +112,8 @@ export default function Page() {
           return;
         }
       } catch (caughtError: unknown) {
-        setError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "Could not verify this email",
-        );
+        setError("Could not verify this email");
+        console.error("Email availability check failed:", caughtError);
         return;
       }
 
@@ -257,7 +252,12 @@ export default function Page() {
         />
       )}
       <div className="absolute flex flex-col items-center gap-5 px-12">
-        <div className="w-12 h-12 bg-[#E1761F]" />
+        <Image
+          src="/logo.svg"
+          alt="MaterialCrate Logo"
+          width={50}
+          height={50}
+        />
         <h1 className="font-serif text-4xl text-center">
           {step === 1
             ? "Let's get started"
