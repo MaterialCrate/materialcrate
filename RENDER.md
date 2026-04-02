@@ -15,12 +15,14 @@
 ## Service settings used
 
 ### `materialcrate-api`
+
 - **Root Directory:** `server`
 - **Build Command:** `corepack enable && pnpm install --frozen-lockfile && pnpm render:build`
 - **Pre-Deploy Command:** `pnpm render:migrate`
 - **Start Command:** `pnpm start`
 
 ### `materialcrate-web`
+
 - **Root Directory:** `web`
 - **Build Command:** `corepack enable && pnpm install --frozen-lockfile && pnpm render:build`
 - **Start Command:** `pnpm start`
@@ -30,6 +32,7 @@
 ## Required environment variables
 
 ### Backend (`materialcrate-api`)
+
 These are required for the app to fully function:
 
 - `DATABASE_URL` (auto-wired from Render Postgres)
@@ -43,11 +46,14 @@ These are required for the app to fully function:
 - `SES_PASS`
 
 Optional / recommended:
+
 - `SUPPORT_EMAIL`
 - `POST_PURGE_INTERVAL_MS`
 
 ### Frontend (`materialcrate-web`)
+
 Required:
+
 - `GRAPHQL_ENDPOINT` → `https://materialcrate-api.onrender.com/graphql`
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL` → `gemini-2.5-flash-lite`
@@ -56,6 +62,7 @@ Required:
 - `LAUNCH_PROTECTED_HOSTS` → your live hostnames (comma-separated)
 
 Optional for social login:
+
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
 - `FACEBOOK_APP_ID`

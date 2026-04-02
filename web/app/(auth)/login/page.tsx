@@ -1,6 +1,12 @@
 "use client";
 
-import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
