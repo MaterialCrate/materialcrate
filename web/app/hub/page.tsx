@@ -85,25 +85,6 @@ const formatHistoryTime = (value: string) => {
   });
 };
 
-const buildLocalAssistantReply = (
-  documentTitle: string,
-  userPrompt: string,
-) => {
-  if (/summarize/i.test(userPrompt)) {
-    return `Summary request saved for "${documentTitle}". You can reopen it anytime from History.`;
-  }
-
-  if (/explain/i.test(userPrompt)) {
-    return `Explanation request saved for "${documentTitle}". This thread will stay in your local history.`;
-  }
-
-  if (/question|quiz/i.test(userPrompt)) {
-    return `Quiz request saved for "${documentTitle}". You can come back to this chat later from History.`;
-  }
-
-  return `Your Ju Intelli prompt for "${documentTitle}" has been saved to this chat history.`;
-};
-
 export default function HubPage() {
   const searchParams = useSearchParams();
   const requestedPostId = searchParams.get("postId")?.trim() ?? "";
@@ -119,6 +100,7 @@ export default function HubPage() {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
 
   const showHeaderTemporarily = useCallback(() => {
@@ -340,8 +322,8 @@ export default function HubPage() {
     setIsPickerOpen(false);
   };
 
-  const handleSendPrompt = () => {
-    if (!selectedDocument || !prompt.trim()) {
+  const handleSendPrompt = async () => {
+    if (!selectedDocument || !prompt.trim() || isSending) {
       return;
     }
 
@@ -349,28 +331,74 @@ export default function HubPage() {
     const documentTitle =
       selectedDocument.post.title?.trim() || "Untitled document";
     const timestamp = new Date().toISOString();
+    const userMessage: ChatMessage = {
+      id: createMessageId(),
+      role: "user",
+      text: nextPrompt,
+      createdAt: timestamp,
+      documentId: selectedDocument.id,
+      documentTitle,
+    };
 
-    const nextMessages: ChatMessage[] = [
-      {
-        id: createMessageId(),
-        role: "user",
-        text: nextPrompt,
-        createdAt: timestamp,
-        documentId: selectedDocument.id,
-        documentTitle,
-      },
-      {
-        id: createMessageId(),
-        role: "assistant",
-        text: buildLocalAssistantReply(documentTitle, nextPrompt),
-        createdAt: timestamp,
-        documentId: selectedDocument.id,
-        documentTitle,
-      },
-    ];
-
-    setHistory((current) => [...current, ...nextMessages]);
+    setHistory((current) => [...current, userMessage]);
     setPrompt("");
+    setError("");
+    setIsSending(true);
+
+    try {
+      const response = await fetch("/api/hub/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          savedPostId: selectedDocument.id,
+          prompt: nextPrompt,
+          history: conversation.map((message) => ({
+            role: message.role,
+            text: message.text,
+          })),
+        }),
+      });
+
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok || !body?.reply) {
+        throw new Error(body?.error || "Failed to get Ju Intelli response.");
+      }
+
+      setHistory((current) => [
+        ...current,
+        {
+          id: createMessageId(),
+          role: "assistant",
+          text: body.reply,
+          createdAt: new Date().toISOString(),
+          documentId: selectedDocument.id,
+          documentTitle,
+        },
+      ]);
+    } catch (chatError) {
+      const message =
+        chatError instanceof Error
+          ? chatError.message
+          : "Failed to get Ju Intelli response.";
+
+      setError(message);
+      setHistory((current) => [
+        ...current,
+        {
+          id: createMessageId(),
+          role: "assistant",
+          text: `I couldn’t respond right now. ${message}`,
+          createdAt: new Date().toISOString(),
+          documentId: selectedDocument.id,
+          documentTitle,
+        },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleUseHistoryEntry = (entry: ChatMessage) => {
@@ -550,7 +578,7 @@ export default function HubPage() {
       ) : null}
 
       <header
-        className={`fixed inset-x-0 top-0 z-30 border-b border-black/6 bg-white backdrop-blur-sm transition-all duration-300 ${
+        className={`fixed inset-x-0 top-0 z-30 border-b border-black/6 bg-white px-4 backdrop-blur-sm transition-all duration-300 ${
           isHeaderVisible
             ? "translate-y-0 opacity-100"
             : "-translate-y-full opacity-0 pointer-events-none"
@@ -646,6 +674,13 @@ export default function HubPage() {
                       </div>
                     </div>
                   ))}
+                  {isSending ? (
+                    <div className="flex justify-start">
+                      <div className="rounded-3xl bg-[#f4f4f4] px-4 py-3 text-sm text-[#696969]">
+                        Ju Intelli is thinking…
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 text-center">
@@ -695,18 +730,6 @@ export default function HubPage() {
         </section>
 
         <section className="mt-3 shrink-0">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            {conversation.length > 0 ? (
-              <button
-                type="button"
-                onClick={handleClearHistory}
-                className="text-xs font-medium text-[#7f6d5a]"
-              >
-                Clear chat
-              </button>
-            ) : null}
-          </div>
-
           <div className="flex items-end gap-2 rounded-[28px]py-1 px-2">
             <textarea
               ref={promptTextareaRef}
@@ -720,7 +743,7 @@ export default function HubPage() {
               type="button"
               aria-label="Send message"
               onClick={handleSendPrompt}
-              disabled={!selectedDocument || !prompt.trim()}
+              disabled={isSending || !selectedDocument || !prompt.trim()}
               className="flex p-3 items-center justify-center rounded-full bg-[#202020] disabled:cursor-not-allowed disabled:bg-[#c9c9c9]"
             >
               <ArrowRight2 size={18} color="#ffffff" />
