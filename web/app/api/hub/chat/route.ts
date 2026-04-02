@@ -37,8 +37,26 @@ const MY_ARCHIVE_QUERY = `
   }
 `;
 
+const DIRECT_POST_QUERY = `
+  query JuIntelliPost($id: ID!) {
+    post(id: $id) {
+      id
+      title
+      description
+      categories
+      year
+      fileUrl
+      author {
+        displayName
+        username
+      }
+    }
+  }
+`;
+
 type HubChatBody = {
   savedPostId?: string;
+  postId?: string;
   prompt?: string;
   history?: Array<{
     role?: "user" | "assistant";
@@ -154,12 +172,13 @@ export async function POST(req: Request) {
   }
 
   const savedPostId = body.savedPostId?.trim() ?? "";
+  const postId = body.postId?.trim() ?? "";
   const prompt = body.prompt?.trim() ?? "";
   const priorHistory = sanitizeHistory(body.history);
 
-  if (!savedPostId) {
+  if (!savedPostId && !postId) {
     return NextResponse.json(
-      { error: "savedPostId is required" },
+      { error: "savedPostId or postId is required" },
       { status: 400 },
     );
   }
@@ -184,8 +203,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error:
-          graphqlBody?.errors?.[0]?.message ||
-          "Failed to load saved document for AI",
+          graphqlBody?.errors?.[0]?.message || "Failed to load document for AI",
         details: graphqlBody?.errors ?? null,
       },
       { status: 400 },
@@ -198,31 +216,68 @@ export async function POST(req: Request) {
     ? (graphqlBody.data.myArchive.savedPosts as ArchiveSavedPostRecord[])
     : [];
 
-  const savedPost = savedPosts.find(
-    (entry) =>
-      entry?.id === savedPostId ||
-      entry?.postId === savedPostId ||
-      entry?.post?.id === savedPostId,
-  );
+  const documentLookupId = savedPostId || postId;
+  let documentRecord =
+    savedPosts.find(
+      (entry) =>
+        entry?.id === documentLookupId ||
+        entry?.postId === documentLookupId ||
+        entry?.post?.id === documentLookupId,
+    ) ?? null;
 
-  if (!savedPost?.post?.id) {
-    return NextResponse.json(
-      { error: "Saved document not found" },
-      { status: 404 },
-    );
+  if (!documentRecord?.post?.id && postId) {
+    const postResponse = await fetch(GRAPHQL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        query: DIRECT_POST_QUERY,
+        variables: { id: postId },
+      }),
+    });
+
+    const postBody = await postResponse.json().catch(() => ({}));
+
+    if (!postResponse.ok || postBody?.errors?.length || !postBody?.data?.post) {
+      return NextResponse.json(
+        {
+          error: postBody?.errors?.[0]?.message || "Document not found",
+          details: postBody?.errors ?? null,
+        },
+        { status: 404 },
+      );
+    }
+
+    documentRecord = {
+      id: postBody.data.post.id,
+      postId: postBody.data.post.id,
+      post: postBody.data.post,
+      folder: null,
+    };
   }
 
-  const documentTitle = savedPost.post.title?.trim() || "Untitled document";
+  if (!documentRecord?.post?.id) {
+    return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  }
+
+  const documentTitle =
+    documentRecord.post.title?.trim() || "Untitled document";
   const documentAuthor =
-    savedPost.post.author?.displayName?.trim() ||
-    savedPost.post.author?.username?.trim() ||
+    documentRecord.post.author?.displayName?.trim() ||
+    documentRecord.post.author?.username?.trim() ||
     "Unknown author";
   const documentDescription =
-    savedPost.post.description?.trim() || "No description provided.";
-  const documentCategories = Array.isArray(savedPost.post.categories)
-    ? savedPost.post.categories.filter(Boolean).join(", ") || "Uncategorized"
+    documentRecord.post.description?.trim() || "No description provided.";
+  const documentCategories = Array.isArray(documentRecord.post.categories)
+    ? documentRecord.post.categories.filter(Boolean).join(", ") ||
+      "Uncategorized"
     : "Uncategorized";
-  const documentFolder = savedPost.folder?.name?.trim() || "Saved posts";
+  const documentFolder =
+    documentRecord.folder?.name?.trim() ||
+    (savedPostId ? "Saved posts" : "Opened from app");
 
   const parts: Array<Record<string, unknown>> = [
     {
@@ -236,7 +291,7 @@ export async function POST(req: Request) {
     },
   ];
 
-  const fileUrl = savedPost.post.fileUrl?.trim?.() ?? "";
+  const fileUrl = documentRecord.post.fileUrl?.trim?.() ?? "";
   if (fileUrl && isAllowedFileUrl(fileUrl)) {
     try {
       const fileResponse = await fetch(fileUrl, {
@@ -301,7 +356,7 @@ export async function POST(req: Request) {
             {
               text:
                 "You are Ju Intelli, the in-app study assistant for Material Crate. " +
-                "Answer clearly and concisely using the selected saved document and the conversation context. " +
+                "Answer clearly and concisely using the selected Material Crate document and the conversation context. " +
                 "If the document does not contain enough information, say that directly instead of inventing details. " +
                 "Do not mention Gemini, API keys, or internal implementation details.",
             },

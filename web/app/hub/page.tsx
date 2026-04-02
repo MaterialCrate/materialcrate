@@ -93,10 +93,15 @@ export default function HubPage() {
   const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const [archive, setArchive] = useState<ArchiveData | null>(null);
+  const [directDocument, setDirectDocument] = useState<ArchiveSavedPost | null>(
+    null,
+  );
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [prompt, setPrompt] = useState("");
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isResolvingRequestedDocument, setIsResolvingRequestedDocument] =
+    useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
@@ -206,11 +211,8 @@ export default function HubPage() {
       } catch (loadError) {
         if (!isCancelled) {
           setArchive(null);
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Failed to load your saved files.",
-          );
+          setError("Failed to load your saved files.");
+          console.error("Error loading saved files:", loadError);
         }
       } finally {
         if (!isCancelled) {
@@ -255,51 +257,138 @@ export default function HubPage() {
     );
   }, [history]);
 
-  const documents = useMemo(() => archive?.savedPosts ?? [], [archive]);
+  const savedDocuments = useMemo(() => archive?.savedPosts ?? [], [archive]);
 
-  const requestedDocument = useMemo(
+  const requestedSavedDocument = useMemo(
     () =>
       requestedPostId
-        ? (documents.find((document) =>
+        ? (savedDocuments.find((document) =>
             [document.id, document.postId, document.post.id].some(
               (value) => value === requestedPostId,
             ),
           ) ?? null)
         : null,
-    [documents, requestedPostId],
+    [requestedPostId, savedDocuments],
   );
 
   useEffect(() => {
-    if (documents.length === 0) {
+    if (!requestedPostId || requestedSavedDocument) {
+      setDirectDocument(null);
+      setIsResolvingRequestedDocument(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadRequestedDocument = async () => {
+      try {
+        setIsResolvingRequestedDocument(true);
+        const response = await fetch(
+          `/api/posts/${encodeURIComponent(requestedPostId)}`,
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok || !body?.post?.id) {
+          throw new Error(body?.error || "Failed to load the selected file.");
+        }
+
+        if (!isCancelled) {
+          setDirectDocument({
+            id: body.post.id,
+            postId: body.post.id,
+            createdAt: body.post.createdAt,
+            post: body.post,
+            folder: null,
+          });
+        }
+      } catch {
+        if (!isCancelled) {
+          setDirectDocument(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsResolvingRequestedDocument(false);
+        }
+      }
+    };
+
+    void loadRequestedDocument();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [requestedPostId, requestedSavedDocument]);
+
+  const documents = useMemo(() => {
+    if (!directDocument) {
+      return savedDocuments;
+    }
+
+    const alreadyIncluded = savedDocuments.some((document) =>
+      [document.id, document.postId, document.post.id].some(
+        (value) => value === directDocument.post.id,
+      ),
+    );
+
+    return alreadyIncluded
+      ? savedDocuments
+      : [directDocument, ...savedDocuments];
+  }, [directDocument, savedDocuments]);
+
+  const requestedDocument = useMemo(
+    () =>
+      requestedSavedDocument ??
+      (requestedPostId
+        ? (documents.find((document) =>
+            [document.id, document.postId, document.post.id].some(
+              (value) => value === requestedPostId,
+            ),
+          ) ?? null)
+        : null),
+    [documents, requestedPostId, requestedSavedDocument],
+  );
+
+  useEffect(() => {
+    if (documents.length === 0 && !requestedDocument) {
       return;
     }
 
     setSelectedDocumentId((current) => {
-      if (requestedDocument) {
-        return requestedDocument.id;
+      if (requestedDocument?.post.id) {
+        return requestedDocument.post.id;
       }
 
-      if (current && documents.some((document) => document.id === current)) {
+      if (
+        current &&
+        documents.some((document) => document.post.id === current)
+      ) {
         return current;
       }
 
-      return documents[0].id;
+      return documents[0]?.post.id ?? "";
     });
   }, [documents, requestedDocument]);
 
   const selectedDocument = useMemo(
     () =>
-      documents.find((document) => document.id === selectedDocumentId) ??
+      documents.find((document) => document.post.id === selectedDocumentId) ??
+      requestedDocument ??
       documents[0] ??
       null,
-    [documents, selectedDocumentId],
+    [documents, requestedDocument, selectedDocumentId],
   );
 
   const conversation = useMemo(
     () =>
       selectedDocument
-        ? history.filter(
-            (message) => message.documentId === selectedDocument.id,
+        ? history.filter((message) =>
+            [selectedDocument.post.id, selectedDocument.id].includes(
+              message.documentId,
+            ),
           )
         : [],
     [history, selectedDocument],
@@ -315,7 +404,10 @@ export default function HubPage() {
   );
 
   const requestedDocumentMissing =
-    Boolean(requestedPostId) && !isLoading && !requestedDocument;
+    Boolean(requestedPostId) &&
+    !isLoading &&
+    !isResolvingRequestedDocument &&
+    !requestedDocument;
 
   const handleSelectDocument = (documentId: string) => {
     setSelectedDocumentId(documentId);
@@ -336,7 +428,7 @@ export default function HubPage() {
       role: "user",
       text: nextPrompt,
       createdAt: timestamp,
-      documentId: selectedDocument.id,
+      documentId: selectedDocument.post.id,
       documentTitle,
     };
 
@@ -352,7 +444,11 @@ export default function HubPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          savedPostId: selectedDocument.id,
+          savedPostId:
+            selectedDocument.id !== selectedDocument.post.id
+              ? selectedDocument.id
+              : undefined,
+          postId: selectedDocument.post.id,
           prompt: nextPrompt,
           history: conversation.map((message) => ({
             role: message.role,
@@ -374,7 +470,7 @@ export default function HubPage() {
           role: "assistant",
           text: body.reply,
           createdAt: new Date().toISOString(),
-          documentId: selectedDocument.id,
+          documentId: selectedDocument.post.id,
           documentTitle,
         },
       ]);
@@ -392,7 +488,7 @@ export default function HubPage() {
           role: "assistant",
           text: `I couldn’t respond right now. ${message}`,
           createdAt: new Date().toISOString(),
-          documentId: selectedDocument.id,
+          documentId: selectedDocument.post.id,
           documentTitle,
         },
       ]);
@@ -401,21 +497,49 @@ export default function HubPage() {
     }
   };
 
-  const handleUseHistoryEntry = (entry: ChatMessage) => {
-    setSelectedDocumentId(entry.documentId);
+  const handleUseHistoryEntry = async (entry: ChatMessage) => {
+    const matchingDocument = documents.find((document) =>
+      [document.post.id, document.id].includes(entry.documentId),
+    );
+
     setPrompt(entry.text);
     setIsHistoryOpen(false);
-  };
 
-  const handleClearHistory = () => {
-    if (!selectedDocument) {
-      setHistory([]);
+    if (matchingDocument?.post.id) {
+      setSelectedDocumentId(matchingDocument.post.id);
       return;
     }
 
-    setHistory((current) =>
-      current.filter((message) => message.documentId !== selectedDocument.id),
-    );
+    try {
+      setIsResolvingRequestedDocument(true);
+      const response = await fetch(
+        `/api/posts/${encodeURIComponent(entry.documentId)}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok || !body?.post?.id) {
+        throw new Error(body?.error || "Failed to reopen that document.");
+      }
+
+      setDirectDocument({
+        id: body.post.id,
+        postId: body.post.id,
+        createdAt: body.post.createdAt,
+        post: body.post,
+        folder: null,
+      });
+      setSelectedDocumentId(body.post.id);
+      setError("");
+    } catch (historyError) {
+      setError("Failed to reopen that document.");
+      console.error("Error reopening document from history:", historyError);
+    } finally {
+      setIsResolvingRequestedDocument(false);
+    }
   };
 
   return (
@@ -477,7 +601,7 @@ export default function HubPage() {
                     <button
                       key={document.id}
                       type="button"
-                      onClick={() => handleSelectDocument(document.id)}
+                      onClick={() => handleSelectDocument(document.post.id)}
                       className={`flex w-full items-start gap-3 rounded-[20px] border px-3 py-3 text-left transition ${
                         isSelected
                           ? "border-[#202020] bg-[#f7f7f7]"
@@ -510,8 +634,8 @@ export default function HubPage() {
                 })
               ) : (
                 <div className="rounded-[20px] bg-[#f7f7f7] px-4 py-5 text-sm text-[#696969]">
-                  No saved files yet. Save a post first, then it can be used in
-                  Ju Intelli.
+                  No saved files yet. You can still open any file directly in Ju
+                  Intelli from the rest of the app.
                 </div>
               )}
             </div>
@@ -619,22 +743,20 @@ export default function HubPage() {
       >
         {requestedDocumentMissing ? (
           <section className="mb-3 rounded-2xl border border-[#f0d4ae] bg-[#fff8ef] px-4 py-3 text-sm text-[#7c5a2a]">
-            That post isn&apos;t in your saved list yet. Tap{" "}
-            <span className="font-semibold">+</span> to choose one of your saved
-            documents instead.
+            That file couldn&apos;t be loaded directly. Tap{" "}
+            <span className="font-semibold">+</span> to choose another document.
           </section>
         ) : null}
 
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="shrink-0 border-b border-black/6 px-4 py-3">
             <p className="text-sm font-medium text-[#202020]">
-              {selectedDocument?.post.title?.trim() ||
-                "Choose a saved document"}
+              {selectedDocument?.post.title?.trim() || "Choose a document"}
             </p>
             <p className="mt-1 text-xs text-[#696969]">
               {selectedDocument
-                ? `${selectedDocument.post.author?.displayName?.trim() || selectedDocument.post.author?.username?.trim() || "Unknown author"}${selectedDocument.folder?.name ? ` • ${selectedDocument.folder.name}` : " • Saved posts"}`
-                : "Only documents already saved in the app can be used here."}
+                ? `${selectedDocument.post.author?.displayName?.trim() || selectedDocument.post.author?.username?.trim() || "Unknown author"}${selectedDocument.folder?.name ? ` • ${selectedDocument.folder.name}` : selectedDocument.id === selectedDocument.post.id ? " • Opened from app" : " • Saved posts"}`
+                : "You can use any document opened from the app, and saved posts also appear here for quick access."}
             </p>
           </div>
 
@@ -691,8 +813,8 @@ export default function HubPage() {
                     Start a new chat
                   </h2>
                   <p className="mt-2 max-w-md text-sm leading-6 text-[#696969]">
-                    Ask Ju Intelli about this saved document. Only this message
-                    area scrolls, and your chat is kept in local history.
+                    Ask Ju Intelli about this document. Only this message area
+                    scrolls, and your chat is kept in local history.
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     {PROMPT_SUGGESTIONS.map((suggestion) => (
@@ -711,10 +833,11 @@ export default function HubPage() {
             ) : (
               <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 text-center">
                 <h2 className="text-lg font-medium text-[#202020]">
-                  Choose a saved document
+                  Choose a document
                 </h2>
                 <p className="mt-2 max-w-md text-sm leading-6 text-[#696969]">
-                  Ju Intelli only works with documents already saved in the app.
+                  Ju Intelli works with saved posts and with files opened
+                  directly from elsewhere in the app.
                 </p>
                 <button
                   type="button"
@@ -730,7 +853,7 @@ export default function HubPage() {
         </section>
 
         <section className="mt-3 shrink-0">
-          <div className="flex items-end gap-2 rounded-[28px]py-1 px-2">
+          <div className="flex items-end gap-2 px-2 py-1">
             <textarea
               ref={promptTextareaRef}
               value={prompt}
