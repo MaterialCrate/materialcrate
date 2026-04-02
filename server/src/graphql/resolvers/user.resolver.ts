@@ -9,8 +9,8 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import sharp from "sharp";
 import { Prisma } from "@prisma/client";
-import { prisma } from "../../config/prisma";
-import { s3 } from "../../config/s3";
+import { prisma } from "../../config/prisma.js";
+import { s3 } from "../../config/s3.js";
 import {
   beginPendingEmailChange,
   getVisiblePendingEmail,
@@ -19,15 +19,15 @@ import {
   sendVerificationEmailForUser,
   verifyEmailCode,
   verifyPendingEmailChange,
-} from "../../auth/emailVerification";
-import { sendAccountDeletedEmail } from "../../email/accountDeletedEmail";
-import { sendAccountRecoveredEmail } from "../../email/accountRecoveredEmail";
-import { ensureWorkspaceForUserId } from "./workspace.resolver";
+} from "../../auth/emailVerification.js";
+import { sendAccountDeletedEmail } from "../../email/accountDeletedEmail.js";
+import { sendAccountRecoveredEmail } from "../../email/accountRecoveredEmail.js";
+import { ensureWorkspaceForUserId } from "./workspace.resolver.js";
 import {
   createNotification,
   NOTIFICATION_ICON,
   NOTIFICATION_TYPE,
-} from "../../services/notifications";
+} from "../../services/notifications.js";
 
 const createToken = (userId: string, email: string) => {
   const secret = process.env.JWT_SECRET;

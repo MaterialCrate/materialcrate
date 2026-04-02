@@ -1,5 +1,5 @@
-import { renderEmailLayout } from "./layout";
-import { isEmailDeliveryConfigured, sendEmail } from "./shared";
+import { renderEmailLayout } from "./layout.js";
+import { isEmailDeliveryConfigured, sendEmail } from "./shared.js";
 
 const formatDeadline = (value: Date) =>
   value.toLocaleString("en-US", {

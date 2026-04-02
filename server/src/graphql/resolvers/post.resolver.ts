@@ -1,13 +1,13 @@
 import { randomUUID } from "crypto";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { prisma } from "../../config/prisma";
-import { s3 } from "../../config/s3";
+import { prisma } from "../../config/prisma.js";
+import { s3 } from "../../config/s3.js";
 import {
   createNotification,
   NOTIFICATION_ICON,
   NOTIFICATION_TYPE,
-} from "../../services/notifications";
+} from "../../services/notifications.js";
 
 type CreatePostArgs = {
   fileBase64: string;

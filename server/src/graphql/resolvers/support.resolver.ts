@@ -1,5 +1,5 @@
-import { prisma } from "../../config/prisma";
-import { sendEmail } from "../../email/shared";
+import { prisma } from "../../config/prisma.js";
+import { sendEmail } from "../../email/shared.js";
 
 type GraphQLContext = {
   user?: {

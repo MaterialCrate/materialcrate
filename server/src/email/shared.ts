@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { transporter } from "../config/mailer";
+import { transporter } from "../config/mailer.js";
 
 export const EMAIL_LOGO_CID = "materialcrate-logo";
 export const EMAIL_WORDMARK_CID = "materialcrate-wordmark";

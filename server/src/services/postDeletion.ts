@@ -1,7 +1,7 @@
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { Prisma } from "@prisma/client";
-import { prisma } from "../config/prisma";
-import { s3 } from "../config/s3";
+import { prisma } from "../config/prisma.js";
+import { s3 } from "../config/s3.js";
 
 const POST_HARD_DELETE_AFTER_DAYS = 30;
 const DEFAULT_PURGE_INTERVAL_MS = 6 * 60 * 60 * 1000;

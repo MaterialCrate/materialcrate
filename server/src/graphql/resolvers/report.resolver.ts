@@ -1,7 +1,7 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { randomUUID } from "crypto";
-import { prisma } from "../../config/prisma";
-import { s3 } from "../../config/s3";
+import { prisma } from "../../config/prisma.js";
+import { s3 } from "../../config/s3.js";
 
 type GraphQLContext = {
   user?: {

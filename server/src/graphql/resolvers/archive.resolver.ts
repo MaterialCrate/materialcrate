@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../../config/prisma";
+import { prisma } from "../../config/prisma.js";
 
 type GraphQLContext = {
   user?: {

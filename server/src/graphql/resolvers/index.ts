@@ -1,10 +1,10 @@
-import { UserResolver } from "./user.resolver";
-import { ArchiveResolver } from "./archive.resolver";
-import { PostResolver } from "./post.resolver";
-import { WorkspaceResolver } from "./workspace.resolver";
-import { NotificationResolver } from "./notification.resolver";
-import { ReportResolver } from "./report.resolver";
-import { SupportResolver } from "./support.resolver";
+import { UserResolver } from "./user.resolver.js";
+import { ArchiveResolver } from "./archive.resolver.js";
+import { PostResolver } from "./post.resolver.js";
+import { WorkspaceResolver } from "./workspace.resolver.js";
+import { NotificationResolver } from "./notification.resolver.js";
+import { ReportResolver } from "./report.resolver.js";
+import { SupportResolver } from "./support.resolver.js";
 
 export const resolvers = {
   Query: {

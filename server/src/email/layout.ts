@@ -1,4 +1,4 @@
-import { EMAIL_LOGO_CID, EMAIL_WORDMARK_CID } from "./shared";
+import { EMAIL_LOGO_CID, EMAIL_WORDMARK_CID } from "./shared.js";
 
 export const renderEmailLayout = ({
   eyebrow,

@@ -1,7 +1,7 @@
-import "./config/env";
-import { connectDB } from "./config/db";
-import { startDeletedPostPurgeLoop } from "./services/postDeletion";
-import { server } from "./server";
+import "./config/env.js";
+import { connectDB } from "./config/db.js";
+import { startDeletedPostPurgeLoop } from "./services/postDeletion.js";
+import { server } from "./server.js";
 
 const PORT = Number(process.env.PORT || 4000);
 const HOST = process.env.HOST || "0.0.0.0";

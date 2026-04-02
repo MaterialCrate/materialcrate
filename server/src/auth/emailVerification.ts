@@ -1,10 +1,10 @@
 import crypto from "crypto";
-import { prisma } from "../config/prisma";
+import { prisma } from "../config/prisma.js";
 import {
   sendVerificationEmail,
   type VerificationEmailVariant,
-} from "../email/verificationEmail";
-import { sendPasswordChangedEmail } from "../email/passwordChangedEmail";
+} from "../email/verificationEmail.js";
+import { sendPasswordChangedEmail } from "../email/passwordChangedEmail.js";
 
 export { sendPasswordChangedEmail };
 

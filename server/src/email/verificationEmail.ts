@@ -1,5 +1,5 @@
-import { renderEmailLayout } from "./layout";
-import { sendEmail } from "./shared";
+import { renderEmailLayout } from "./layout.js";
+import { sendEmail } from "./shared.js";
 
 export type VerificationEmailVariant = "signup" | "emailChange";
 
