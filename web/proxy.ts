@@ -24,7 +24,7 @@ const isBypassPath = (pathname: string) => {
   );
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { nextUrl } = request;
 
   if (isBypassPath(nextUrl.pathname)) {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Inter, Libre_Baskerville } from "next/font/google";
 import "./globals.css";
 import AuthSplashGate from "./components/AuthSplashGate";
@@ -53,7 +54,9 @@ export default function RootLayout({
       </head>
       <body className="font-sans relative">
         <SystemPopupProvider>
-          <ScrollRestoration />
+          <Suspense>
+            <ScrollRestoration />
+          </Suspense>
           <BrowserNotificationBridge />
           <ThemeSync />
           <AuthSplashGate>

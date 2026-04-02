@@ -35,8 +35,7 @@ export default function Navbar() {
         const isArchiveItem = href === "/saved";
         const resolvedHref = isProfileItem ? userProfileHref : href;
         const isActive = isProfileItem
-          ? Boolean(user?.username) &&
-            pathname === `/user/${encodeURIComponent(user.username)}`
+          ? userProfileHref !== "/login" && pathname === userProfileHref
           : isArchiveItem
             ? pathname === href || pathname.startsWith("/saved/folder/")
             : pathname === href;

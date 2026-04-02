@@ -2,7 +2,38 @@
 
 import { useEffect, useState } from "react";
 
-type User = Record<string, unknown>;
+type User = {
+  id: string;
+  email: string;
+  pendingEmail?: string | null;
+  emailVerified: boolean;
+  username: string;
+  displayName: string;
+  profilePicture?: string | null;
+  profileBackground: string;
+  visibilityPublicProfile: boolean;
+  visibilityPublicPosts: boolean;
+  visibilityPublicComments: boolean;
+  visibilityOnlineStatus: boolean;
+  linkedSEOs: string[];
+  subscriptionPlan: string;
+  subscriptionStartedAt?: string | null;
+  subscriptionEndsAt?: string | null;
+  createdAt?: string | null;
+  followersCount: number;
+  followingCount: number;
+  institution?: string | null;
+  program?: string | null;
+  emailNotificationsAccountActivity: boolean;
+  emailNotificationsWeeklySummary: boolean;
+  emailNotificationsProductUpdates: boolean;
+  emailNotificationsMarketing: boolean;
+  pushNotificationsLikes: boolean;
+  pushNotificationsComments: boolean;
+  pushNotificationsFollows: boolean;
+  pushNotificationsMentions: boolean;
+  theme: string;
+};
 
 type AuthState = {
   user: User | null;

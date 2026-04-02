@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { HiOutlineArrowLeft } from "react-icons/hi2";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -26,6 +26,14 @@ const formatRestoreDeadline = (value?: string | null) => {
 };
 
 export default function Page() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
+  );
+}
+
+function LoginContent() {
   const searchParams = useSearchParams();
   const popup = useSystemPopup();
   const [step, setStep] = useState<number>(1);

@@ -56,13 +56,14 @@ export default function OptionsOptions({
     React.useState(false);
   const [isUpdatingBlock, setIsUpdatingBlock] = React.useState(false);
   const author = post?.author;
-  const username = author?.username?.trim()
-    ? `@${author.username}`
-    : "@unknown";
+  const authorUsername =
+    typeof author?.username === "string" ? author.username.trim() : "";
+  const currentUsername =
+    typeof user?.username === "string" ? user.username.trim() : "";
+  const username = authorUsername ? `@${authorUsername}` : "@unknown";
   const isOwner =
-    Boolean(user?.username?.trim()) &&
-    user?.username?.trim().toLowerCase() ===
-      author?.username?.trim().toLowerCase();
+    Boolean(currentUsername) &&
+    currentUsername.toLowerCase() === authorUsername.toLowerCase();
   const pinActionLabel = post?.pinned ? "Unpin from profile" : "Pin to profile";
   const commentsActionLabel = post?.commentsDisabled
     ? "Enable comments"

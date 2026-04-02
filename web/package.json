@@ -2,10 +2,12 @@
   "name": "materialcrate",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.21.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "render:build": "pnpm build",
     "lint": "eslint"
   },
   "dependencies": {
