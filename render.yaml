@@ -68,7 +68,7 @@ services:
       - key: LAUNCH_AT
         value: 2026-04-06T20:00:00
       - key: LAUNCH_PROTECTED_HOSTS
-        value: materialcrate-web.onrender.com
+        value: materialcrate.com,www.materialcrate.com,materialcrate-web.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
