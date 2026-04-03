@@ -6,14 +6,14 @@ import { DocumentUpload, More2, Notification } from "iconsax-reactjs";
 import Post, {
   type HomePost,
   type PostOptionsAnchor,
-} from "./components/home/Post";
-import UploadDrawer from "./components/home/UploadDrawer";
-import CommentDrawer from "./components/home/CommentDrawer";
-import OptionsDrawer from "./components/home/PostOptions";
-import PdfViewerModal from "./components/home/PdfViewerModal";
-import Header from "./components/home/Header";
-import ArchiveDrawer from "./components/home/ArchiveDrawer";
-import Spinner from "./components/Spinner";
+} from "../components/home/Post";
+import UploadDrawer from "../components/home/UploadDrawer";
+import CommentDrawer from "../components/home/CommentDrawer";
+import OptionsDrawer from "../components/home/PostOptions";
+import PdfViewerModal from "../components/home/PdfViewerModal";
+import Header from "../components/home/Header";
+import ArchiveDrawer from "../components/home/ArchiveDrawer";
+import Spinner from "../components/Spinner";
 
 type ArchiveSavedPost = {
   id: string;
