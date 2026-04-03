@@ -1,5 +1,5 @@
 import React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
 import ActionButton from "../ActionButton";
 
@@ -10,12 +10,12 @@ interface emailTypes {
 
 export default function Email({ email, setEmail }: emailTypes) {
   const pathname = usePathname();
-  const router = useRouter();
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const mode = pathname === "/register" ? "register" : "login";
 
   const handleSocialAuth = (provider: "google" | "facebook") => {
-    router.push(`/api/auth/social/${provider}?mode=${mode}`);
+    if (typeof window === "undefined") return;
+    window.location.assign(`/api/auth/social/${provider}?mode=${mode}`);
   };
 
   return (
@@ -57,11 +57,12 @@ export default function Email({ email, setEmail }: emailTypes) {
               : "Don't have an account? "}
             <span
               className="text-black font-semibold"
-              onClick={() =>
-                router.push(
+              onClick={() => {
+                if (typeof window === "undefined") return;
+                window.location.assign(
                   `${pathname === "/register" ? "/login" : "/register"}`,
-                )
-              }
+                );
+              }}
             >
               {pathname === "/register" ? "Sign in" : "Sign up"}
             </span>

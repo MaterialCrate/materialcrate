@@ -1,8 +1,11 @@
 import { randomUUID } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import { getBaseUrl } from "../../../../lib/site-url";
 
-const GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
-const FACEBOOK_OAUTH_AUTHORIZE_URL = "https://www.facebook.com/v22.0/dialog/oauth";
+const GOOGLE_OAUTH_AUTHORIZE_URL =
+  "https://accounts.google.com/o/oauth2/v2/auth";
+const FACEBOOK_OAUTH_AUTHORIZE_URL =
+  "https://www.facebook.com/v22.0/dialog/oauth";
 
 const SUPPORTED_PROVIDERS = new Set(["google", "facebook"]);
 
@@ -16,16 +19,50 @@ const buildErrorRedirect = (origin: string, mode: string, message: string) => {
   return url;
 };
 
+const getRequestOrigin = (req: NextRequest) => {
+  const forwardedHost = req.headers
+    .get("x-forwarded-host")
+    ?.split(",")[0]
+    ?.trim();
+  const forwardedProto = req.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim();
+
+  if (forwardedHost) {
+    const protocol =
+      forwardedProto ||
+      (forwardedHost.startsWith("localhost") ||
+      forwardedHost.startsWith("127.0.0.1")
+        ? "http"
+        : "https");
+    return `${protocol}://${forwardedHost}`;
+  }
+
+  const origin = req.nextUrl.origin;
+  if (
+    process.env.NODE_ENV === "production" &&
+    /:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)
+  ) {
+    return getBaseUrl();
+  }
+
+  return origin;
+};
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const resolvedParams = await params;
-  const provider = String(resolvedParams.provider || "").trim().toLowerCase();
-  const mode = req.nextUrl.searchParams.get("mode") === "register" ? "register" : "login";
+  const provider = String(resolvedParams.provider || "")
+    .trim()
+    .toLowerCase();
+  const mode =
+    req.nextUrl.searchParams.get("mode") === "register" ? "register" : "login";
   const fallbackNextPath = mode === "register" ? "/register?social=1" : "/";
   const nextPath = req.nextUrl.searchParams.get("next") || fallbackNextPath;
-  const origin = req.nextUrl.origin;
+  const origin = getRequestOrigin(req);
 
   if (!SUPPORTED_PROVIDERS.has(provider)) {
     return NextResponse.redirect(

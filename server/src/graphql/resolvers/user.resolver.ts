@@ -88,6 +88,21 @@ const generateUniqueUsername = async (baseValue: string) => {
   throw new Error("Could not generate a unique username");
 };
 
+const normalizeEmailAddress = (value: unknown) =>
+  String(value || "")
+    .trim()
+    .toLowerCase();
+
+const findUserByEmailInsensitive = (email: string) =>
+  (prisma as any).user.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: "insensitive",
+      },
+    },
+  });
+
 const getDeletedAccountRestoreDeadline = (deletedAt: unknown) => {
   if (!deletedAt) return null;
   const parsed =
@@ -468,11 +483,12 @@ export const UserResolver = {
     signup: async (_: unknown, args: any) => {
       const { email, password, username, displayName, institution, program } =
         args;
+      const normalizedEmail = normalizeEmailAddress(email);
       const normalizedUsername = username?.trim();
       const normalizedDisplayName = displayName?.trim();
 
       if (
-        !email ||
+        !normalizedEmail ||
         !password ||
         !normalizedUsername ||
         !normalizedDisplayName
@@ -490,7 +506,20 @@ export const UserResolver = {
         where: {
           deleted: false,
           disabled: false,
-          OR: [{ email }, { username: normalizedUsername }],
+          OR: [
+            {
+              email: {
+                equals: normalizedEmail,
+                mode: "insensitive",
+              },
+            },
+            {
+              username: {
+                equals: normalizedUsername,
+                mode: "insensitive",
+              },
+            },
+          ],
         },
       });
 
@@ -500,7 +529,7 @@ export const UserResolver = {
 
       const hashed = await bcrypt.hash(password, 12);
       const createUserData = {
-        email,
+        email: normalizedEmail,
         password: hashed,
         username: normalizedUsername,
         displayName: normalizedDisplayName,
@@ -560,14 +589,13 @@ export const UserResolver = {
 
     login: async (_: unknown, args: any) => {
       const { email, password } = args;
+      const normalizedEmail = normalizeEmailAddress(email);
 
-      if (!email || !password) {
+      if (!normalizedEmail || !password) {
         throw new Error("Email and password are required");
       }
 
-      const user = await (prisma as any).user.findFirst({
-        where: { email },
-      });
+      const user = await findUserByEmailInsensitive(normalizedEmail);
       if (!user || !user.password) {
         throw new Error("Invalid credentials");
       }
@@ -622,9 +650,7 @@ export const UserResolver = {
     socialAuth: async (_: unknown, args: any) => {
       const provider = normalizeSocialProvider(args.provider);
       const providerUserId = String(args.providerUserId || "").trim();
-      const email = String(args.email || "")
-        .trim()
-        .toLowerCase();
+      const email = normalizeEmailAddress(args.email);
       const displayName = String(args.displayName || "").trim();
 
       if (!providerUserId || !email) {
@@ -678,9 +704,7 @@ export const UserResolver = {
         return buildAuthPayload(refreshedUser);
       }
 
-      const existingUserByEmail = await (prisma as any).user.findFirst({
-        where: { email },
-      });
+      const existingUserByEmail = await findUserByEmailInsensitive(email);
 
       if (existingUserByEmail) {
         if (existingUserByEmail.deleted) {

@@ -60,6 +60,7 @@ Optional / recommended:
 Required:
 
 - `GRAPHQL_ENDPOINT` → `https://materialcrate-api.onrender.com/graphql`
+- `APP_BASE_URL` → `https://www.materialcrate.com`
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL` → `gemini-2.5-flash-lite`
 - `NEXT_PUBLIC_LAUNCH_AT` → `2026-04-06T20:00:00`

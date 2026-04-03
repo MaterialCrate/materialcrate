@@ -59,6 +59,8 @@ services:
         value: production
       - key: GRAPHQL_ENDPOINT
         value: https://materialcrate-api.onrender.com/graphql
+      - key: APP_BASE_URL
+        value: https://www.materialcrate.com
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL

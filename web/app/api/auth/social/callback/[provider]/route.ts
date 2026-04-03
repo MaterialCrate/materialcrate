@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBaseUrl } from "../../../../../lib/site-url";
 import {
   RESTORE_SESSION_COOKIE_NAME,
   SESSION_COOKIE_NAME,
@@ -11,7 +12,8 @@ const GRAPHQL_ENDPOINT =
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
-const FACEBOOK_TOKEN_URL = "https://graph.facebook.com/v22.0/oauth/access_token";
+const FACEBOOK_TOKEN_URL =
+  "https://graph.facebook.com/v22.0/oauth/access_token";
 const FACEBOOK_PROFILE_URL = "https://graph.facebook.com/me";
 
 const SOCIAL_AUTH_MUTATION = `
@@ -62,6 +64,37 @@ const buildErrorRedirect = (
   return url;
 };
 
+const getRequestOrigin = (req: NextRequest) => {
+  const forwardedHost = req.headers
+    .get("x-forwarded-host")
+    ?.split(",")[0]
+    ?.trim();
+  const forwardedProto = req.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim();
+
+  if (forwardedHost) {
+    const protocol =
+      forwardedProto ||
+      (forwardedHost.startsWith("localhost") ||
+      forwardedHost.startsWith("127.0.0.1")
+        ? "http"
+        : "https");
+    return `${protocol}://${forwardedHost}`;
+  }
+
+  const origin = req.nextUrl.origin;
+  if (
+    process.env.NODE_ENV === "production" &&
+    /:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin)
+  ) {
+    return getBaseUrl();
+  }
+
+  return origin;
+};
+
 const readMode = (req: NextRequest, provider: string) => {
   const value = req.cookies.get(`mc_oauth_mode_${provider}`)?.value;
   return value === "register" ? "register" : "login";
@@ -70,10 +103,7 @@ const readMode = (req: NextRequest, provider: string) => {
 const readNextPath = (req: NextRequest, provider: string) =>
   req.cookies.get(`mc_oauth_next_${provider}`)?.value || "/";
 
-const clearSocialCookies = (
-  response: NextResponse,
-  provider: string,
-) => {
+const clearSocialCookies = (response: NextResponse, provider: string) => {
   response.cookies.set(`mc_oauth_state_${provider}`, "", {
     path: "/",
     maxAge: 0,
@@ -89,7 +119,9 @@ const clearSocialCookies = (
 };
 
 const ensureEmail = (email?: string | null) => {
-  const normalized = String(email || "").trim().toLowerCase();
+  const normalized = String(email || "")
+    .trim()
+    .toLowerCase();
   if (!normalized) {
     throw new Error("No email was returned by the social provider");
   }
@@ -138,12 +170,10 @@ const exchangeGoogleCodeForIdentity = async (
     providerUserId: String(profileBody.sub),
     email: ensureEmail(profileBody.email),
     displayName:
-      (
-        profileBody.name ??
+      (profileBody.name ??
         [profileBody.given_name, profileBody.family_name]
           .filter(Boolean)
-          .join(" ")
-      ) ||
+          .join(" ")) ||
       null,
   } satisfies SocialIdentity;
 };
@@ -184,12 +214,10 @@ const exchangeFacebookCodeForIdentity = async (
     providerUserId: String(profileBody.id),
     email: ensureEmail(profileBody.email),
     displayName:
-      (
-        profileBody.name ??
+      (profileBody.name ??
         [profileBody.first_name, profileBody.last_name]
           .filter(Boolean)
-          .join(" ")
-      ) ||
+          .join(" ")) ||
       null,
   } satisfies SocialIdentity;
 };
@@ -213,9 +241,11 @@ export async function GET(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const resolvedParams = await params;
-  const provider = String(resolvedParams.provider || "").trim().toLowerCase();
+  const provider = String(resolvedParams.provider || "")
+    .trim()
+    .toLowerCase();
   const mode = readMode(req, provider);
-  const origin = req.nextUrl.origin;
+  const origin = getRequestOrigin(req);
   const error = req.nextUrl.searchParams.get("error");
   const code = req.nextUrl.searchParams.get("code");
   const state = req.nextUrl.searchParams.get("state");
@@ -223,7 +253,12 @@ export async function GET(
 
   if (error) {
     const response = NextResponse.redirect(
-      buildErrorRedirect(origin, mode, provider, "Social sign-in was cancelled"),
+      buildErrorRedirect(
+        origin,
+        mode,
+        provider,
+        "Social sign-in was cancelled",
+      ),
     );
     clearSocialCookies(response, provider);
     return response;
@@ -231,7 +266,12 @@ export async function GET(
 
   if (!code || !state || !savedState || state !== savedState) {
     const response = NextResponse.redirect(
-      buildErrorRedirect(origin, mode, provider, "Invalid social sign-in state"),
+      buildErrorRedirect(
+        origin,
+        mode,
+        provider,
+        "Invalid social sign-in state",
+      ),
     );
     clearSocialCookies(response, provider);
     return response;
