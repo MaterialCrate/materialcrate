@@ -220,7 +220,15 @@ export default function BrowserNotificationBridge() {
 
     let unsubscribe: (() => void) | undefined;
     let isDisposed = false;
-    void subscribeToNotificationActivity(user.id, () => {
+    void subscribeToNotificationActivity(user.id, (event) => {
+      if (
+        event.reason !== "notification-created" &&
+        typeof event.unreadCount === "number" &&
+        event.unreadCount <= 0
+      ) {
+        return;
+      }
+
       scheduleUnreadNotificationsSync();
     }).then((cleanup) => {
       if (isDisposed) {

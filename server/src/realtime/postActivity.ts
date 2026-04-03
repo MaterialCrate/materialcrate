@@ -6,6 +6,10 @@ type NotificationActivityReason =
   | "notification-created"
   | "notification-read"
   | "notifications-read-all";
+type FollowActivityReason =
+  | "followed"
+  | "unfollowed"
+  | "follow-request-accepted";
 
 export type PostActivityEvent = {
   postId: string;
@@ -27,6 +31,15 @@ export type NotificationActivityEvent = {
   emittedAt?: string;
 };
 
+export type FollowActivityEvent = {
+  userId: string;
+  reason: FollowActivityReason;
+  actorId?: string | null;
+  followersCount?: number;
+  followingCount?: number;
+  emittedAt?: string;
+};
+
 const POST_ACTIVITY_SOCKET_PATH = "/socket.io";
 const EMIT_DEBOUNCE_MS = 900;
 
@@ -45,6 +58,13 @@ const pendingNotificationEvents = new Map<
     event: NotificationActivityEvent;
   }
 >();
+const pendingFollowEvents = new Map<
+  string,
+  {
+    timer: NodeJS.Timeout;
+    event: FollowActivityEvent;
+  }
+>();
 
 const normalizePostId = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
@@ -53,6 +73,7 @@ const normalizeUserId = (value: unknown) =>
 
 const getPostRoomName = (postId: string) => `post:${postId}`;
 const getNotificationRoomName = (userId: string) => `notifications:${userId}`;
+const getFollowRoomName = (userId: string) => `follow:${userId}`;
 
 export const registerPostActivityRealtime = (httpServer: HttpServer) => {
   if (io) {
@@ -103,6 +124,24 @@ export const registerPostActivityRealtime = (httpServer: HttpServer) => {
       }
 
       socket.leave(getNotificationRoomName(userId));
+    });
+
+    socket.on("follow:watch", (incomingUserId: unknown) => {
+      const userId = normalizeUserId(incomingUserId);
+      if (!userId) {
+        return;
+      }
+
+      socket.join(getFollowRoomName(userId));
+    });
+
+    socket.on("follow:unwatch", (incomingUserId: unknown) => {
+      const userId = normalizeUserId(incomingUserId);
+      if (!userId) {
+        return;
+      }
+
+      socket.leave(getFollowRoomName(userId));
     });
   });
 
@@ -165,6 +204,35 @@ export const emitNotificationActivity = (event: NotificationActivityEvent) => {
   }, EMIT_DEBOUNCE_MS);
 
   pendingNotificationEvents.set(userId, {
+    timer,
+    event: mergedEvent,
+  });
+};
+
+export const emitFollowActivity = (event: FollowActivityEvent) => {
+  const userId = normalizeUserId(event.userId);
+  if (!io || !userId) {
+    return;
+  }
+
+  const existing = pendingFollowEvents.get(userId);
+  if (existing) {
+    clearTimeout(existing.timer);
+  }
+
+  const mergedEvent: FollowActivityEvent = {
+    ...(existing?.event ?? { userId }),
+    ...event,
+    userId,
+    emittedAt: new Date().toISOString(),
+  };
+
+  const timer = setTimeout(() => {
+    io?.to(getFollowRoomName(userId)).emit("follow:activity", mergedEvent);
+    pendingFollowEvents.delete(userId);
+  }, EMIT_DEBOUNCE_MS);
+
+  pendingFollowEvents.set(userId, {
     timer,
     event: mergedEvent,
   });

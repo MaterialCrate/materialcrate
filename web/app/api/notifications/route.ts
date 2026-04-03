@@ -13,6 +13,7 @@ const NOTIFICATIONS_QUERY = `
       actorUsername
       postId
       commentId
+      followRequestId
       title
       description
       icon
@@ -112,12 +113,6 @@ const runGraphQL = async ({
   return { graphqlResponse, graphqlBody };
 };
 
-const PENDING_FOLLOW_REQUEST_FOR_ACTOR_QUERY = `
-  query PendingFollowRequestForActor($actorId: ID!) {
-    pendingFollowRequestForActor(actorId: $actorId)
-  }
-`;
-
 export async function GET(request: NextRequest) {
   const token = await getAuthToken();
   if (!token) {
@@ -148,29 +143,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const notifications = graphqlBody?.data?.notifications ?? [];
+  const notifications = Array.isArray(graphqlBody?.data?.notifications)
+    ? graphqlBody.data.notifications
+    : [];
 
-  // Enrich FOLLOW_REQUEST notifications with the follow request ID
-  const enriched = await Promise.all(
-    notifications.map(async (notification: any) => {
-      if (notification.type !== "FOLLOW_REQUEST" || !notification.actorId) {
-        return notification;
-      }
-
-      const { graphqlBody: reqBody } = await runGraphQL({
-        query: PENDING_FOLLOW_REQUEST_FOR_ACTOR_QUERY,
-        variables: { actorId: notification.actorId },
-        token,
-      });
-
-      return {
-        ...notification,
-        followRequestId: reqBody?.data?.pendingFollowRequestForActor ?? null,
-      };
-    }),
-  );
-
-  return NextResponse.json({ notifications: enriched });
+  return NextResponse.json({ notifications });
 }
 
 type CreateNotificationBody = {

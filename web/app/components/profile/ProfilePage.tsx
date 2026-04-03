@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
+import { subscribeToFollowActivity } from "@/app/lib/post-activity-realtime";
 import Acheivement from "@/app/components/profile/Acheivement";
 import Header, { type ProfileTab } from "@/app/components/profile/Header";
 import Post, {
@@ -203,6 +204,59 @@ export default function ProfilePage({ username }: ProfilePageProps) {
 
     return () => controller.abort();
   }, [profile?.username]);
+
+  useEffect(() => {
+    if (!profile?.id) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let isDisposed = false;
+
+    void subscribeToFollowActivity(profile.id, (event) => {
+      setProfile((current) => {
+        if (!current || current.id !== event.userId) {
+          return current;
+        }
+
+        const nextProfile: ProfileUser = {
+          ...current,
+          followersCount:
+            typeof event.followersCount === "number"
+              ? event.followersCount
+              : current.followersCount,
+          followingCount:
+            typeof event.followingCount === "number"
+              ? event.followingCount
+              : current.followingCount,
+        };
+
+        if (user?.id && event.actorId === user.id) {
+          if (event.reason === "unfollowed") {
+            nextProfile.isFollowedByCurrentUser = false;
+            nextProfile.hasPendingFollowRequest = false;
+          } else {
+            nextProfile.isFollowedByCurrentUser = true;
+            nextProfile.hasPendingFollowRequest = false;
+          }
+        }
+
+        return nextProfile;
+      });
+    }).then((cleanup) => {
+      if (isDisposed) {
+        cleanup();
+        return;
+      }
+
+      unsubscribe = cleanup;
+    });
+
+    return () => {
+      isDisposed = true;
+      unsubscribe?.();
+    };
+  }, [profile?.id, user?.id]);
 
   const isOwner =
     normalizeUsername(user?.username as string) !== "" &&
@@ -624,6 +678,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
       )}
       <FollowersnFollowingList
         isOpen={selectedFollowList !== null}
+        userId={profile?.id}
         username={profile?.username}
         subscriptionPlan={profile?.subscriptionPlan}
         initialTab={selectedFollowList ?? "followers"}

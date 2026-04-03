@@ -181,9 +181,21 @@ const resolveNotificationTargets = async (notification: any) => {
   };
 };
 
-const toNotificationGraphQL = async (notification: any) => {
+const toNotificationGraphQL = async (
+  notification: any,
+  options?: {
+    actorUsernameById?: Map<string, string>;
+    followRequestIdByActorId?: Map<string, string>;
+  },
+) => {
+  const normalizedActorId = notification.actorId?.trim?.() || null;
+  const actorUsernameFromMap = normalizedActorId
+    ? (options?.actorUsernameById?.get(normalizedActorId) ?? null)
+    : null;
   const [actorUsername, targets, profilePicture] = await Promise.all([
-    resolveNotificationActorUsername(notification.actorId),
+    actorUsernameFromMap !== null
+      ? Promise.resolve(actorUsernameFromMap)
+      : resolveNotificationActorUsername(notification.actorId),
     resolveNotificationTargets(notification),
     resolveNotificationProfilePicture(notification.profilePicture),
   ]);
@@ -195,6 +207,11 @@ const toNotificationGraphQL = async (notification: any) => {
     actorUsername,
     postId: targets.postId,
     commentId: targets.commentId,
+    followRequestId:
+      notification.type === NOTIFICATION_TYPE.FOLLOW_REQUEST &&
+      normalizedActorId
+        ? (options?.followRequestIdByActorId?.get(normalizedActorId) ?? null)
+        : null,
     title: notification.title,
     description: notification.description,
     icon: notification.icon,
@@ -235,7 +252,89 @@ export const NotificationResolver = {
         take: safeLimit,
       });
 
-      return Promise.all(notifications.map(toNotificationGraphQL));
+      const actorIds = Array.from(
+        new Set(
+          notifications
+            .map(
+              (notification: { actorId?: string | null }) =>
+                notification.actorId?.trim() || "",
+            )
+            .filter(Boolean),
+        ),
+      );
+
+      const followRequestActorIds = Array.from(
+        new Set(
+          notifications
+            .filter(
+              (notification: { type?: string; actorId?: string | null }) =>
+                notification.type === NOTIFICATION_TYPE.FOLLOW_REQUEST &&
+                Boolean(notification.actorId?.trim()),
+            )
+            .map(
+              (notification: { actorId?: string | null }) =>
+                notification.actorId?.trim() || "",
+            ),
+        ),
+      );
+
+      const [actors, pendingFollowRequests] = await Promise.all([
+        actorIds.length
+          ? (prisma as any).user.findMany({
+              where: {
+                id: {
+                  in: actorIds,
+                },
+              },
+              select: {
+                id: true,
+                username: true,
+              },
+            })
+          : Promise.resolve([]),
+        followRequestActorIds.length
+          ? (prisma as any).followRequest.findMany({
+              where: {
+                requesterId: {
+                  in: followRequestActorIds,
+                },
+                targetId: viewerId,
+                status: "PENDING",
+                expiresAt: {
+                  gt: new Date(),
+                },
+              },
+              select: {
+                id: true,
+                requesterId: true,
+              },
+            })
+          : Promise.resolve([]),
+      ]);
+
+      const actorUsernameById = new Map<string, string>(
+        actors.map((actor: { id: string; username?: string | null }) => [
+          actor.id,
+          actor.username?.trim() || "",
+        ]),
+      );
+      const followRequestIdByActorId = new Map<string, string>(
+        pendingFollowRequests.map(
+          (request: { id: string; requesterId: string }) => [
+            request.requesterId,
+            request.id,
+          ],
+        ),
+      );
+
+      return Promise.all(
+        notifications.map((notification: any) =>
+          toNotificationGraphQL(notification, {
+            actorUsernameById,
+            followRequestIdByActorId,
+          }),
+        ),
+      );
     },
   },
   Mutation: {

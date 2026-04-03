@@ -25,6 +25,15 @@ export type NotificationActivityEvent = {
   emittedAt?: string;
 };
 
+export type FollowActivityEvent = {
+  userId: string;
+  reason: "followed" | "unfollowed" | "follow-request-accepted";
+  actorId?: string | null;
+  followersCount?: number;
+  followingCount?: number;
+  emittedAt?: string;
+};
+
 type SocketConfigResponse = {
   enabled?: boolean;
   socketUrl?: string | null;
@@ -33,6 +42,7 @@ type SocketConfigResponse = {
 
 type ActivityHandler = (event: PostActivityEvent) => void;
 type NotificationActivityHandler = (event: NotificationActivityEvent) => void;
+type FollowActivityHandler = (event: FollowActivityEvent) => void;
 
 let socketPromise: Promise<Socket | null> | null = null;
 const handlersByPostId = new Map<string, Set<ActivityHandler>>();
@@ -42,6 +52,8 @@ const notificationHandlersByUserId = new Map<
   Set<NotificationActivityHandler>
 >();
 const notificationWatcherCountByUserId = new Map<string, number>();
+const followHandlersByUserId = new Map<string, Set<FollowActivityHandler>>();
+const followWatcherCountByUserId = new Map<string, number>();
 
 const normalizePostId = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
@@ -84,6 +96,26 @@ const broadcastNotificationActivity = (event: NotificationActivityEvent) => {
       handler({ ...event, userId });
     } catch (error) {
       console.error("Failed to handle realtime notification activity", error);
+    }
+  });
+};
+
+const broadcastFollowActivity = (event: FollowActivityEvent) => {
+  const userId = normalizeUserId(event.userId);
+  if (!userId) {
+    return;
+  }
+
+  const handlers = followHandlersByUserId.get(userId);
+  if (!handlers?.size) {
+    return;
+  }
+
+  handlers.forEach((handler) => {
+    try {
+      handler({ ...event, userId });
+    } catch (error) {
+      console.error("Failed to handle realtime follow activity", error);
     }
   });
 };
@@ -131,6 +163,7 @@ const ensureSocket = async () => {
 
       socket.on("post:activity", broadcastActivity);
       socket.on("notification:activity", broadcastNotificationActivity);
+      socket.on("follow:activity", broadcastFollowActivity);
       return socket;
     })();
   }
@@ -231,5 +264,53 @@ export const subscribeToNotificationActivity = async (
     }
 
     notificationWatcherCountByUserId.set(normalizedUserId, nextWatcherCount);
+  };
+};
+
+export const subscribeToFollowActivity = async (
+  userId: string,
+  handler: FollowActivityHandler,
+) => {
+  const normalizedUserId = normalizeUserId(userId);
+  if (!normalizedUserId) {
+    return () => {};
+  }
+
+  const handlers =
+    followHandlersByUserId.get(normalizedUserId) ??
+    new Set<FollowActivityHandler>();
+  handlers.add(handler);
+  followHandlersByUserId.set(normalizedUserId, handlers);
+
+  const socket = await ensureSocket();
+  if (socket) {
+    const watcherCount = followWatcherCountByUserId.get(normalizedUserId) ?? 0;
+    if (watcherCount === 0) {
+      socket.emit("follow:watch", normalizedUserId);
+    }
+    followWatcherCountByUserId.set(normalizedUserId, watcherCount + 1);
+  }
+
+  return () => {
+    const currentHandlers = followHandlersByUserId.get(normalizedUserId);
+    currentHandlers?.delete(handler);
+
+    if (currentHandlers && currentHandlers.size === 0) {
+      followHandlersByUserId.delete(normalizedUserId);
+    }
+
+    if (!socket) {
+      return;
+    }
+
+    const nextWatcherCount =
+      (followWatcherCountByUserId.get(normalizedUserId) ?? 1) - 1;
+    if (nextWatcherCount <= 0) {
+      followWatcherCountByUserId.delete(normalizedUserId);
+      socket.emit("follow:unwatch", normalizedUserId);
+      return;
+    }
+
+    followWatcherCountByUserId.set(normalizedUserId, nextWatcherCount);
   };
 };

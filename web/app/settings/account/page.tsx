@@ -77,6 +77,8 @@ export default function Page() {
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [hasCreatedPasswordSinceLoad, setHasCreatedPasswordSinceLoad] =
+    useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -110,6 +112,9 @@ export default function Page() {
     };
   }, [showJoinedCountdown, showPlanRenewsCountdown, showPlanStartedCountdown]);
 
+  const canCreatePassword =
+    Boolean(user?.linkedSEOs?.length) && !hasCreatedPasswordSinceLoad;
+
   const accountSections = useMemo(
     () => [
       {
@@ -132,7 +137,7 @@ export default function Page() {
             : []),
           {
             label: "Password",
-            value: "********",
+            value: canCreatePassword ? "Create password" : "Change password",
             key: "password",
           },
           {
@@ -189,6 +194,7 @@ export default function Page() {
       },
     ],
     [
+      canCreatePassword,
       now,
       showJoinedCountdown,
       showPlanRenewsCountdown,
@@ -259,28 +265,36 @@ export default function Page() {
   };
 
   const handlePasswordChangeRequest = async () => {
-    const currentPassword = await popup.prompt({
-      title: "Current Password",
-      message: "Enter your current password to continue.",
-      confirmLabel: "Continue",
-      cancelLabel: "Cancel",
-      placeholder: "Current password",
-      defaultValue: "",
-      inputType: "password",
-    });
-    if (currentPassword === null) {
-      return;
-    }
+    let currentPassword = "";
 
-    if (!currentPassword) {
-      setError("Current password is required.");
-      return;
+    if (!canCreatePassword) {
+      const promptedCurrentPassword = await popup.prompt({
+        title: "Current Password",
+        message: "Enter your current password to continue.",
+        confirmLabel: "Continue",
+        cancelLabel: "Cancel",
+        placeholder: "Current password",
+        defaultValue: "",
+        inputType: "password",
+      });
+      if (promptedCurrentPassword === null) {
+        return;
+      }
+
+      if (!promptedCurrentPassword) {
+        setError("Current password is required.");
+        return;
+      }
+
+      currentPassword = promptedCurrentPassword;
     }
 
     const newPassword = await popup.prompt({
-      title: "New Password",
-      message: "Enter the new password you want to use.",
-      confirmLabel: "Save Password",
+      title: canCreatePassword ? "Create Password" : "New Password",
+      message: canCreatePassword
+        ? "Create a password for email sign-in in addition to your social account."
+        : "Enter the new password you want to use.",
+      confirmLabel: "Continue",
       cancelLabel: "Cancel",
       placeholder: "New password",
       defaultValue: "",
@@ -300,8 +314,26 @@ export default function Page() {
       return;
     }
 
-    if (currentPassword === newPassword) {
+    if (!canCreatePassword && currentPassword === newPassword) {
       setError("New password must differ from current password");
+      return;
+    }
+
+    const confirmPassword = await popup.prompt({
+      title: canCreatePassword ? "Confirm Password" : "Confirm New Password",
+      message: "Enter the password again to confirm.",
+      confirmLabel: canCreatePassword ? "Create Password" : "Save Password",
+      cancelLabel: "Cancel",
+      placeholder: "Confirm password",
+      defaultValue: "",
+      inputType: "password",
+    });
+    if (confirmPassword === null) {
+      return;
+    }
+
+    if (confirmPassword !== newPassword) {
+      setError("Passwords do not match");
       return;
     }
 
@@ -318,13 +350,22 @@ export default function Page() {
       const body = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(body?.error || "Failed to change password");
+        throw new Error(body?.error || "Failed to save password");
       }
 
-      setSuccess("Password updated successfully");
+      setHasCreatedPasswordSinceLoad(true);
+      setSuccess(
+        canCreatePassword
+          ? "Password created successfully"
+          : "Password updated successfully",
+      );
     } catch (caughtError: unknown) {
-      setError("Failed to change password");
-      console.error("Failed to change password: ", caughtError);
+      setError(
+        canCreatePassword
+          ? "Failed to create password"
+          : "Failed to change password",
+      );
+      console.error("Failed to save password: ", caughtError);
     } finally {
       setIsSubmittingPassword(false);
     }

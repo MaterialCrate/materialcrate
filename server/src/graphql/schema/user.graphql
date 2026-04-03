@@ -86,7 +86,7 @@ type Mutation {
   verifyEmailCode(email: String!, code: String!): Boolean!
   resendVerificationEmail(email: String!): Boolean!
   requestEmailChange(newEmail: String!): Boolean!
-  changePassword(currentPassword: String!, newPassword: String!): Boolean!
+  changePassword(currentPassword: String, newPassword: String!): Boolean!
   verifyPendingEmailChange(code: String!): User!
   resendPendingEmailChange: Boolean!
   deleteMyAccount: Boolean!

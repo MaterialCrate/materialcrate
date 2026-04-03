@@ -28,6 +28,7 @@ import {
   NOTIFICATION_ICON,
   NOTIFICATION_TYPE,
 } from "../../services/notifications.js";
+import { emitFollowActivity } from "../../realtime/postActivity.js";
 
 const createToken = (userId: string, email: string) => {
   const secret = process.env.JWT_SECRET;
@@ -205,6 +206,78 @@ const includeProviderInLinkedSeos = (
     return existing;
   }
   return [...existing, provider];
+};
+
+const createNotificationSafely = async (
+  context: string,
+  input: Parameters<typeof createNotification>[0],
+) => {
+  try {
+    return await createNotification(input);
+  } catch (error) {
+    console.error(`[${context}] Failed to create notification`, {
+      userId: input.userId,
+      actorId: input.actorId,
+      type: input.type,
+      error,
+    });
+    return null;
+  }
+};
+
+const deleteNotificationsSafely = async (
+  context: string,
+  where: Record<string, unknown>,
+) => {
+  try {
+    await (prisma as any).notification.deleteMany({ where });
+  } catch (error) {
+    console.error(`[${context}] Failed to delete notifications`, {
+      where,
+      error,
+    });
+  }
+};
+
+const emitFollowActivityForUser = async ({
+  userId,
+  reason,
+  actorId,
+}: {
+  userId: string;
+  reason: "followed" | "unfollowed" | "follow-request-accepted";
+  actorId?: string | null;
+}) => {
+  const normalizedUserId = String(userId || "").trim();
+  if (!normalizedUserId) {
+    return;
+  }
+
+  try {
+    const [followersCount, followingCount] = await Promise.all([
+      (prisma as any).follow.count({
+        where: { followingId: normalizedUserId },
+      }),
+      (prisma as any).follow.count({
+        where: { followerId: normalizedUserId },
+      }),
+    ]);
+
+    emitFollowActivity({
+      userId: normalizedUserId,
+      reason,
+      actorId: actorId?.trim() || null,
+      followersCount,
+      followingCount,
+    });
+  } catch (error) {
+    console.error("Failed to emit follow activity", {
+      userId: normalizedUserId,
+      reason,
+      actorId,
+      error,
+    });
+  }
 };
 
 const sanitizeFileName = (name: string) =>
@@ -855,7 +928,7 @@ export const UserResolver = {
       {
         currentPassword,
         newPassword,
-      }: { currentPassword: string; newPassword: string },
+      }: { currentPassword?: string | null; newPassword: string },
       ctx: any,
     ) => {
       if (!ctx.user?.sub) {
@@ -865,15 +938,15 @@ export const UserResolver = {
       const currentPasswordValue = String(currentPassword || "");
       const newPasswordValue = String(newPassword || "");
 
-      if (!currentPasswordValue || !newPasswordValue) {
-        throw new Error("Current password and new password are required");
+      if (!newPasswordValue) {
+        throw new Error("New password is required");
       }
 
       if (newPasswordValue.length < 8) {
         throw new Error("New password must be at least 8 characters");
       }
 
-      if (currentPasswordValue === newPasswordValue) {
+      if (currentPasswordValue && currentPasswordValue === newPasswordValue) {
         throw new Error(
           "New password must be different from your current password",
         );
@@ -885,6 +958,7 @@ export const UserResolver = {
           id: true,
           email: true,
           password: true,
+          linkedSEOs: true,
         },
       });
 
@@ -892,13 +966,22 @@ export const UserResolver = {
         throw new Error("User not found");
       }
 
-      const passwordMatches = await bcrypt.compare(
-        currentPasswordValue,
-        user.password,
-      );
+      const canCreatePasswordWithoutCurrent =
+        Array.isArray(user.linkedSEOs) && user.linkedSEOs.length > 0;
 
-      if (!passwordMatches) {
-        throw new Error("Current password is incorrect");
+      if (!currentPasswordValue && !canCreatePasswordWithoutCurrent) {
+        throw new Error("Current password is required");
+      }
+
+      if (currentPasswordValue) {
+        const passwordMatches = await bcrypt.compare(
+          currentPasswordValue,
+          user.password,
+        );
+
+        if (!passwordMatches) {
+          throw new Error("Current password is incorrect");
+        }
       }
 
       const nextPasswordHash = await bcrypt.hash(newPasswordValue, 12);
@@ -1261,7 +1344,7 @@ export const UserResolver = {
           },
         });
 
-        await createNotification({
+        await createNotificationSafely("followUser", {
           userId: targetUser.id,
           actorId: ctx.user.sub,
           type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
@@ -1290,7 +1373,7 @@ export const UserResolver = {
       });
 
       if (targetUser.id !== ctx.user.sub) {
-        await createNotification({
+        await createNotificationSafely("followUser", {
           userId: targetUser.id,
           actorId: ctx.user.sub,
           type: NOTIFICATION_TYPE.FOLLOW,
@@ -1300,6 +1383,19 @@ export const UserResolver = {
           profilePicture: actor?.profilePicture,
         });
       }
+
+      await Promise.all([
+        emitFollowActivityForUser({
+          userId: targetUser.id,
+          reason: "followed",
+          actorId: ctx.user.sub,
+        }),
+        emitFollowActivityForUser({
+          userId: ctx.user.sub,
+          reason: "followed",
+          actorId: targetUser.id,
+        }),
+      ]);
 
       return { followed: true, pending: false };
     },
@@ -1348,15 +1444,26 @@ export const UserResolver = {
         },
       });
 
-      await (prisma as any).notification.deleteMany({
-        where: {
-          userId: targetUser.id,
-          actorId: ctx.user.sub,
-          type: {
-            in: [NOTIFICATION_TYPE.FOLLOW, NOTIFICATION_TYPE.FOLLOW_REQUEST],
-          },
+      await deleteNotificationsSafely("unfollowUser", {
+        userId: targetUser.id,
+        actorId: ctx.user.sub,
+        type: {
+          in: [NOTIFICATION_TYPE.FOLLOW, NOTIFICATION_TYPE.FOLLOW_REQUEST],
         },
       });
+
+      await Promise.all([
+        emitFollowActivityForUser({
+          userId: targetUser.id,
+          reason: "unfollowed",
+          actorId: ctx.user.sub,
+        }),
+        emitFollowActivityForUser({
+          userId: ctx.user.sub,
+          reason: "unfollowed",
+          actorId: targetUser.id,
+        }),
+      ]);
 
       return true;
     },
@@ -1422,12 +1529,10 @@ export const UserResolver = {
       });
 
       // Remove the follow request notification
-      await (prisma as any).notification.deleteMany({
-        where: {
-          userId: ctx.user.sub,
-          actorId: request.requesterId,
-          type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
-        },
+      await deleteNotificationsSafely("acceptFollowRequest", {
+        userId: ctx.user.sub,
+        actorId: request.requesterId,
+        type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
       });
 
       // Notify the requester that their request was accepted
@@ -1441,7 +1546,7 @@ export const UserResolver = {
         ? `@${actor.username.trim()}`
         : actorLabel;
 
-      await createNotification({
+      await createNotificationSafely("acceptFollowRequest", {
         userId: request.requesterId,
         actorId: ctx.user.sub,
         type: NOTIFICATION_TYPE.FOLLOW,
@@ -1450,6 +1555,19 @@ export const UserResolver = {
         icon: NOTIFICATION_ICON.FOLLOW,
         profilePicture: actor?.profilePicture,
       });
+
+      await Promise.all([
+        emitFollowActivityForUser({
+          userId: request.targetId,
+          reason: "follow-request-accepted",
+          actorId: request.requesterId,
+        }),
+        emitFollowActivityForUser({
+          userId: request.requesterId,
+          reason: "follow-request-accepted",
+          actorId: request.targetId,
+        }),
+      ]);
 
       return true;
     },
@@ -1482,12 +1600,10 @@ export const UserResolver = {
       });
 
       // Remove the follow request notification
-      await (prisma as any).notification.deleteMany({
-        where: {
-          userId: ctx.user.sub,
-          actorId: request.requesterId,
-          type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
-        },
+      await deleteNotificationsSafely("declineFollowRequest", {
+        userId: ctx.user.sub,
+        actorId: request.requesterId,
+        type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
       });
 
       return true;
@@ -1529,12 +1645,10 @@ export const UserResolver = {
         },
       });
 
-      await (prisma as any).notification.deleteMany({
-        where: {
-          userId: targetUser.id,
-          actorId: ctx.user.sub,
-          type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
-        },
+      await deleteNotificationsSafely("cancelFollowRequest", {
+        userId: targetUser.id,
+        actorId: ctx.user.sub,
+        type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
       });
 
       return true;

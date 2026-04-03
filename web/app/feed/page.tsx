@@ -256,7 +256,34 @@ export default function Home() {
     let unsubscribe: (() => void) | undefined;
     let isDisposed = false;
 
-    void subscribeToNotificationActivity(user.id, () => {
+    void subscribeToNotificationActivity(user.id, (event) => {
+      if (typeof event.unreadCount === "number") {
+        const unreadCount = Math.max(0, event.unreadCount);
+        setUnreadNotificationCount(unreadCount);
+
+        if (unreadCount === 0) {
+          setHasUnopenedNotifications(false);
+          return;
+        }
+
+        if (
+          typeof window !== "undefined" &&
+          event.reason === "notification-created"
+        ) {
+          const lastOpenedAt = Number.parseInt(
+            window.localStorage.getItem(
+              NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY,
+            ) || "0",
+            10,
+          );
+          const emittedAt = Date.parse(event.emittedAt || "");
+          setHasUnopenedNotifications(
+            !Number.isNaN(emittedAt) ? emittedAt > lastOpenedAt : true,
+          );
+          return;
+        }
+      }
+
       scheduleNotificationIndicatorRefresh();
     }).then((cleanup) => {
       if (isDisposed) {

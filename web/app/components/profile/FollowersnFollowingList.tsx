@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft2, Verify } from "iconsax-reactjs";
+import { subscribeToFollowActivity } from "@/app/lib/post-activity-realtime";
 
 export type FollowListTab = "followers" | "following";
 
@@ -21,6 +22,7 @@ type FollowConnection = {
 
 type FollowersnFollowingListProps = {
   isOpen: boolean;
+  userId?: string;
   username?: string;
   subscriptionPlan?: string | null;
   initialTab: FollowListTab;
@@ -59,6 +61,7 @@ const getActionLabel = (
 
 export default function FollowersnFollowingList({
   isOpen,
+  userId,
   username,
   subscriptionPlan,
   initialTab,
@@ -72,6 +75,7 @@ export default function FollowersnFollowingList({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [updatingUsernames, setUpdatingUsernames] = useState<string[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
@@ -136,7 +140,32 @@ export default function FollowersnFollowingList({
     void loadConnections();
 
     return () => controller.abort();
-  }, [isOpen, onCountsChange, username]);
+  }, [isOpen, onCountsChange, reloadKey, username]);
+
+  useEffect(() => {
+    if (!isOpen || !userId?.trim()) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let isDisposed = false;
+
+    void subscribeToFollowActivity(userId, () => {
+      setReloadKey((current) => current + 1);
+    }).then((cleanup) => {
+      if (isDisposed) {
+        cleanup();
+        return;
+      }
+
+      unsubscribe = cleanup;
+    });
+
+    return () => {
+      isDisposed = true;
+      unsubscribe?.();
+    };
+  }, [isOpen, userId]);
 
   const activeList = useMemo(
     () => (activeTab === "followers" ? followers : following),

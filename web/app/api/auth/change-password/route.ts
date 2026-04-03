@@ -5,7 +5,7 @@ const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
 const CHANGE_PASSWORD_MUTATION = `
-  mutation ChangePassword($currentPassword: String!, $newPassword: String!) {
+  mutation ChangePassword($currentPassword: String, $newPassword: String!) {
     changePassword(
       currentPassword: $currentPassword
       newPassword: $newPassword
@@ -19,12 +19,16 @@ type ChangePasswordBody = {
 };
 
 const getErrorStatus = (message: string, fallbackStatus?: number) => {
-  if (message === "Not authenticated" || message === "Current password is incorrect") {
+  if (
+    message === "Not authenticated" ||
+    message === "Current password is incorrect"
+  ) {
     return 401;
   }
 
   if (
-    message === "Current password and new password are required" ||
+    message === "Current password is required" ||
+    message === "New password is required" ||
     message === "New password must be at least 8 characters" ||
     message === "New password must be different from your current password"
   ) {
@@ -54,9 +58,9 @@ export async function POST(req: Request) {
   const currentPassword = body.currentPassword ?? "";
   const newPassword = body.newPassword ?? "";
 
-  if (!currentPassword || !newPassword) {
+  if (!newPassword) {
     return NextResponse.json(
-      { error: "Current password and new password are required" },
+      { error: "New password is required" },
       { status: 400 },
     );
   }
@@ -75,7 +79,10 @@ export async function POST(req: Request) {
     },
     body: JSON.stringify({
       query: CHANGE_PASSWORD_MUTATION,
-      variables: { currentPassword, newPassword },
+      variables: {
+        currentPassword: currentPassword || null,
+        newPassword,
+      },
     }),
   });
 

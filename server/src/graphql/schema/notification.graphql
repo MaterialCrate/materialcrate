@@ -5,6 +5,7 @@ type Notification {
   actorUsername: String
   postId: ID
   commentId: ID
+  followRequestId: ID
   title: String!
   description: String!
   icon: String!
