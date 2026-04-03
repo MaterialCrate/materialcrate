@@ -1197,6 +1197,9 @@ export const UserResolver = {
       });
       const actorLabel =
         actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+      const actorHandle = actor?.username?.trim()
+        ? `@${actor.username.trim()}`
+        : actorLabel;
 
       // Private profile: create a follow request instead of a direct follow
       if (!targetUser.visibilityPublicProfile) {
@@ -1238,8 +1241,8 @@ export const UserResolver = {
           userId: targetUser.id,
           actorId: ctx.user.sub,
           type: NOTIFICATION_TYPE.FOLLOW_REQUEST,
-          title: "Follow request",
-          description: `${actorLabel} wants to follow you.`,
+          title: `${actorLabel} requested to follow you`,
+          description: actorHandle,
           icon: NOTIFICATION_ICON.FOLLOW_REQUEST,
           profilePicture: actor?.profilePicture,
         });
@@ -1267,8 +1270,8 @@ export const UserResolver = {
           userId: targetUser.id,
           actorId: ctx.user.sub,
           type: NOTIFICATION_TYPE.FOLLOW,
-          title: "New follower",
-          description: `${actorLabel} started following you.`,
+          title: `${actorLabel} followed you`,
+          description: actorHandle,
           icon: NOTIFICATION_ICON.FOLLOW,
           profilePicture: actor?.profilePicture,
         });
@@ -1410,13 +1413,16 @@ export const UserResolver = {
       });
       const actorLabel =
         actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+      const actorHandle = actor?.username?.trim()
+        ? `@${actor.username.trim()}`
+        : actorLabel;
 
       await createNotification({
         userId: request.requesterId,
         actorId: ctx.user.sub,
         type: NOTIFICATION_TYPE.FOLLOW,
-        title: "Follow request accepted",
-        description: `${actorLabel} accepted your follow request.`,
+        title: `${actorLabel} accepted your follow request`,
+        description: actorHandle,
         icon: NOTIFICATION_ICON.FOLLOW,
         profilePicture: actor?.profilePicture,
       });

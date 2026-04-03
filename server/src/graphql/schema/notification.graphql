@@ -2,6 +2,9 @@ type Notification {
   id: ID!
   type: String!
   actorId: ID
+  actorUsername: String
+  postId: ID
+  commentId: ID
   title: String!
   description: String!
   icon: String!
@@ -22,6 +25,8 @@ extend type Mutation {
     icon: String!
     profilePicture: String
     userId: ID
+    postId: ID
+    commentId: ID
   ): Notification!
   markNotificationRead(notificationId: ID!): Notification!
   markAllNotificationsRead: Boolean!

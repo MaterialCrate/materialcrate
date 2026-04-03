@@ -30,6 +30,8 @@ const PUSH_NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
 type CreateNotificationInput = {
   userId: string;
   actorId?: string | null;
+  postId?: string | null;
+  commentId?: string | null;
   type?: string;
   title: string;
   description: string;
@@ -41,6 +43,8 @@ type CreateNotificationInput = {
 export const createNotification = async ({
   userId,
   actorId,
+  postId,
+  commentId,
   type = NOTIFICATION_TYPE.SYSTEM,
   title,
   description,

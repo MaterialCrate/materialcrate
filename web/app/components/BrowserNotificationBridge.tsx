@@ -2,11 +2,18 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useAuth } from "@/app/lib/auth-client";
+import {
+  getNotificationDescriptionPreview,
+  getNotificationHref,
+} from "@/app/lib/notification-navigation";
 import { subscribeToNotificationActivity } from "@/app/lib/post-activity-realtime";
 
 type NotificationItem = {
   id: string;
   type: string;
+  actorUsername?: string | null;
+  postId?: string | null;
+  commentId?: string | null;
   title: string;
   description: string;
   unread: boolean;
@@ -165,10 +172,19 @@ export default function BrowserNotificationBridge() {
             continue;
           }
 
-          new window.Notification(item.title, {
-            body: item.description,
+          const href = getNotificationHref(item) ?? "/notifications";
+          const browserNotification = new window.Notification(item.title, {
+            body: getNotificationDescriptionPreview(item.description, 120),
             tag: `mc-${item.id}`,
           });
+
+          browserNotification.onclick = () => {
+            browserNotification.close();
+            try {
+              window.focus();
+            } catch {}
+            window.location.assign(href);
+          };
         }
 
         saveSeenIdsToStorage(seenIdsRef.current);

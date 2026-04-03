@@ -1004,6 +1004,7 @@ export const PostResolver = {
         where: { id: postId },
         select: {
           id: true,
+          title: true,
           authorId: true,
           commentsDisabled: true,
           deleted: true,
@@ -1070,13 +1071,15 @@ export const PostResolver = {
           });
           const actorLabel =
             actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+          const postTitle = post.title?.trim() || "Untitled post";
 
           await createNotification({
             userId: post.authorId,
             actorId: viewerId,
+            postId,
             type: NOTIFICATION_TYPE.POST_LIKE,
-            title: "New like",
-            description: `${actorLabel} liked your post.`,
+            title: `${actorLabel} liked your post`,
+            description: postTitle,
             icon: NOTIFICATION_ICON.POST_LIKE,
             profilePicture: actor?.profilePicture,
           });
@@ -1130,7 +1133,7 @@ export const PostResolver = {
 
       const post = await prisma.post.findUnique({
         where: { id: postId },
-        select: { id: true, deleted: true, authorId: true },
+        select: { id: true, title: true, deleted: true, authorId: true },
       });
       if (!post || post.deleted) {
         throw new Error("Post not found");
@@ -1170,13 +1173,14 @@ export const PostResolver = {
 
         await createNotification({
           userId: post.authorId,
-          type: normalizedParentCommentId
-            ? NOTIFICATION_TYPE.COMMENT
-            : NOTIFICATION_TYPE.COMMENT,
-          title: normalizedParentCommentId ? "New reply" : "New comment",
-          description: normalizedParentCommentId
-            ? `${actorLabel} replied to a thread on your post.`
-            : `${actorLabel} commented on your post.`,
+          actorId: viewerId,
+          postId,
+          commentId: comment.id,
+          type: NOTIFICATION_TYPE.COMMENT,
+          title: normalizedParentCommentId
+            ? `${actorLabel} replied on your post`
+            : `${actorLabel} commented on your post`,
+          description: normalizedContent,
           icon: NOTIFICATION_ICON.COMMENT,
           profilePicture: actor?.profilePicture,
         });
@@ -1216,7 +1220,7 @@ export const PostResolver = {
 
       const comment = await (prisma as any).comment.findUnique({
         where: { id: commentId },
-        select: { id: true, authorId: true, postId: true },
+        select: { id: true, authorId: true, postId: true, content: true },
       });
       if (!comment) {
         throw new Error("Comment not found");
@@ -1287,13 +1291,16 @@ export const PostResolver = {
           });
           const actorLabel =
             actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+          const commentPreview = comment.content?.trim() || "Your comment";
 
           await createNotification({
             userId: comment.authorId,
             actorId: viewerId,
+            postId: comment.postId,
+            commentId,
             type: NOTIFICATION_TYPE.COMMENT_LIKE,
-            title: "Comment liked",
-            description: `${actorLabel} liked your comment.`,
+            title: `${actorLabel} liked your comment`,
+            description: commentPreview,
             icon: NOTIFICATION_ICON.COMMENT_LIKE,
             profilePicture: actor?.profilePicture,
           });

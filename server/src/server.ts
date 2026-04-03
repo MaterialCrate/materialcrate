@@ -23,6 +23,9 @@ export const createHttpServer = () => {
       app.get("/health", (_, res) => {
         res.status(200).json({ ok: true });
       });
+      app.get("/.well-known/apollo/server-health", (_, res) => {
+        res.status(200).json({ ok: true });
+      });
 
       server.applyMiddleware({
         app,

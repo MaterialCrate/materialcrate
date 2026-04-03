@@ -32,6 +32,7 @@ export const metadata: Metadata = {
   },
 };
 
+
 const themeInitScript = `
   try {
     var savedTheme = localStorage.getItem("mc-theme") || "light";

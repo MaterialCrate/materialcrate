@@ -69,22 +69,143 @@ const resolveNotificationProfilePicture = async (
   }
 };
 
-const toNotificationGraphQL = async (notification: any) => ({
-  id: notification.id,
-  type: notification.type ?? NOTIFICATION_TYPE.SYSTEM,
-  actorId: notification.actorId ?? null,
-  title: notification.title,
-  description: notification.description,
-  icon: notification.icon,
-  profilePicture: await resolveNotificationProfilePicture(
-    notification.profilePicture,
-  ),
-  unread: Boolean(notification.unread),
-  time:
+const resolveNotificationActorUsername = async (actorId?: string | null) => {
+  const normalizedActorId = actorId?.trim();
+  if (!normalizedActorId) {
+    return null;
+  }
+
+  const actor = await (prisma as any).user.findUnique({
+    where: { id: normalizedActorId },
+    select: { username: true },
+  });
+
+  return actor?.username?.trim() || null;
+};
+
+const resolveNotificationTargets = async (notification: any) => {
+  const storedPostId = notification.postId?.trim?.() || null;
+  const storedCommentId = notification.commentId?.trim?.() || null;
+
+  if (storedPostId || storedCommentId) {
+    return {
+      postId: storedPostId,
+      commentId: storedCommentId,
+    };
+  }
+
+  const actorId = notification.actorId?.trim?.() || null;
+  const recipientUserId = notification.userId?.trim?.() || null;
+  if (!actorId || !recipientUserId) {
+    return {
+      postId: storedPostId,
+      commentId: storedCommentId,
+    };
+  }
+
+  const parsedTime =
     notification.time instanceof Date
-      ? notification.time.toISOString()
-      : new Date(notification.time).toISOString(),
-});
+      ? notification.time
+      : new Date(notification.time);
+  const timeUpperBound = Number.isNaN(parsedTime.getTime())
+    ? undefined
+    : new Date(parsedTime.getTime() + 5 * 60 * 1000);
+
+  if (notification.type === NOTIFICATION_TYPE.POST_LIKE) {
+    const relatedLike = await prisma.like.findFirst({
+      where: {
+        userId: actorId,
+        ...(timeUpperBound ? { createdAt: { lte: timeUpperBound } } : {}),
+        post: {
+          authorId: recipientUserId,
+          deleted: false,
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { postId: true },
+    });
+
+    return {
+      postId: relatedLike?.postId ?? null,
+      commentId: null,
+    };
+  }
+
+  if (notification.type === NOTIFICATION_TYPE.COMMENT) {
+    const relatedComment = await (prisma as any).comment.findFirst({
+      where: {
+        authorId: actorId,
+        ...(timeUpperBound ? { createdAt: { lte: timeUpperBound } } : {}),
+        post: {
+          authorId: recipientUserId,
+          deleted: false,
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, postId: true },
+    });
+
+    return {
+      postId: relatedComment?.postId ?? null,
+      commentId: relatedComment?.id ?? null,
+    };
+  }
+
+  if (notification.type === NOTIFICATION_TYPE.COMMENT_LIKE) {
+    const relatedCommentLike = await (prisma as any).commentLike.findFirst({
+      where: {
+        userId: actorId,
+        ...(timeUpperBound ? { createdAt: { lte: timeUpperBound } } : {}),
+        comment: {
+          authorId: recipientUserId,
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        commentId: true,
+        comment: {
+          select: { postId: true },
+        },
+      },
+    });
+
+    return {
+      postId: relatedCommentLike?.comment?.postId ?? null,
+      commentId: relatedCommentLike?.commentId ?? null,
+    };
+  }
+
+  return {
+    postId: storedPostId,
+    commentId: storedCommentId,
+  };
+};
+
+const toNotificationGraphQL = async (notification: any) => {
+  const [actorUsername, targets, profilePicture] = await Promise.all([
+    resolveNotificationActorUsername(notification.actorId),
+    resolveNotificationTargets(notification),
+    resolveNotificationProfilePicture(notification.profilePicture),
+  ]);
+
+  return {
+    id: notification.id,
+    type: notification.type ?? NOTIFICATION_TYPE.SYSTEM,
+    actorId: notification.actorId ?? null,
+    actorUsername,
+    postId: targets.postId,
+    commentId: targets.commentId,
+    title: notification.title,
+    description: notification.description,
+    icon: notification.icon,
+    profilePicture,
+    unread: Boolean(notification.unread),
+    time:
+      notification.time instanceof Date
+        ? notification.time.toISOString()
+        : new Date(notification.time).toISOString(),
+  };
+};
 
 export const NotificationResolver = {
   Query: {
@@ -126,6 +247,8 @@ export const NotificationResolver = {
         icon,
         profilePicture,
         userId,
+        postId,
+        commentId,
         type,
       }: {
         title: string;
@@ -133,6 +256,8 @@ export const NotificationResolver = {
         icon: string;
         profilePicture?: string;
         userId?: string;
+        postId?: string;
+        commentId?: string;
         type?: string;
       },
       ctx: GraphQLContext,
@@ -150,6 +275,8 @@ export const NotificationResolver = {
         icon: icon?.trim() || NOTIFICATION_ICON.SYSTEM,
         profilePicture,
         type,
+        postId,
+        commentId,
       });
 
       return toNotificationGraphQL(notification);

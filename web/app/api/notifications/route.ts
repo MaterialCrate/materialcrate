@@ -10,6 +10,9 @@ const NOTIFICATIONS_QUERY = `
       id
       type
       actorId
+      actorUsername
+      postId
+      commentId
       title
       description
       icon
@@ -28,6 +31,8 @@ const CREATE_NOTIFICATION_MUTATION = `
     $icon: String!
     $profilePicture: String
     $userId: ID
+    $postId: ID
+    $commentId: ID
   ) {
     createNotification(
       type: $type
@@ -36,9 +41,15 @@ const CREATE_NOTIFICATION_MUTATION = `
       icon: $icon
       profilePicture: $profilePicture
       userId: $userId
+      postId: $postId
+      commentId: $commentId
     ) {
       id
       type
+      actorId
+      actorUsername
+      postId
+      commentId
       title
       description
       icon
@@ -54,6 +65,10 @@ const MARK_NOTIFICATION_READ_MUTATION = `
     markNotificationRead(notificationId: $notificationId) {
       id
       type
+      actorId
+      actorUsername
+      postId
+      commentId
       title
       description
       icon
@@ -165,6 +180,8 @@ type CreateNotificationBody = {
   icon?: string;
   profilePicture?: string;
   userId?: string;
+  postId?: string;
+  commentId?: string;
 };
 
 export async function POST(request: Request) {
@@ -186,6 +203,8 @@ export async function POST(request: Request) {
   const icon = body.icon?.trim() || "Notification";
   const profilePicture = body.profilePicture?.trim() || undefined;
   const userId = body.userId?.trim() || undefined;
+  const postId = body.postId?.trim() || undefined;
+  const commentId = body.commentId?.trim() || undefined;
 
   if (!title || !description) {
     return NextResponse.json(
@@ -196,7 +215,16 @@ export async function POST(request: Request) {
 
   const { graphqlResponse, graphqlBody } = await runGraphQL({
     query: CREATE_NOTIFICATION_MUTATION,
-    variables: { type, title, description, icon, profilePicture, userId },
+    variables: {
+      type,
+      title,
+      description,
+      icon,
+      profilePicture,
+      userId,
+      postId,
+      commentId,
+    },
     token,
   });
 

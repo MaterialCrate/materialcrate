@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   ArchiveMinus,
   DocumentText1,
@@ -17,11 +18,18 @@ import {
 import Header from "../components/Header";
 import Alert from "../components/Alert";
 import { useAuth } from "../lib/auth-client";
+import {
+  getNotificationDescriptionPreview,
+  getNotificationHref,
+} from "../lib/notification-navigation";
 import { subscribeToNotificationActivity } from "../lib/post-activity-realtime";
 
 type NotificationItem = {
   id: string | number;
   type?: string;
+  actorUsername?: string | null;
+  postId?: string | null;
+  commentId?: string | null;
   followRequestId?: string | null;
   title: string;
   description: string;
@@ -32,6 +40,7 @@ type NotificationItem = {
   unread?: boolean;
   imageLabel: string;
   imageTone: string;
+  href?: string | null;
   Icon: IconsaxIcon;
 };
 
@@ -39,6 +48,9 @@ type ApiNotificationItem = {
   id: string | number;
   type?: string;
   actorId?: string | null;
+  actorUsername?: string | null;
+  postId?: string | null;
+  commentId?: string | null;
   followRequestId?: string | null;
   title: string;
   description: string;
@@ -144,6 +156,7 @@ const getGroupLabel = (time: string) => {
 };
 
 export default function Page() {
+  const router = useRouter();
   const { user } = useAuth();
   const [notifications, setNotifications] = React.useState<
     ApiNotificationItem[]
@@ -217,6 +230,9 @@ export default function Page() {
       current.push({
         id: notification.id,
         type: notification.type,
+        actorUsername: notification.actorUsername ?? null,
+        postId: notification.postId ?? null,
+        commentId: notification.commentId ?? null,
         followRequestId: notification.followRequestId ?? null,
         title: notification.title,
         description: notification.description,
@@ -226,6 +242,7 @@ export default function Page() {
         imageLabel: getImageLabel(notification.title),
         imageTone: style.imageTone,
         accent: style.accent,
+        href: getNotificationHref(notification),
         Icon: style.Icon,
       });
 
@@ -392,6 +409,16 @@ export default function Page() {
     }
   };
 
+  const handleNotificationClick = async (item: NotificationItem) => {
+    if (item.unread) {
+      await markOneAsRead(item.id);
+    }
+
+    if (item.href) {
+      router.push(item.href);
+    }
+  };
+
   const handleFollowRequestAction = async (
     followRequestId: string,
     notificationId: string | number,
@@ -446,9 +473,9 @@ export default function Page() {
               {group.items.map((item) => (
                 <article
                   key={item.id}
-                  className="rounded-[22px] border border-black/6 bg-white px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.04)] active:opacity-50 cursor-pointer"
+                  className={`rounded-[22px] border border-black/6 bg-white px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.04)] active:opacity-50 ${item.href ? "cursor-pointer" : "cursor-default"}`}
                   onClick={() => {
-                    void (item.unread && markOneAsRead(item.id));
+                    void handleNotificationClick(item);
                   }}
                 >
                   <div className="flex items-start gap-3">
@@ -493,7 +520,7 @@ export default function Page() {
                       </div>
 
                       <p className="text-sm leading-6 text-[#666666]">
-                        {item.description}
+                        {getNotificationDescriptionPreview(item.description)}
                       </p>
 
                       {item.type === "FOLLOW_REQUEST" &&
