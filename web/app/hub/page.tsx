@@ -85,6 +85,159 @@ const formatHistoryTime = (value: string) => {
   });
 };
 
+const BULLET_LINE_REGEX = /^[-*•]\s+/;
+const NUMBERED_LINE_REGEX = /^\d+\.\s+/;
+const HEADING_LINE_REGEX = /^#{1,3}\s+/;
+
+const renderInlineFormattedText = (text: string) =>
+  text
+    .split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
+    .filter(Boolean)
+    .map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={`${part}-${index}`} className="font-semibold">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code
+            key={`${part}-${index}`}
+            className="rounded bg-black/6 px-1 py-0.5 font-mono text-[0.95em]"
+          >
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+
+      return <span key={`${part}-${index}`}>{part}</span>;
+    });
+
+const renderMessageText = (text: string) => {
+  const normalizedLines = text.replace(/\r\n/g, "\n").split("\n");
+  const blocks = [];
+  let index = 0;
+
+  while (index < normalizedLines.length) {
+    const trimmedLine = normalizedLines[index].trim();
+
+    if (!trimmedLine) {
+      index += 1;
+      continue;
+    }
+
+    if (BULLET_LINE_REGEX.test(trimmedLine)) {
+      const items: string[] = [];
+
+      while (index < normalizedLines.length) {
+        const currentLine = normalizedLines[index].trim();
+
+        if (!currentLine) {
+          index += 1;
+          break;
+        }
+
+        if (!BULLET_LINE_REGEX.test(currentLine)) {
+          break;
+        }
+
+        items.push(currentLine.replace(BULLET_LINE_REGEX, "").trim());
+        index += 1;
+      }
+
+      blocks.push(
+        <ul key={`bullet-${blocks.length}`} className="list-disc space-y-2 pl-5">
+          {items.map((item, itemIndex) => (
+            <li key={`${item}-${itemIndex}`} className="wrap-break-word">
+              {renderInlineFormattedText(item)}
+            </li>
+          ))}
+        </ul>,
+      );
+      continue;
+    }
+
+    if (NUMBERED_LINE_REGEX.test(trimmedLine)) {
+      const items: string[] = [];
+
+      while (index < normalizedLines.length) {
+        const currentLine = normalizedLines[index].trim();
+
+        if (!currentLine) {
+          index += 1;
+          break;
+        }
+
+        if (!NUMBERED_LINE_REGEX.test(currentLine)) {
+          break;
+        }
+
+        items.push(currentLine.replace(NUMBERED_LINE_REGEX, "").trim());
+        index += 1;
+      }
+
+      blocks.push(
+        <ol
+          key={`numbered-${blocks.length}`}
+          className="list-decimal space-y-2 pl-5"
+        >
+          {items.map((item, itemIndex) => (
+            <li key={`${item}-${itemIndex}`} className="wrap-break-word">
+              {renderInlineFormattedText(item)}
+            </li>
+          ))}
+        </ol>,
+      );
+      continue;
+    }
+
+    const paragraphLines: string[] = [];
+    while (index < normalizedLines.length) {
+      const currentLine = normalizedLines[index];
+      const currentTrimmed = currentLine.trim();
+
+      if (!currentTrimmed) {
+        index += 1;
+        break;
+      }
+
+      if (
+        BULLET_LINE_REGEX.test(currentTrimmed) ||
+        NUMBERED_LINE_REGEX.test(currentTrimmed)
+      ) {
+        break;
+      }
+
+      paragraphLines.push(currentLine.trimEnd());
+      index += 1;
+    }
+
+    const paragraphText = paragraphLines.join("\n").trim();
+    const isHeading =
+      paragraphLines.length === 1 && HEADING_LINE_REGEX.test(paragraphText);
+
+    blocks.push(
+      <p
+        key={`paragraph-${blocks.length}`}
+        className={`wrap-break-word whitespace-pre-wrap ${
+          isHeading ? "font-semibold text-[#111111]" : ""
+        }`}
+      >
+        {renderInlineFormattedText(
+          isHeading
+            ? paragraphText.replace(HEADING_LINE_REGEX, "")
+            : paragraphText,
+        )}
+      </p>,
+    );
+  }
+
+  return <div className="space-y-3">{blocks}</div>;
+};
+
 export default function HubPage() {
   const searchParams = useSearchParams();
   const requestedPostId = searchParams.get("postId")?.trim() ?? "";
@@ -783,7 +936,13 @@ export default function HubPage() {
                             : "bg-[#f4f4f4] text-[#202020]"
                         }`}
                       >
-                        <p>{message.text}</p>
+                        {message.role === "assistant" ? (
+                          renderMessageText(message.text)
+                        ) : (
+                          <p className="wrap-break-word whitespace-pre-wrap">
+                            {message.text}
+                          </p>
+                        )}
                         <p
                           className={`mt-2 text-[11px] ${
                             message.role === "user"

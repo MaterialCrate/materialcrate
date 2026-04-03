@@ -45,6 +45,11 @@ These are required for the app to fully function:
 - `SES_USER`
 - `SES_PASS`
 
+Health check note:
+
+- Set the API service health check path to `/.well-known/apollo/server-health`.
+- Do not use `/graphql` for Render health checks because a plain GET returns `400`.
+
 Optional / recommended:
 
 - `SUPPORT_EMAIL`
