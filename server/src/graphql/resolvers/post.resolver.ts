@@ -8,6 +8,7 @@ import {
   NOTIFICATION_ICON,
   NOTIFICATION_TYPE,
 } from "../../services/notifications.js";
+import { emitPostActivity } from "../../realtime/postActivity.js";
 
 type CreatePostArgs = {
   fileBase64: string;
@@ -1090,7 +1091,16 @@ export const PostResolver = {
         throw new Error("Post not found");
       }
 
-      return mapPostForGraphQL(updatedPost, viewerId);
+      const mappedPost = mapPostForGraphQL(updatedPost, viewerId);
+
+      emitPostActivity({
+        postId,
+        reason: "post-like",
+        postLikeCount: mappedPost.likeCount ?? 0,
+        commentCount: mappedPost.commentCount ?? 0,
+      });
+
+      return mappedPost;
     },
     createComment: async (
       _: unknown,
@@ -1172,7 +1182,27 @@ export const PostResolver = {
         });
       }
 
-      return mapCommentForGraphQL(comment, viewerId);
+      const mappedComment = mapCommentForGraphQL(comment, viewerId);
+      const commentCount = await (prisma as any).comment.count({
+        where: { postId },
+      });
+      const replyCount = normalizedParentCommentId
+        ? await (prisma as any).comment.count({
+            where: { parentId: normalizedParentCommentId },
+          })
+        : undefined;
+
+      emitPostActivity({
+        postId,
+        reason: "comment-created",
+        commentId: mappedComment.id,
+        parentCommentId: mappedComment.parentId ?? null,
+        commentCount,
+        commentLikeCount: mappedComment.likeCount ?? 0,
+        ...(typeof replyCount === "number" ? { replyCount } : {}),
+      });
+
+      return mappedComment;
     },
     toggleCommentLike: async (
       _: unknown,
@@ -1278,7 +1308,17 @@ export const PostResolver = {
         throw new Error("Comment not found");
       }
 
-      return mapCommentForGraphQL(updatedComment, viewerId);
+      const mappedComment = mapCommentForGraphQL(updatedComment, viewerId);
+
+      emitPostActivity({
+        postId: comment.postId,
+        reason: "comment-like",
+        commentId,
+        parentCommentId: mappedComment.parentId ?? null,
+        commentLikeCount: mappedComment.likeCount ?? 0,
+      });
+
+      return mappedComment;
     },
   },
   Post: {

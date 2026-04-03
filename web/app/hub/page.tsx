@@ -149,7 +149,10 @@ const renderMessageText = (text: string) => {
       }
 
       blocks.push(
-        <ul key={`bullet-${blocks.length}`} className="list-disc space-y-2 pl-5">
+        <ul
+          key={`bullet-${blocks.length}`}
+          className="list-disc space-y-2 pl-5"
+        >
           {items.map((item, itemIndex) => (
             <li key={`${item}-${itemIndex}`} className="wrap-break-word">
               {renderInlineFormattedText(item)}

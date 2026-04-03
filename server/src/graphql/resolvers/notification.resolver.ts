@@ -7,6 +7,7 @@ import {
   NOTIFICATION_ICON,
   NOTIFICATION_TYPE,
 } from "../../services/notifications.js";
+import { emitNotificationActivity } from "../../realtime/postActivity.js";
 
 type GraphQLContext = {
   user?: {
@@ -182,6 +183,20 @@ export const NotificationResolver = {
         data: { unread: false },
       });
 
+      const unreadCount = await (prisma as any).notification.count({
+        where: {
+          userId: viewerId,
+          unread: true,
+        },
+      });
+
+      emitNotificationActivity({
+        userId: viewerId,
+        reason: "notification-read",
+        notificationId: normalizedId,
+        unreadCount,
+      });
+
       return toNotificationGraphQL(notification);
     },
     markAllNotificationsRead: async (
@@ -202,6 +217,12 @@ export const NotificationResolver = {
         data: {
           unread: false,
         },
+      });
+
+      emitNotificationActivity({
+        userId: viewerId,
+        reason: "notifications-read-all",
+        unreadCount: 0,
       });
 
       return true;

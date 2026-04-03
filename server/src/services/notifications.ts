@@ -1,4 +1,5 @@
 import { prisma } from "../config/prisma.js";
+import { emitNotificationActivity } from "../realtime/postActivity.js";
 
 export const NOTIFICATION_ICON = {
   COMMENT: "MessageText1",
@@ -54,7 +55,7 @@ export const createNotification = async ({
 
   const normalizedType = type.trim() || NOTIFICATION_TYPE.SYSTEM;
 
-  return (prisma as any).notification.create({
+  const notification = await (prisma as any).notification.create({
     data: {
       userId: normalizedUserId,
       actorId: actorId?.trim() || null,
@@ -66,6 +67,26 @@ export const createNotification = async ({
       unread,
     },
   });
+
+  try {
+    const unreadCount = await (prisma as any).notification.count({
+      where: {
+        userId: normalizedUserId,
+        unread: true,
+      },
+    });
+
+    emitNotificationActivity({
+      userId: normalizedUserId,
+      reason: "notification-created",
+      notificationId: notification.id,
+      unreadCount,
+    });
+  } catch (error) {
+    console.error("Failed to emit notification activity", error);
+  }
+
+  return notification;
 };
 
 export const shouldSendPushNotification = async (

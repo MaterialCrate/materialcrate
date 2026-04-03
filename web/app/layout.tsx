@@ -1,7 +1,7 @@
+import "./globals.css";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Inter, Libre_Baskerville } from "next/font/google";
-import "./globals.css";
 import AuthSplashGate from "./components/AuthSplashGate";
 import ConditionalNavbar from "./components/ConditionalNavbar";
 import { SystemPopupProvider } from "./components/SystemPopup";
@@ -25,6 +25,11 @@ const libreBaskerville = Libre_Baskerville({
 export const metadata: Metadata = {
   title: "Material Crate",
   description: "Home to your studies.",
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "any" }],
+    shortcut: ["/favicon.ico"],
+    apple: [{ url: "/logo.png", type: "image/png" }],
+  },
 };
 
 const themeInitScript = `
@@ -50,6 +55,7 @@ export default function RootLayout({
       className={`${inter.variable} ${libreBaskerville.variable} antialiased`}
     >
       <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="font-sans relative">

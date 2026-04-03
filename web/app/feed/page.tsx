@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DocumentUpload, More2, Notification } from "iconsax-reactjs";
+import { useAuth } from "../lib/auth-client";
+import { subscribeToNotificationActivity } from "../lib/post-activity-realtime";
 import Post, {
   type HomePost,
   type PostOptionsAnchor,
@@ -29,9 +31,12 @@ type NotificationListItem = {
 const NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY =
   "mc.notifications.lastOpenedAt";
 const FEED_PAGE_SIZE = 15;
+const NOTIFICATION_INDICATOR_REFRESH_DEBOUNCE_MS = 300;
+const NOTIFICATION_INDICATOR_MIN_REFRESH_INTERVAL_MS = 1500;
 
 export default function Home() {
   const router = useRouter();
+  const { user } = useAuth();
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<HomePost | null>(null);
@@ -68,8 +73,10 @@ export default function Home() {
   const [hasUnopenedNotifications, setHasUnopenedNotifications] =
     useState(false);
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
+  const notificationRefreshTimeoutRef = useRef<number | null>(null);
+  const lastNotificationRefreshAtRef = useRef(0);
 
-  const refreshNotificationIndicators = async () => {
+  const refreshNotificationIndicators = useCallback(async () => {
     try {
       const response = await fetch(
         "/api/notifications?limit=100&unreadOnly=true",
@@ -112,7 +119,38 @@ export default function Home() {
         notifications.length > 0 && newestUnreadAt > lastOpenedAt,
       );
     } catch {}
-  };
+  }, []);
+
+  const scheduleNotificationIndicatorRefresh = useCallback(
+    (delay = NOTIFICATION_INDICATOR_REFRESH_DEBOUNCE_MS) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      if (notificationRefreshTimeoutRef.current) {
+        window.clearTimeout(notificationRefreshTimeoutRef.current);
+      }
+
+      const elapsed = Date.now() - lastNotificationRefreshAtRef.current;
+      const nextDelay =
+        elapsed >= NOTIFICATION_INDICATOR_MIN_REFRESH_INTERVAL_MS
+          ? delay
+          : Math.max(
+              delay,
+              NOTIFICATION_INDICATOR_MIN_REFRESH_INTERVAL_MS - elapsed,
+            );
+
+      notificationRefreshTimeoutRef.current = window.setTimeout(() => {
+        lastNotificationRefreshAtRef.current = Date.now();
+        void refreshNotificationIndicators();
+      }, nextDelay);
+    },
+    [refreshNotificationIndicators],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -192,12 +230,12 @@ export default function Home() {
     void refreshNotificationIndicators();
 
     const onWindowFocus = () => {
-      void refreshNotificationIndicators();
+      scheduleNotificationIndicatorRefresh(0);
     };
 
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        void refreshNotificationIndicators();
+        scheduleNotificationIndicatorRefresh(0);
       }
     };
 
@@ -207,6 +245,42 @@ export default function Home() {
     return () => {
       window.removeEventListener("focus", onWindowFocus);
       document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [refreshNotificationIndicators, scheduleNotificationIndicatorRefresh]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let isDisposed = false;
+
+    void subscribeToNotificationActivity(user.id, () => {
+      scheduleNotificationIndicatorRefresh();
+    }).then((cleanup) => {
+      if (isDisposed) {
+        cleanup();
+        return;
+      }
+
+      unsubscribe = cleanup;
+    });
+
+    return () => {
+      isDisposed = true;
+      unsubscribe?.();
+    };
+  }, [scheduleNotificationIndicatorRefresh, user?.id]);
+
+  useEffect(() => {
+    return () => {
+      if (
+        typeof window !== "undefined" &&
+        notificationRefreshTimeoutRef.current
+      ) {
+        window.clearTimeout(notificationRefreshTimeoutRef.current);
+      }
     };
   }, []);
 

@@ -13,6 +13,7 @@ import {
   Send2,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
 import Alert from "@/app/components/Alert";
 import Image from "next/image";
 import PdfThumbnail from "./PdfThumbnail";
@@ -72,6 +73,9 @@ type PendingProtectedAction =
   | "archive-remove"
   | null;
 
+const POST_ACTIVITY_REFRESH_WINDOW_MS = 15000;
+const POST_ACTIVITY_PREFETCH_MARGIN = "280px 0px";
+
 function formatTimeAgo(timestamp: string) {
   const trimmed = timestamp?.trim();
   if (!trimmed) return "Just now";
@@ -117,9 +121,11 @@ export default function Post({
   const router = useRouter();
   const { user, isLoading } = useAuth();
   const optionsButtonRef = React.useRef<HTMLButtonElement | null>(null);
+  const postCardRef = React.useRef<HTMLDivElement | null>(null);
   const alertTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const lastActivityRefreshRef = React.useRef(0);
   const authorFullName = post.author?.displayName?.trim() || "Unknown user";
   const authorUsername = post.author?.username
     ? `@${post.author.username}`
@@ -131,10 +137,14 @@ export default function Post({
     : null;
   const createdLabel = formatTimeAgo(post.createdAt);
   const [likeCount, setLikeCount] = useState<number>(post.likeCount ?? 0);
+  const [commentCount, setCommentCount] = useState<number>(
+    post.commentCount ?? 0,
+  );
   const [viewerHasLiked, setViewerHasLiked] = useState<boolean>(
     Boolean(post.viewerHasLiked),
   );
   const [isLiking, setIsLiking] = useState<boolean>(false);
+  const [isNearViewport, setIsNearViewport] = useState(false);
   const [alertState, setAlertState] = useState<{
     message: string | null;
     type: "success" | "error" | "info";
@@ -193,6 +203,150 @@ export default function Post({
     },
     [ensureAuthenticated, isLiking, post.id],
   );
+
+  useEffect(() => {
+    setLikeCount(post.likeCount ?? 0);
+    setCommentCount(post.commentCount ?? 0);
+    setViewerHasLiked(Boolean(post.viewerHasLiked));
+  }, [post.commentCount, post.id, post.likeCount, post.viewerHasLiked]);
+
+  const refreshPostActivity = useCallback(
+    async (force = false) => {
+      if (!post.id) {
+        return;
+      }
+
+      if (
+        typeof document !== "undefined" &&
+        document.visibilityState === "hidden"
+      ) {
+        return;
+      }
+
+      const now = Date.now();
+      if (
+        !force &&
+        now - lastActivityRefreshRef.current < POST_ACTIVITY_REFRESH_WINDOW_MS
+      ) {
+        return;
+      }
+
+      lastActivityRefreshRef.current = now;
+
+      try {
+        const response = await fetch(
+          `/api/posts/${encodeURIComponent(post.id)}`,
+          {
+            method: "GET",
+            cache: "no-store",
+          },
+        );
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok || !body?.post) {
+          throw new Error(body?.error || "Failed to refresh post activity");
+        }
+
+        setLikeCount(
+          typeof body.post.likeCount === "number" ? body.post.likeCount : 0,
+        );
+        setCommentCount(
+          typeof body.post.commentCount === "number"
+            ? body.post.commentCount
+            : 0,
+        );
+        setViewerHasLiked(Boolean(body.post.viewerHasLiked));
+      } catch (error) {
+        console.error("Failed to refresh post activity", post.id, error);
+      }
+    },
+    [post.id],
+  );
+
+  useEffect(() => {
+    const element = postCardRef.current;
+    if (!element || typeof IntersectionObserver === "undefined") {
+      setIsNearViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsNearViewport(entry.isIntersecting);
+      },
+      {
+        rootMargin: POST_ACTIVITY_PREFETCH_MARGIN,
+        threshold: 0.01,
+      },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isNearViewport) {
+      return;
+    }
+
+    void refreshPostActivity();
+  }, [isNearViewport, refreshPostActivity]);
+
+  useEffect(() => {
+    if (!isNearViewport || !post.id) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let isDisposed = false;
+
+    void (async () => {
+      const cleanup = await subscribeToPostActivity(post.id, (event) => {
+        if (typeof event.postLikeCount === "number") {
+          setLikeCount(event.postLikeCount);
+        }
+
+        if (typeof event.commentCount === "number") {
+          setCommentCount(event.commentCount);
+        }
+      });
+
+      if (isDisposed) {
+        cleanup();
+        return;
+      }
+
+      unsubscribe = cleanup;
+    })();
+
+    return () => {
+      isDisposed = true;
+      unsubscribe?.();
+    };
+  }, [isNearViewport, post.id]);
+
+  useEffect(() => {
+    if (!isNearViewport || typeof window === "undefined") {
+      return;
+    }
+
+    const handleResume = () => {
+      if (document.visibilityState === "visible") {
+        void refreshPostActivity(true);
+      }
+    };
+
+    window.addEventListener("focus", handleResume);
+    document.addEventListener("visibilitychange", handleResume);
+
+    return () => {
+      window.removeEventListener("focus", handleResume);
+      document.removeEventListener("visibilitychange", handleResume);
+    };
+  }, [isNearViewport, refreshPostActivity]);
 
   useEffect(() => {
     return () => {
@@ -289,7 +443,7 @@ export default function Post({
   ]);
 
   return (
-    <div className="mt-4 space-y-2">
+    <div ref={postCardRef} className="mt-4 space-y-2">
       <Alert message={alertState.message} type={alertState.type} />
       <div className="flex justify-between items-start px-6">
         <button
@@ -416,7 +570,7 @@ export default function Post({
             }}
           >
             <Messages2 size={20} color="#808080" />
-            <p className="text-[#808080] text-xs">{post.commentCount ?? 0}</p>
+            <p className="text-[#808080] text-xs">{commentCount}</p>
           </button>
           <button
             aria-label="Archive"

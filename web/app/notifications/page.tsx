@@ -16,6 +16,8 @@ import {
 } from "iconsax-reactjs";
 import Header from "../components/Header";
 import Alert from "../components/Alert";
+import { useAuth } from "../lib/auth-client";
+import { subscribeToNotificationActivity } from "../lib/post-activity-realtime";
 
 type NotificationItem = {
   id: string | number;
@@ -108,6 +110,9 @@ const getImageLabel = (title: string) => {
   return letters || "NT";
 };
 
+const NOTIFICATION_PAGE_REFRESH_DEBOUNCE_MS = 300;
+const NOTIFICATION_PAGE_MIN_REFRESH_INTERVAL_MS = 1500;
+
 const getGroupLabel = (time: string) => {
   const parsed = new Date(time);
   if (Number.isNaN(parsed.getTime())) {
@@ -139,11 +144,14 @@ const getGroupLabel = (time: string) => {
 };
 
 export default function Page() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = React.useState<
     ApiNotificationItem[]
   >([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const realtimeRefreshTimeoutRef = React.useRef<number | null>(null);
+  const lastRealtimeRefreshAtRef = React.useRef(0);
 
   const formatNotificationTime = (value: string) => {
     const parsed = new Date(value);
@@ -159,35 +167,43 @@ export default function Page() {
     });
   };
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      setError(null);
-      const response = await fetch("/api/notifications?limit=100", {
-        method: "GET",
-        cache: "no-store",
-      });
+  const fetchNotifications = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      try {
+        if (!silent) {
+          setIsLoading(true);
+        }
+        setError(null);
+        const response = await fetch("/api/notifications?limit=100", {
+          method: "GET",
+          cache: "no-store",
+        });
 
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setError("Failed to fetch notifications");
+          console.error(
+            "Failed to fetch notifications: ",
+            body?.error,
+            body?.details,
+          );
+          return;
+        }
+
+        const items = Array.isArray(body?.notifications)
+          ? (body.notifications as ApiNotificationItem[])
+          : [];
+        setNotifications(items);
+      } catch {
         setError("Failed to fetch notifications");
-        console.error(
-          "Failed to fetch notifications: ",
-          body?.error,
-          body?.details,
-        );
-        return;
+      } finally {
+        if (!silent) {
+          setIsLoading(false);
+        }
       }
-
-      const items = Array.isArray(body?.notifications)
-        ? (body.notifications as ApiNotificationItem[])
-        : [];
-      setNotifications(items);
-    } catch {
-      setError("Failed to fetch notifications");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
   const notificationGroups = useMemo(() => {
     const groupsMap = new Map<string, NotificationItem[]>();
@@ -235,6 +251,86 @@ export default function Page() {
   useEffect(() => {
     void fetchNotifications();
   }, [fetchNotifications]);
+
+  const scheduleNotificationRefresh = useCallback(
+    (delay = NOTIFICATION_PAGE_REFRESH_DEBOUNCE_MS) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      if (realtimeRefreshTimeoutRef.current) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      }
+
+      const elapsed = Date.now() - lastRealtimeRefreshAtRef.current;
+      const nextDelay =
+        elapsed >= NOTIFICATION_PAGE_MIN_REFRESH_INTERVAL_MS
+          ? delay
+          : Math.max(
+              delay,
+              NOTIFICATION_PAGE_MIN_REFRESH_INTERVAL_MS - elapsed,
+            );
+
+      realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
+        lastRealtimeRefreshAtRef.current = Date.now();
+        void fetchNotifications({ silent: true });
+      }, nextDelay);
+    },
+    [fetchNotifications],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && realtimeRefreshTimeoutRef.current) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let isDisposed = false;
+
+    void subscribeToNotificationActivity(user.id, () => {
+      scheduleNotificationRefresh();
+    }).then((cleanup) => {
+      if (isDisposed) {
+        cleanup();
+        return;
+      }
+
+      unsubscribe = cleanup;
+    });
+
+    return () => {
+      isDisposed = true;
+      unsubscribe?.();
+    };
+  }, [scheduleNotificationRefresh, user?.id]);
+
+  useEffect(() => {
+    const handleVisibleRefresh = () => {
+      if (document.visibilityState === "visible") {
+        scheduleNotificationRefresh(0);
+      }
+    };
+
+    window.addEventListener("focus", handleVisibleRefresh);
+    document.addEventListener("visibilitychange", handleVisibleRefresh);
+
+    return () => {
+      window.removeEventListener("focus", handleVisibleRefresh);
+      document.removeEventListener("visibilitychange", handleVisibleRefresh);
+    };
+  }, [scheduleNotificationRefresh]);
 
   const markAllAsRead = async () => {
     try {

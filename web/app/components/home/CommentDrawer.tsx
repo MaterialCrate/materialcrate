@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { CloseCircle, Heart, Send, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
+import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
 import Alert from "../Alert";
 import type { HomePost } from "./Post";
 
@@ -41,6 +42,8 @@ type ReplyTarget = {
 
 const REPLIES_BATCH_SIZE = 10;
 const COMMENTS_BATCH_SIZE = 50;
+const COMMENTS_REALTIME_REFRESH_DEBOUNCE_MS = 700;
+const COMMENTS_REALTIME_MIN_REFRESH_INTERVAL_MS = 1500;
 
 function formatTimeAgo(timestamp: string) {
   const trimmed = timestamp?.trim();
@@ -121,6 +124,9 @@ export default function CommentDrawer({
   const [isLikingByCommentId, setIsLikingByCommentId] = useState<
     Record<string, boolean>
   >({});
+  const expandedRepliesRef = React.useRef<Record<string, boolean>>({});
+  const realtimeRefreshTimeoutRef = React.useRef<number | null>(null);
+  const lastRealtimeRefreshRef = React.useRef(0);
   const isOwner =
     Boolean(typeof user?.username === "string" && user.username.trim()) &&
     typeof user?.username === "string" &&
@@ -145,81 +151,144 @@ export default function CommentDrawer({
     return true;
   }, [isLoading, router, user]);
 
-  const fetchComments = useCallback(async () => {
-    if (!postId) {
-      setComments([]);
-      return;
-    }
-
-    setIsLoadingComments(true);
-    setCommentsError(null);
-
-    try {
-      const response = await fetch(
-        `/api/comments?postId=${encodeURIComponent(postId)}&limit=${COMMENTS_BATCH_SIZE}&offset=0`,
-        { method: "GET", cache: "no-store" },
-      );
-      const body = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(body?.error || "Failed to load comments");
+  const fetchComments = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (!postId) {
+        setComments([]);
+        return;
       }
 
-      setComments(Array.isArray(body?.comments) ? body.comments : []);
-    } catch (error) {
-      setComments([]);
-      setCommentsError("Failed to load comments");
-      console.error("Failed to load comments for post", error);
-    } finally {
-      setIsLoadingComments(false);
-    }
-  }, [postId]);
+      if (!silent) {
+        setIsLoadingComments(true);
+      }
+      setCommentsError(null);
+
+      try {
+        const response = await fetch(
+          `/api/comments?postId=${encodeURIComponent(postId)}&limit=${COMMENTS_BATCH_SIZE}&offset=0`,
+          { method: "GET", cache: "no-store" },
+        );
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(body?.error || "Failed to load comments");
+        }
+
+        setComments(Array.isArray(body?.comments) ? body.comments : []);
+      } catch (error) {
+        if (!silent) {
+          setComments([]);
+        }
+        setCommentsError("Failed to load comments");
+        console.error("Failed to load comments for post", error);
+      } finally {
+        if (!silent) {
+          setIsLoadingComments(false);
+        }
+      }
+    },
+    [postId],
+  );
 
   useEffect(() => {
     if (!isOpen || !postId) return;
     void fetchComments();
   }, [fetchComments, isOpen, postId]);
 
-  const loadReplies = async (commentId: string, offset: number) => {
-    if (!postId) return;
+  const loadReplies = useCallback(
+    async (commentId: string, offset: number) => {
+      if (!postId) return;
 
-    setIsLoadingRepliesByCommentId((previous) => ({
-      ...previous,
-      [commentId]: true,
-    }));
-
-    try {
-      const response = await fetch(
-        `/api/comments?postId=${encodeURIComponent(postId)}&parentCommentId=${encodeURIComponent(commentId)}&limit=${REPLIES_BATCH_SIZE}&offset=${offset}`,
-        { method: "GET", cache: "no-store" },
-      );
-      const body = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        throw new Error(body?.error || "Failed to load replies");
-      }
-
-      const incomingReplies = Array.isArray(body?.comments)
-        ? body.comments
-        : [];
-      setRepliesByCommentId((previous) => ({
-        ...previous,
-        [commentId]:
-          offset === 0
-            ? incomingReplies
-            : [...(previous[commentId] ?? []), ...incomingReplies],
-      }));
-      setCommentsError(null);
-    } catch (error) {
-      setCommentsError("Failed to load replies");
-      console.error("Failed to load replies for comment", commentId, error);
-    } finally {
       setIsLoadingRepliesByCommentId((previous) => ({
         ...previous,
-        [commentId]: false,
+        [commentId]: true,
       }));
-    }
-  };
+
+      try {
+        const response = await fetch(
+          `/api/comments?postId=${encodeURIComponent(postId)}&parentCommentId=${encodeURIComponent(commentId)}&limit=${REPLIES_BATCH_SIZE}&offset=${offset}`,
+          { method: "GET", cache: "no-store" },
+        );
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(body?.error || "Failed to load replies");
+        }
+
+        const incomingReplies = Array.isArray(body?.comments)
+          ? body.comments
+          : [];
+        setRepliesByCommentId((previous) => ({
+          ...previous,
+          [commentId]:
+            offset === 0
+              ? incomingReplies
+              : [...(previous[commentId] ?? []), ...incomingReplies],
+        }));
+        setCommentsError(null);
+      } catch (error) {
+        setCommentsError("Failed to load replies");
+        console.error("Failed to load replies for comment", commentId, error);
+      } finally {
+        setIsLoadingRepliesByCommentId((previous) => ({
+          ...previous,
+          [commentId]: false,
+        }));
+      }
+    },
+    [postId],
+  );
+
+  useEffect(() => {
+    expandedRepliesRef.current = expandedRepliesByCommentId;
+  }, [expandedRepliesByCommentId]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && realtimeRefreshTimeoutRef.current) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const scheduleRealtimeCommentsRefresh = useCallback(
+    (delay = COMMENTS_REALTIME_REFRESH_DEBOUNCE_MS) => {
+      if (!isOpen || !postId || typeof window === "undefined") {
+        return;
+      }
+
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      if (realtimeRefreshTimeoutRef.current) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      }
+
+      const elapsed = Date.now() - lastRealtimeRefreshRef.current;
+      const nextDelay =
+        elapsed >= COMMENTS_REALTIME_MIN_REFRESH_INTERVAL_MS
+          ? delay
+          : Math.max(
+              delay,
+              COMMENTS_REALTIME_MIN_REFRESH_INTERVAL_MS - elapsed,
+            );
+
+      realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
+        lastRealtimeRefreshRef.current = Date.now();
+        void fetchComments({ silent: true });
+
+        Object.entries(expandedRepliesRef.current).forEach(
+          ([commentId, isExpanded]) => {
+            if (isExpanded) {
+              void loadReplies(commentId, 0);
+            }
+          },
+        );
+      }, nextDelay);
+    },
+    [fetchComments, isOpen, loadReplies, postId],
+  );
 
   const handleToggleReplies = async (comment: DrawerComment) => {
     const commentId = comment.id;
@@ -268,6 +337,69 @@ export default function CommentDrawer({
     },
     [],
   );
+
+  useEffect(() => {
+    if (!isOpen || !postId) {
+      return;
+    }
+
+    let unsubscribe: (() => void) | undefined;
+    let isDisposed = false;
+
+    void (async () => {
+      const cleanup = await subscribeToPostActivity(postId, (event) => {
+        if (event.commentId && typeof event.commentLikeCount === "number") {
+          applyUpdatedComment({
+            id: event.commentId,
+            likeCount: event.commentLikeCount,
+          });
+        }
+
+        if (event.parentCommentId && typeof event.replyCount === "number") {
+          applyUpdatedComment({
+            id: event.parentCommentId,
+            replyCount: event.replyCount,
+          });
+        }
+
+        if (event.reason === "comment-created") {
+          scheduleRealtimeCommentsRefresh(250);
+        }
+      });
+
+      if (isDisposed) {
+        cleanup();
+        return;
+      }
+
+      unsubscribe = cleanup;
+    })();
+
+    return () => {
+      isDisposed = true;
+      unsubscribe?.();
+    };
+  }, [applyUpdatedComment, isOpen, postId, scheduleRealtimeCommentsRefresh]);
+
+  useEffect(() => {
+    if (!isOpen || !postId || typeof window === "undefined") {
+      return;
+    }
+
+    const handleResume = () => {
+      if (document.visibilityState === "visible") {
+        scheduleRealtimeCommentsRefresh(0);
+      }
+    };
+
+    window.addEventListener("focus", handleResume);
+    document.addEventListener("visibilitychange", handleResume);
+
+    return () => {
+      window.removeEventListener("focus", handleResume);
+      document.removeEventListener("visibilitychange", handleResume);
+    };
+  }, [isOpen, postId, scheduleRealtimeCommentsRefresh]);
 
   const handleLikeComment = async (commentId: string) => {
     if (isLikingByCommentId[commentId] || !ensureAuthenticated()) return;
@@ -414,6 +546,11 @@ export default function CommentDrawer({
   };
 
   const handleClose = () => {
+    if (typeof window !== "undefined" && realtimeRefreshTimeoutRef.current) {
+      window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      realtimeRefreshTimeoutRef.current = null;
+    }
+
     resetState();
     onClose();
   };

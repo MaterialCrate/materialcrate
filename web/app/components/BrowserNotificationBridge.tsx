@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
+import { useAuth } from "@/app/lib/auth-client";
+import { subscribeToNotificationActivity } from "@/app/lib/post-activity-realtime";
 
 type NotificationItem = {
   id: string;
@@ -33,6 +35,9 @@ const DEFAULT_PUSH_PREFS: PushPrefs = {
 };
 
 const SEEN_IDS_STORAGE_KEY = "mc-browser-notification-seen";
+const UNREAD_NOTIFICATIONS_SYNC_INTERVAL_MS = 60000;
+const NOTIFICATION_SYNC_MIN_INTERVAL_MS = 1500;
+const NOTIFICATION_SYNC_DEBOUNCE_MS = 400;
 
 const readSeenIdsFromStorage = () => {
   if (typeof window === "undefined") {
@@ -70,15 +75,18 @@ const saveSeenIdsToStorage = (seenIds: Set<string>) => {
 };
 
 export default function BrowserNotificationBridge() {
+  const { user, isLoading } = useAuth();
   const seenIdsRef = useRef<Set<string>>(new Set());
   const pushPrefsRef = useRef<PushPrefs>(DEFAULT_PUSH_PREFS);
+  const syncTimeoutRef = useRef<number | null>(null);
+  const lastSyncAtRef = useRef(0);
   const canUseNotifications = useMemo(
     () => typeof window !== "undefined" && "Notification" in window,
     [],
   );
 
   useEffect(() => {
-    if (!canUseNotifications) {
+    if (!canUseNotifications || isLoading || !user?.id) {
       return;
     }
 
@@ -167,27 +175,75 @@ export default function BrowserNotificationBridge() {
       } catch {}
     };
 
+    const scheduleUnreadNotificationsSync = (
+      delay = NOTIFICATION_SYNC_DEBOUNCE_MS,
+    ) => {
+      if (document.visibilityState === "hidden") {
+        return;
+      }
+
+      if (syncTimeoutRef.current) {
+        window.clearTimeout(syncTimeoutRef.current);
+      }
+
+      const elapsed = Date.now() - lastSyncAtRef.current;
+      const nextDelay =
+        elapsed >= NOTIFICATION_SYNC_MIN_INTERVAL_MS
+          ? delay
+          : Math.max(delay, NOTIFICATION_SYNC_MIN_INTERVAL_MS - elapsed);
+
+      syncTimeoutRef.current = window.setTimeout(() => {
+        lastSyncAtRef.current = Date.now();
+        void syncUnreadNotifications();
+      }, nextDelay);
+    };
+
     void requestPermission()
       .then(() => fetchPushPrefs())
       .then(() => syncUnreadNotifications());
 
+    let unsubscribe: (() => void) | undefined;
+    let isDisposed = false;
+    void subscribeToNotificationActivity(user.id, () => {
+      scheduleUnreadNotificationsSync();
+    }).then((cleanup) => {
+      if (isDisposed) {
+        cleanup();
+        return;
+      }
+
+      unsubscribe = cleanup;
+    });
+
     const intervalId = window.setInterval(() => {
-      void fetchPushPrefs().then(() => syncUnreadNotifications());
-    }, 30000);
+      void syncUnreadNotifications();
+    }, UNREAD_NOTIFICATIONS_SYNC_INTERVAL_MS);
 
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        void syncUnreadNotifications();
+        void fetchPushPrefs().then(() => scheduleUnreadNotificationsSync(0));
       }
     };
 
+    const onWindowFocus = () => {
+      void fetchPushPrefs().then(() => scheduleUnreadNotificationsSync(0));
+    };
+
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onWindowFocus);
 
     return () => {
+      isDisposed = true;
       window.clearInterval(intervalId);
+      if (syncTimeoutRef.current) {
+        window.clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+      unsubscribe?.();
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onWindowFocus);
     };
-  }, [canUseNotifications]);
+  }, [canUseNotifications, isLoading, user?.id]);
 
   return null;
 }
