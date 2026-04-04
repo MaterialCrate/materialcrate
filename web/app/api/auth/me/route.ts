@@ -23,6 +23,9 @@ const ME_QUERY = `
       subscriptionPlan
       subscriptionStartedAt
       subscriptionEndsAt
+      pendingSubscriptionPlan
+      pendingSubscriptionAction
+      pendingSubscriptionEffectiveAt
       createdAt
       followersCount
       followingCount
@@ -100,7 +103,7 @@ export async function GET() {
   const primary = await fetchMe(token, ME_QUERY);
   const missingFieldError = Array.isArray(primary.body?.errors)
     ? primary.body.errors.some((error: { message?: string }) =>
-        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus|emailNotificationsAccountActivity|emailNotificationsWeeklySummary|emailNotificationsProductUpdates|emailNotificationsMarketing)"/.test(
+        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus|emailNotificationsAccountActivity|emailNotificationsWeeklySummary|emailNotificationsProductUpdates|emailNotificationsMarketing|pendingSubscriptionPlan|pendingSubscriptionAction|pendingSubscriptionEffectiveAt)"/.test(
           error?.message ?? "",
         ),
       )
@@ -141,6 +144,9 @@ export async function GET() {
         pushNotificationsComments: true,
         pushNotificationsFollows: true,
         pushNotificationsMentions: true,
+        pendingSubscriptionPlan: null,
+        pendingSubscriptionAction: null,
+        pendingSubscriptionEffectiveAt: null,
         theme: "light",
       },
     });

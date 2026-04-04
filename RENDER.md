@@ -55,6 +55,11 @@ Optional / recommended:
 - `SUPPORT_EMAIL`
 - `POST_PURGE_INTERVAL_MS`
 - `GRAPHQL_BODY_LIMIT` → `35mb`
+- `PADDLE_API_KEY`
+- `PADDLE_WEBHOOK_SECRET`
+- `PADDLE_PRO_PRICE_ID`
+- `PADDLE_PREMIUM_PRICE_ID`
+- `PADDLE_DEFAULT_CURRENCY` → `USD`
 
 ### Frontend (`materialcrate-web`)
 
@@ -75,6 +80,13 @@ Optional for social login:
 - `FACEBOOK_APP_ID`
 - `FACEBOOK_APP_SECRET`
 
+Required for Paddle checkout on the web app:
+
+- `NEXT_PUBLIC_PADDLE_ENVIRONMENT` → `production`
+- `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`
+- `NEXT_PUBLIC_PADDLE_PRO_PRICE_ID`
+- `NEXT_PUBLIC_PADDLE_PREMIUM_PRICE_ID`
+
 ---
 
 ## Important notes
@@ -82,7 +94,9 @@ Optional for social login:
 - The frontend calls the backend through `GRAPHQL_ENDPOINT`, so update it if you rename the API service.
 - The backend now binds to `0.0.0.0`, which is required for Render web services.
 - Prisma migrations are applied with `pnpm render:migrate` before deploy.
+- Paddle webhooks should point to `https://materialcrate-api.onrender.com/billing/paddle/webhook` in production.
 - The launch page lock stays active in production before launch, but development remains usable.
+- For a step-by-step billing checklist, see `PADDLE_SETUP.md`.
 
 ---
 

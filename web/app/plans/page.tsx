@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import Header from "../components/Header";
+import PlanActionButton from "../components/billing/PlanActionButton";
 
 export const metadata: Metadata = {
   title: "Plans | Material Crate",
@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 type Plan = {
+  planId: "free" | "pro" | "premium";
   name: string;
   subtitle: string;
   priceLabel: string;
@@ -16,18 +17,17 @@ type Plan = {
   badge?: string;
   highlight?: boolean;
   buttonLabel: string;
-  buttonHref: string;
   features: string[];
 };
 
 const plans: Plan[] = [
   {
+    planId: "free",
     name: "Free",
     subtitle: "Continue with the essentials",
     priceLabel: "$0",
     cadence: "forever",
     buttonLabel: "Continue with free",
-    buttonHref: "/register",
     features: [
       "Create your account",
       "Set up your profile",
@@ -37,6 +37,7 @@ const plans: Plan[] = [
     ],
   },
   {
+    planId: "pro",
     name: "Pro",
     subtitle: "Unlock full customization",
     priceLabel: "$3.99",
@@ -44,7 +45,6 @@ const plans: Plan[] = [
     badge: "Most popular",
     highlight: true,
     buttonLabel: "Go Pro",
-    buttonHref: "/register",
     features: [
       "Everything in Free",
       "Maximum profile customization",
@@ -55,13 +55,13 @@ const plans: Plan[] = [
     ],
   },
   {
+    planId: "premium",
     name: "Premium",
     subtitle: "Study smarter with AI",
     priceLabel: "$9.99",
     cadence: "/month",
     badge: "AI powered",
     buttonLabel: "Unlock Premium",
-    buttonHref: "/register",
     features: [
       "Everything in Pro",
       "AI study tools",
@@ -135,16 +135,15 @@ export default function PlansPage() {
                 </div>
               </div>
 
-              <Link
-                href={plan.buttonHref}
-                className={`mt-5 inline-flex w-full items-center justify-center rounded-full px-4 py-3 text-sm font-semibold transition ${
+              <PlanActionButton
+                plan={plan.planId}
+                defaultLabel={plan.buttonLabel}
+                className={`inline-flex w-full items-center justify-center rounded-full px-4 py-3 text-sm font-semibold transition ${
                   plan.highlight
                     ? "bg-[#E1761F] text-white hover:bg-[#C96619]"
                     : "border border-black/10 bg-white text-[#1E1E1E] hover:bg-[#FBF7F2]"
                 }`}
-              >
-                {plan.buttonLabel}
-              </Link>
+              />
 
               <ul className="mt-5 space-y-3">
                 {plan.features.map((feature) => (

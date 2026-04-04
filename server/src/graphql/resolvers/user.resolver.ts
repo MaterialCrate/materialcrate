@@ -2338,5 +2338,8 @@ export const UserResolver = {
       toIsoStringOrNull(user.subscriptionStartedAt),
     subscriptionEndsAt: (user: { subscriptionEndsAt?: unknown }) =>
       toIsoStringOrNull(user.subscriptionEndsAt),
+    pendingSubscriptionEffectiveAt: (user: {
+      pendingSubscriptionEffectiveAt?: unknown;
+    }) => toIsoStringOrNull(user.pendingSubscriptionEffectiveAt),
   },
 };

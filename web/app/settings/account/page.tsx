@@ -10,6 +10,7 @@ import { refreshAuth, useAuth } from "@/app/lib/auth-client";
 import {
   formatSubscriptionPlan,
   hasPaidSubscription,
+  normalizeSubscriptionPlan,
 } from "@/app/lib/subscription";
 
 const formatDate = (value?: string | null) => {
@@ -63,6 +64,55 @@ const formatCountdownUntil = (value?: string | null, now = Date.now()) => {
   return formatDuration(timestamp - now);
 };
 
+const getPendingSubscriptionCopy = ({
+  currentPlan,
+  pendingPlan,
+  action,
+  effectiveAt,
+}: {
+  currentPlan?: string | null;
+  pendingPlan?: string | null;
+  action?: string | null;
+  effectiveAt?: string | null;
+}) => {
+  if (!effectiveAt && !action && !pendingPlan) {
+    return null;
+  }
+
+  const normalizedCurrentPlan = normalizeSubscriptionPlan(currentPlan);
+  const normalizedPendingPlan = pendingPlan
+    ? normalizeSubscriptionPlan(pendingPlan)
+    : null;
+  const effectiveLabel = formatDate(effectiveAt);
+  const when = effectiveLabel !== "-" ? ` on ${effectiveLabel}` : "";
+
+  if (action === "cancel" || normalizedPendingPlan === "free") {
+    return {
+      summary: `Cancellation pending${when}`,
+      note: `Your ${formatSubscriptionPlan(currentPlan)} access stays active until the scheduled end date.`,
+    };
+  }
+
+  if (normalizedPendingPlan && normalizedPendingPlan !== normalizedCurrentPlan) {
+    return {
+      summary: `${formatSubscriptionPlan(normalizedPendingPlan)} pending${when}`,
+      note: `Your plan stays on ${formatSubscriptionPlan(currentPlan)} until the change takes effect.`,
+    };
+  }
+
+  if (action === "pause") {
+    return {
+      summary: `Pause pending${when}`,
+      note: "Your current access remains unchanged until the scheduled date.",
+    };
+  }
+
+  return {
+    summary: `Plan change pending${when}`,
+    note: "Your current access remains unchanged until the scheduled date.",
+  };
+};
+
 export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -75,6 +125,7 @@ export default function Page() {
   const [showPlanRenewsCountdown, setShowPlanRenewsCountdown] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [hasCreatedPasswordSinceLoad, setHasCreatedPasswordSinceLoad] =
     useState(false);
@@ -90,6 +141,17 @@ export default function Page() {
   useEffect(() => {
     if (searchParams.get("emailChanged") === "1") {
       setSuccess("Email updated successfully.");
+    }
+
+    if (searchParams.get("billing") === "success") {
+      setSuccess(
+        "Checkout completed. Your subscription will refresh as soon as Paddle confirms the payment.",
+      );
+      void refreshAuth();
+    }
+
+    if (searchParams.get("billing") === "cancelled") {
+      setError("Checkout was cancelled.");
     }
   }, [searchParams]);
 
@@ -113,6 +175,22 @@ export default function Page() {
 
   const canCreatePassword =
     Boolean(user?.linkedSEOs?.length) && !hasCreatedPasswordSinceLoad;
+
+  const pendingSubscriptionCopy = useMemo(
+    () =>
+      getPendingSubscriptionCopy({
+        currentPlan: user?.subscriptionPlan,
+        pendingPlan: user?.pendingSubscriptionPlan,
+        action: user?.pendingSubscriptionAction,
+        effectiveAt: user?.pendingSubscriptionEffectiveAt,
+      }),
+    [
+      user?.pendingSubscriptionAction,
+      user?.pendingSubscriptionEffectiveAt,
+      user?.pendingSubscriptionPlan,
+      user?.subscriptionPlan,
+    ],
+  );
 
   const accountSections = useMemo(
     () => [
@@ -157,6 +235,15 @@ export default function Page() {
             value: formatSubscriptionPlan(user?.subscriptionPlan),
             key: "accountPlan",
           },
+          ...(pendingSubscriptionCopy
+            ? [
+                {
+                  label: "Pending change",
+                  value: pendingSubscriptionCopy.summary,
+                  key: "pendingSubscriptionChange",
+                },
+              ]
+            : []),
           ...(hasPaidSubscription(user?.subscriptionPlan)
             ? [
                 {
@@ -195,6 +282,7 @@ export default function Page() {
     [
       canCreatePassword,
       now,
+      pendingSubscriptionCopy,
       showJoinedCountdown,
       showPlanRenewsCountdown,
       showPlanStartedCountdown,
@@ -370,6 +458,35 @@ export default function Page() {
     }
   };
 
+  const handleManageBilling = async () => {
+    setIsOpeningBillingPortal(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch("/api/billing/portal", {
+        method: "POST",
+      });
+      const body = await response.json().catch(() => ({}));
+      const url = typeof body?.url === "string" ? body.url.trim() : "";
+
+      if (!response.ok || !/^https?:\/\//i.test(url)) {
+        throw new Error(body?.error || "Failed to open billing portal");
+      }
+
+      window.location.assign(url);
+    } catch (caughtError: unknown) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Failed to open billing portal",
+      );
+      console.error("Failed to open billing portal:", caughtError);
+    } finally {
+      setIsOpeningBillingPortal(false);
+    }
+  };
+
   const handleDeleteAccount = async () => {
     const confirmed = await popup.confirm({
       title: "Delete account?",
@@ -421,7 +538,10 @@ export default function Page() {
         <Header
           title="Account Information"
           isLoading={
-            isSubmittingEmail || isSubmittingPassword || isDeletingAccount
+            isSubmittingEmail ||
+            isSubmittingPassword ||
+            isOpeningBillingPortal ||
+            isDeletingAccount
           }
         />
         <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
@@ -515,6 +635,51 @@ export default function Page() {
             </div>
           </Fragment>
         ))}
+        <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A8A8A]">
+          Billing
+        </h2>
+        <div className="mb-4 w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
+          <p className="text-sm font-medium text-[#2D2D2D]">
+            {hasPaidSubscription(user?.subscriptionPlan)
+              ? "Manage subscription"
+              : "Upgrade your plan"}
+          </p>
+          <p className="mt-1 text-xs text-[#6F6F6F]">
+            Billing, invoices, payment methods, and cancellations are handled
+            securely through Paddle.
+          </p>
+          {pendingSubscriptionCopy ? (
+            <div className="mt-3 rounded-2xl bg-[#FFF7ED] px-3 py-3">
+              <p className="text-sm font-medium text-[#A15D16]">
+                {pendingSubscriptionCopy.summary}
+              </p>
+              <p className="mt-1 text-xs text-[#8A6A44]">
+                {pendingSubscriptionCopy.note}
+              </p>
+            </div>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {hasPaidSubscription(user?.subscriptionPlan) ? (
+              <button
+                type="button"
+                onClick={() => void handleManageBilling()}
+                disabled={isOpeningBillingPortal}
+                className="rounded-full bg-[#1D1D1D] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+              >
+                {isOpeningBillingPortal ? "Opening..." : "Manage Billing"}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => router.push("/plans")}
+              className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-[#202020]"
+            >
+              {hasPaidSubscription(user?.subscriptionPlan)
+                ? "Change plan"
+                : "View plans"}
+            </button>
+          </div>
+        </div>
         <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[#B45C5C]">
           Danger Zone
         </h2>

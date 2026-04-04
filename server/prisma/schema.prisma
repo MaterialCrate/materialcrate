@@ -33,9 +33,16 @@ model User {
   uninterestedPostIds String[] @default([])
   blockedUserIds String[] @default([])
   /// Allowed values: free, pro, premium
-  subscriptionPlan      String   @default("free")
-  subscriptionStartedAt DateTime @default(now())
-  subscriptionEndsAt    DateTime?
+  subscriptionPlan             String   @default("free")
+  subscriptionStartedAt        DateTime @default(now())
+  subscriptionEndsAt           DateTime?
+  pendingSubscriptionPlan      String?
+  pendingSubscriptionAction    String?
+  pendingSubscriptionEffectiveAt DateTime?
+  paddleCustomerId             String?  @unique
+  paddleSubscriptionId     String?  @unique
+  paddleSubscriptionStatus String?
+  paddlePriceId            String?
   emailVerified Boolean  @default(false)
   emailVerificationToken          String?
   emailVerificationTokenExpiresAt DateTime?

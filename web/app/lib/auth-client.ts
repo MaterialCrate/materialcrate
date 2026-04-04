@@ -19,6 +19,9 @@ type User = {
   subscriptionPlan: string;
   subscriptionStartedAt?: string | null;
   subscriptionEndsAt?: string | null;
+  pendingSubscriptionPlan?: string | null;
+  pendingSubscriptionAction?: string | null;
+  pendingSubscriptionEffectiveAt?: string | null;
   createdAt?: string | null;
   followersCount: number;
   followingCount: number;

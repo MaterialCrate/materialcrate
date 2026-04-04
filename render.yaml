@@ -28,6 +28,16 @@ services:
         generateValue: true
       - key: GRAPHQL_BODY_LIMIT
         value: 35mb
+      - key: PADDLE_API_KEY
+        sync: false
+      - key: PADDLE_WEBHOOK_SECRET
+        sync: false
+      - key: PADDLE_PRO_PRICE_ID
+        sync: false
+      - key: PADDLE_PREMIUM_PRICE_ID
+        sync: false
+      - key: PADDLE_DEFAULT_CURRENCY
+        value: USD
       - key: AWS_REGION
         sync: false
       - key: AWS_S3_BUCKET_NAME
@@ -63,6 +73,14 @@ services:
         value: https://materialcrate-api.onrender.com/graphql
       - key: APP_BASE_URL
         value: https://www.materialcrate.com
+      - key: NEXT_PUBLIC_PADDLE_ENVIRONMENT
+        value: production
+      - key: NEXT_PUBLIC_PADDLE_CLIENT_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_PADDLE_PRO_PRICE_ID
+        sync: false
+      - key: NEXT_PUBLIC_PADDLE_PREMIUM_PRICE_ID
+        sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL

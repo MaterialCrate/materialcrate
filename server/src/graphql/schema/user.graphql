@@ -31,6 +31,9 @@ type User {
   subscriptionPlan: String!
   subscriptionStartedAt: String
   subscriptionEndsAt: String
+  pendingSubscriptionPlan: String
+  pendingSubscriptionAction: String
+  pendingSubscriptionEffectiveAt: String
   emailVerified: Boolean!
   deleted: Boolean!
   deletedAt: String
