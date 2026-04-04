@@ -24,6 +24,8 @@ interface UploadDrawerProps {
   onPostSaved?: (post: HomePost, mode: "create" | "edit") => void;
 }
 
+const MAX_UPLOAD_FILE_BYTES = 20 * 1024 * 1024;
+
 export default function UploadDrawer({
   isOpen,
   onClose,
@@ -80,9 +82,9 @@ export default function UploadDrawer({
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
-    if (file && file.size > 100 * 1024 * 1024) {
+    if (file && file.size > MAX_UPLOAD_FILE_BYTES) {
       setAlertType("error");
-      setAlertMessage("File size exceeds 100MB limit.");
+      setAlertMessage("File size exceeds 20MB limit.");
       setSelectedFile(null);
       setThumbnailBase64(null);
       setIsGeneratingThumbnail(false);
@@ -292,7 +294,7 @@ export default function UploadDrawer({
                           </span>
                         </p>
                         <p className="text-[10px] text-[#737373] font-medium text-center">
-                          Max file size: 100MB (PDF)
+                          Max file size: 20MB (PDF)
                         </p>
                       </div>
                     </>

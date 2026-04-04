@@ -32,6 +32,7 @@ model User {
   linkedSEOs    String[] @default([])
   uninterestedPostIds String[] @default([])
   blockedUserIds String[] @default([])
+  /// Allowed values: free, pro, premium
   subscriptionPlan      String   @default("free")
   subscriptionStartedAt DateTime @default(now())
   subscriptionEndsAt    DateTime?

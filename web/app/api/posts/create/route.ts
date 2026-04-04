@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
+const MAX_UPLOAD_FILE_BYTES = 20 * 1024 * 1024;
 
 const CREATE_POST_MUTATION = `
   mutation CreatePost(
@@ -57,6 +58,13 @@ export async function POST(req: Request) {
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "File is required" }, { status: 400 });
+  }
+
+  if (file.size > MAX_UPLOAD_FILE_BYTES) {
+    return NextResponse.json(
+      { error: "File size exceeds 20MB limit" },
+      { status: 400 },
+    );
   }
 
   if (typeof title !== "string") {

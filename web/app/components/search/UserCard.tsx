@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { User, Verify } from "iconsax-reactjs";
+import { hasPaidSubscription } from "@/app/lib/subscription";
 
 export type SearchUser = {
   id: string;
@@ -21,7 +22,7 @@ type UserCardProps = {
 };
 
 export default function UserCard({ user, onClick }: UserCardProps) {
-  const isPro = user.subscriptionPlan?.trim().toLowerCase() === "pro";
+  const hasPaidPlan = hasPaidSubscription(user.subscriptionPlan);
 
   return (
     <button
@@ -49,7 +50,7 @@ export default function UserCard({ user, onClick }: UserCardProps) {
           <p className="truncate text-sm font-semibold text-[#000000]">
             {user.displayName}
           </p>
-          {isPro && <Verify size={16} color="#E1761F" variant="Bold" />}
+          {hasPaidPlan && <Verify size={16} color="#E1761F" variant="Bold" />}
         </div>
         <p className="truncate text-xs font-medium text-[#585858]">
           @{user.username}

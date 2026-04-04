@@ -7,6 +7,10 @@ import Alert from "@/app/components/Alert";
 import Header from "@/app/components/Header";
 import { useSystemPopup } from "@/app/components/SystemPopup";
 import { refreshAuth, useAuth } from "@/app/lib/auth-client";
+import {
+  formatSubscriptionPlan,
+  hasPaidSubscription,
+} from "@/app/lib/subscription";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
@@ -23,11 +27,6 @@ const formatDate = (value?: string | null) => {
 
 const formatSeoProvider = (provider: string) =>
   provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase();
-
-const formatPlan = (plan?: string | null) => {
-  if (!plan) return "free";
-  return plan.toLowerCase();
-};
 
 const normalizeEmail = (value: string) => value.trim().toLowerCase();
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -155,10 +154,10 @@ export default function Page() {
         items: [
           {
             label: "Subscription Plan",
-            value: formatPlan(user?.subscriptionPlan),
+            value: formatSubscriptionPlan(user?.subscriptionPlan),
             key: "accountPlan",
           },
-          ...(user?.subscriptionPlan?.toLowerCase() === "pro"
+          ...(hasPaidSubscription(user?.subscriptionPlan)
             ? [
                 {
                   label: "Started",

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { CloseCircle, Heart, Send, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
+import { hasPaidSubscription } from "@/app/lib/subscription";
 import Alert from "../Alert";
 import type { HomePost } from "./Post";
 
@@ -95,8 +96,8 @@ function getAuthorProfilePicture(author?: CommentAuthor | null) {
   return author?.profilePicture || author?.profilePictureUrl || "";
 }
 
-function getAuthorSubscriptionPlan(author?: CommentAuthor | null) {
-  return author?.subscriptionPlan?.trim().toLowerCase() || "";
+function hasPaidAuthorSubscription(author?: CommentAuthor | null) {
+  return hasPaidSubscription(author?.subscriptionPlan);
 }
 
 export default function CommentDrawer({
@@ -618,7 +619,7 @@ export default function CommentDrawer({
                         <p className="text-xs text-[#444444] font-semibold">
                           {getAuthorName(comment.author)}
                         </p>
-                        {getAuthorSubscriptionPlan(comment.author) === "pro" ? (
+                        {hasPaidAuthorSubscription(comment.author) ? (
                           <Verify size={14} color="#E1761F" variant="Bold" />
                         ) : null}
                       </div>
@@ -699,8 +700,7 @@ export default function CommentDrawer({
                               <p className="text-xs text-[#444444] font-semibold">
                                 {getAuthorName(reply.author)}
                               </p>
-                              {getAuthorSubscriptionPlan(reply.author) ===
-                              "pro" ? (
+                              {hasPaidAuthorSubscription(reply.author) ? (
                                 <Verify
                                   size={14}
                                   color="#E1761F"

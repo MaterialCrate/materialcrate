@@ -26,6 +26,8 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      - key: GRAPHQL_BODY_LIMIT
+        value: 35mb
       - key: AWS_REGION
         sync: false
       - key: AWS_S3_BUCKET_NAME

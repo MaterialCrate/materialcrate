@@ -104,6 +104,15 @@ const findUserByEmailInsensitive = (email: string) =>
     },
   });
 
+const PAID_SUBSCRIPTION_PLANS = new Set(["pro", "premium"]);
+
+const hasPaidSubscriptionPlan = (plan: unknown) =>
+  PAID_SUBSCRIPTION_PLANS.has(
+    String(plan || "")
+      .trim()
+      .toLowerCase(),
+  );
+
 const getDeletedAccountRestoreDeadline = (deletedAt: unknown) => {
   if (!deletedAt) return null;
   const parsed =
@@ -1913,12 +1922,13 @@ export const UserResolver = {
           program: args.program ?? null,
         };
 
-        const isProUser =
-          existingUser.subscriptionPlan?.trim().toLowerCase() === "pro";
+        const hasPaidPlan = hasPaidSubscriptionPlan(
+          existingUser.subscriptionPlan,
+        );
 
-        if (hasProfileBackgroundFile && !isProUser) {
+        if (hasProfileBackgroundFile && !hasPaidPlan) {
           throw new Error(
-            "Profile backgrounds are available to Pro users only",
+            "Profile backgrounds are available to Pro and Premium users only",
           );
         }
 
@@ -1985,9 +1995,9 @@ export const UserResolver = {
             profileBackground === DEFAULT_PROFILE_BACKGROUND
           ) {
             updateData.profileBackground = DEFAULT_PROFILE_BACKGROUND;
-          } else if (!isProUser) {
+          } else if (!hasPaidPlan) {
             throw new Error(
-              "Profile backgrounds are available to Pro users only",
+              "Profile backgrounds are available to Pro and Premium users only",
             );
           }
         }

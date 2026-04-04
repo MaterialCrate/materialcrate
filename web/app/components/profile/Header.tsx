@@ -8,6 +8,11 @@ import {
   getProfileBackgroundPresentation,
   isDefaultProfileBackground,
 } from "@/app/lib/profile-background";
+import {
+  getSubscriptionBadgeLabel,
+  hasPaidSubscription,
+  normalizeSubscriptionPlan,
+} from "@/app/lib/subscription";
 
 export type ProfileTab = "posts" | "achievements";
 
@@ -74,6 +79,9 @@ export default function Header({
     ? "text-white/55"
     : "text-[#787777]";
   const indicatorClass = hasCustomBackground ? "bg-white" : "bg-[#404040]";
+  const normalizedSubscriptionPlan = normalizeSubscriptionPlan(subscriptionPlan);
+  const hasPaidPlan = hasPaidSubscription(subscriptionPlan);
+  const planBadgeLabel = getSubscriptionBadgeLabel(subscriptionPlan);
 
   return (
     <header
@@ -111,7 +119,7 @@ export default function Header({
               <p className={`text-lg font-medium ${primaryTextClass}`}>
                 {displayName}
               </p>
-              {subscriptionPlan?.trim().toLowerCase() === "pro" ? (
+              {hasPaidPlan ? (
                 <Verify size={18} color="#E1761F" variant="Bold" />
               ) : null}
             </div>
@@ -119,7 +127,7 @@ export default function Header({
           </div>
         </div>
         {isOwner &&
-          (subscriptionPlan === "free" ? (
+          (normalizedSubscriptionPlan === "free" ? (
             <div className="flex items-center gap-6">
               <button
                 type="button"
@@ -143,8 +151,8 @@ export default function Header({
               type="button"
               className="px-3 py-2 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
             >
-              <Image src={proStar} alt="Pro star" width={16} height={16} />
-              <p className="text-white text-sm font-medium">Pro</p>
+              <Image src={proStar} alt="Plan badge" width={16} height={16} />
+              <p className="text-white text-sm font-medium">{planBadgeLabel}</p>
             </button>
           ))}
       </div>
@@ -172,13 +180,14 @@ export default function Header({
           </button>
         </div>
         {isOwner ? (
-          subscriptionPlan === "free" ? (
+          normalizedSubscriptionPlan === "free" ? (
             <button
               type="button"
               className="px-3 py-2 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
+              onClick={() => router.push("/plans")}
             >
-              <Image src={proStar} alt="Pro star" width={16} height={16} />
-              <p className="text-white text-sm font-medium">Upgrade to Pro</p>
+              <Image src={proStar} alt="View plans" width={16} height={16} />
+              <p className="text-white text-sm font-medium">View plans</p>
             </button>
           ) : (
             <div className="flex items-center gap-6">

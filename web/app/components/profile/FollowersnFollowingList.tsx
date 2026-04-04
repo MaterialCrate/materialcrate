@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft2, Verify } from "iconsax-reactjs";
 import { subscribeToFollowActivity } from "@/app/lib/post-activity-realtime";
+import { hasPaidSubscription } from "@/app/lib/subscription";
 
 export type FollowListTab = "followers" | "following";
 
@@ -269,7 +270,7 @@ export default function FollowersnFollowingList({
           </button>
           <div className="flex items-center gap-1">
             <p className="text-base font-semibold text-[#1E1E1E]">{username}</p>
-            {subscriptionPlan === "pro" && (
+            {hasPaidSubscription(subscriptionPlan) && (
               <Verify size={18} color="#E1761F" variant="Bold" />
             )}
           </div>
@@ -345,8 +346,7 @@ export default function FollowersnFollowingList({
                         <p className="truncate text-sm font-semibold text-[#000000]">
                           {entry.displayName}
                         </p>
-                        {entry.subscriptionPlan?.trim().toLowerCase() ===
-                        "pro" ? (
+                        {hasPaidSubscription(entry.subscriptionPlan) ? (
                           <Verify size={16} color="#E1761F" variant="Bold" />
                         ) : null}
                       </div>

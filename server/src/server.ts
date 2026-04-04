@@ -5,6 +5,8 @@ import { context } from "./auth/context.js";
 import { typeDefs, resolvers } from "./graphql/index.js";
 import { registerPostActivityRealtime } from "./realtime/postActivity.js";
 
+const GRAPHQL_BODY_LIMIT = process.env.GRAPHQL_BODY_LIMIT?.trim() || "35mb";
+
 export const server = new ApolloServer({
   typeDefs,
   resolvers,
@@ -33,6 +35,9 @@ export const createHttpServer = () => {
         cors: {
           origin: true,
           credentials: true,
+        },
+        bodyParserConfig: {
+          limit: GRAPHQL_BODY_LIMIT,
         },
       });
 

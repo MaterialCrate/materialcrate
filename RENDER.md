@@ -54,6 +54,7 @@ Optional / recommended:
 
 - `SUPPORT_EMAIL`
 - `POST_PURGE_INTERVAL_MS`
+- `GRAPHQL_BODY_LIMIT` → `35mb`
 
 ### Frontend (`materialcrate-web`)
 

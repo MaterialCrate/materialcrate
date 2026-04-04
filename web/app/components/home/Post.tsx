@@ -14,6 +14,7 @@ import {
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
+import { hasPaidSubscription } from "@/app/lib/subscription";
 import Alert from "@/app/components/Alert";
 import Image from "next/image";
 import PdfThumbnail from "./PdfThumbnail";
@@ -131,7 +132,7 @@ export default function Post({
     ? `@${post.author.username}`
     : "@unknown";
   const authorProfilePicture = post.author?.profilePicture;
-  const subscriptionPlan = post.author?.subscriptionPlan?.trim().toLowerCase();
+  const hasPaidPlan = hasPaidSubscription(post.author?.subscriptionPlan);
   const authorRoute = post.author?.username
     ? `/user/${encodeURIComponent(post.author.username)}`
     : null;
@@ -472,9 +473,7 @@ export default function Post({
           <div>
             <div className="flex items-center gap-0.5">
               <p className="font-medium text-[#202020]">{authorFullName}</p>
-              {subscriptionPlan === "pro" && (
-                <Verify size={18} color="#E1761F" variant="Bold" />
-              )}
+              {hasPaidPlan && <Verify size={18} color="#E1761F" variant="Bold" />}
             </div>
             <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
               <p>{authorUsername}</p>

@@ -13,6 +13,10 @@ import {
   isDefaultProfileBackground,
 } from "@/app/lib/profile-background";
 import { refreshAuth, useAuth } from "@/app/lib/auth-client";
+import {
+  getSubscriptionBadgeLabel,
+  hasPaidSubscription,
+} from "@/app/lib/subscription";
 
 type UserProfile = {
   username: string;
@@ -71,7 +75,8 @@ export default function Page() {
   const profileBackgroundInputRef = useRef<HTMLInputElement | null>(null);
 
   const router = useRouter();
-  const isProUser = user?.subscriptionPlan?.trim().toLowerCase() === "pro";
+  const isPaidUser = hasPaidSubscription(user?.subscriptionPlan);
+  const planLabel = getSubscriptionBadgeLabel(user?.subscriptionPlan);
 
   const profilePictureToRender =
     profilePicturePreviewUrl || profile.profilePictureUrl || "";
@@ -433,8 +438,8 @@ export default function Page() {
   };
 
   const handleProfileBackgroundButtonClick = () => {
-    if (!isProUser) {
-      setError("Custom profile backgrounds are Pro-only");
+    if (!isPaidUser) {
+      setError("Custom profile backgrounds are available on Pro and Premium");
       return;
     }
 
@@ -449,8 +454,8 @@ export default function Page() {
 
     if (!file) return;
 
-    if (!isProUser) {
-      setError("Custom profile backgrounds are Pro-only");
+    if (!isPaidUser) {
+      setError("Custom profile backgrounds are available on Pro and Premium");
       return;
     }
 
@@ -580,22 +585,22 @@ export default function Page() {
                   Profile background
                 </p>
                 <p className="mt-0.5 text-xs text-[#666666]">
-                  {isProUser
+                  {isPaidUser
                     ? "Tap the pen to upload an image or GIF under 5MB."
-                    : "Default background is active. Upgrade to Pro to upload images or GIFs."}
+                    : "Default background is active. Upgrade to Pro or Premium to upload images or GIFs."}
                 </p>
               </div>
               <span
                 className={`rounded-full px-3 py-1 text-[11px] font-medium ${
-                  isProUser
+                  isPaidUser
                     ? "bg-[#FFF1DE] text-[#A95A13]"
                     : "bg-[#EFEFEF] text-[#6A6A6A]"
                 }`}
               >
-                {isProUser ? "Pro" : "Free"}
+                {isPaidUser ? planLabel : "Free"}
               </span>
             </div>
-            {isProUser &&
+            {isPaidUser &&
             (!isDefaultProfileBackground(profile.profileBackground) ||
               Boolean(profileBackgroundFile)) ? (
               <div className="mt-4">

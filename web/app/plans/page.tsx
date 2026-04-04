@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import Header from "../components/Header";
 
@@ -105,7 +104,7 @@ export default function PlansPage() {
       </div>
 
       <div className="relative mx-auto w-full max-w-6xl px-4 pb-28 pt-20 sm:px-6 lg:px-8">
-        <section id="compare" className="mt-6 grid gap-4 lg:grid-cols-3">
+        <section id="compare" className="grid gap-4 lg:grid-cols-3">
           {plans.map((plan) => (
             <article
               key={plan.name}
@@ -115,11 +114,11 @@ export default function PlansPage() {
                   : "border-black/6 bg-white"
               }`}
             >
-              {plan.badge ? (
+              {plan.badge && (
                 <div className="mb-4 inline-flex rounded-full bg-[#FFF1E2] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#B86420]">
                   {plan.badge}
                 </div>
-              ) : null}
+              )}
 
               <div className="flex items-start justify-between gap-3">
                 <div>
