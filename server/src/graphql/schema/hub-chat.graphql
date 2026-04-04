@@ -1,0 +1,39 @@
+type HubChatMessage {
+  id: ID!
+  role: String!
+  text: String!
+  createdAt: String!
+}
+
+input HubChatMessageInput {
+  id: ID!
+  role: String!
+  text: String!
+  createdAt: String!
+}
+
+type HubChat {
+  id: ID!
+  userId: ID!
+  postId: ID!
+  savedPostId: ID
+  documentTitle: String!
+  messages: [HubChatMessage!]!
+  createdAt: String!
+  updatedAt: String!
+}
+
+extend type Query {
+  myHubChats: [HubChat!]!
+  myHubChat(postId: ID!): HubChat
+}
+
+extend type Mutation {
+  upsertHubChat(
+    postId: ID!
+    savedPostId: ID
+    documentTitle: String!
+    messages: [HubChatMessageInput!]!
+  ): HubChat!
+  clearHubChat(chatId: ID!): Boolean!
+}

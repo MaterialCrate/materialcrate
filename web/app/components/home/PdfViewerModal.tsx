@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CloseCircle } from "iconsax-reactjs";
-import { useAuth } from "@/app/lib/auth-client";
 import type { HomePost } from "./Post";
 
 type PdfViewerModalProps = {
@@ -191,9 +190,6 @@ export default function PdfViewerModal({
             <p className="mt-1 text-sm text-[#707070]">
               {post.categories.join(", ")}
               {pdfState.pageCount > 0 && ` • ${pdfState.pageCount} pages`}
-            </p>
-            <p className="mt-1 text-xs font-medium text-[#A15D16]">
-              Protected view • download and print shortcuts are blocked in-app
             </p>
           </div>
           <div className="flex items-center gap-2">

@@ -537,7 +537,8 @@ export default function Home() {
               savedPost.isAuthorMutedByCurrentUser ?? false,
             isAuthorBlockedByCurrentUser:
               savedPost.isAuthorBlockedByCurrentUser ?? false,
-            author: savedPost.author ||
+            author:
+              savedPost.author ||
               (user
                 ? {
                     id: user.id,
@@ -720,7 +721,7 @@ export default function Home() {
           <p className="px-6 py-8 text-sm text-[#696969]">No posts yet.</p>
         ) : (
           <>
-            {posts.map((post, index) => (
+            {posts.map((post) => (
               <div key={post.id} data-scroll-item>
                 <Post
                   post={post}
@@ -785,11 +786,6 @@ export default function Home() {
                     void handleArchiveRemove(selectedPost);
                   }}
                 />
-                {index < posts.length - 1 && (
-                  <div className="px-6">
-                    <div className="h-px w-full bg-black/20 mt-4" />
-                  </div>
-                )}
               </div>
             ))}
             {isLoadingMorePosts && (

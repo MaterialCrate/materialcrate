@@ -7,7 +7,6 @@ import {
   Heart,
   Messages2,
   Archive,
-  ArrowDown2,
   User,
   Verify,
   Location,
@@ -507,10 +506,10 @@ export default function Post({
   ]);
 
   return (
-    <div ref={postCardRef} className="mt-4">
+    <div ref={postCardRef}>
       <Alert message={alertState.message} type={alertState.type} />
-      <article className="overflow-hidden rounded-[26px] border border-black/6 bg-white shadow-[0_14px_34px_rgba(0,0,0,0.05)]">
-        <div className="flex items-start justify-between gap-3 px-5 pt-5">
+      <article>
+        <div className="flex items-start justify-between px-5 pt-5">
           <button
             type="button"
             className="flex min-w-0 items-center gap-3 text-left"

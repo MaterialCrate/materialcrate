@@ -37,6 +37,60 @@ const MY_ARCHIVE_QUERY = `
   }
 `;
 
+const MY_HUB_CHATS_QUERY = `
+  query MyHubChats {
+    myHubChats {
+      id
+      postId
+      savedPostId
+      documentTitle
+      createdAt
+      updatedAt
+      messages {
+        id
+        role
+        text
+        createdAt
+      }
+    }
+  }
+`;
+
+const UPSERT_HUB_CHAT_MUTATION = `
+  mutation UpsertHubChat(
+    $postId: ID!
+    $savedPostId: ID
+    $documentTitle: String!
+    $messages: [HubChatMessageInput!]!
+  ) {
+    upsertHubChat(
+      postId: $postId
+      savedPostId: $savedPostId
+      documentTitle: $documentTitle
+      messages: $messages
+    ) {
+      id
+      postId
+      savedPostId
+      documentTitle
+      createdAt
+      updatedAt
+      messages {
+        id
+        role
+        text
+        createdAt
+      }
+    }
+  }
+`;
+
+const CLEAR_HUB_CHAT_MUTATION = `
+  mutation ClearHubChat($chatId: ID!) {
+    clearHubChat(chatId: $chatId)
+  }
+`;
+
 const DIRECT_POST_QUERY = `
   query JuIntelliPost($id: ID!) {
     post(id: $id) {
@@ -54,14 +108,29 @@ const DIRECT_POST_QUERY = `
   }
 `;
 
+type HubChatMessagePayload = {
+  id?: string;
+  role?: "user" | "assistant";
+  text?: string;
+  createdAt?: string;
+};
+
 type HubChatBody = {
+  chatId?: string;
   savedPostId?: string;
   postId?: string;
   prompt?: string;
-  history?: Array<{
-    role?: "user" | "assistant";
-    text?: string;
-  }>;
+  history?: HubChatMessagePayload[];
+};
+
+type HubChatRecord = {
+  id?: string;
+  postId?: string;
+  savedPostId?: string | null;
+  documentTitle?: string | null;
+  messages?: HubChatMessagePayload[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type ArchiveSavedPostRecord = {
@@ -98,6 +167,19 @@ type GeminiResponseBody = {
   };
 };
 
+const buildAuthHeaders = (token: string) => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${token}`,
+});
+
+const createMessageId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 const isAllowedFileUrl = (value: string) => {
   try {
     const parsed = new URL(value);
@@ -124,9 +206,16 @@ const extractReplyText = (body: GeminiResponseBody) => {
     .trim();
 };
 
-const sanitizeHistory = (history: HubChatBody["history"]) => {
+const sanitizeHistory = (
+  history: HubChatBody["history"],
+): Array<{
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  createdAt: string;
+}> => {
   if (!Array.isArray(history)) {
-    return [] as Array<{ role: "user" | "assistant"; text: string }>;
+    return [];
   }
 
   return history
@@ -136,15 +225,99 @@ const sanitizeHistory = (history: HubChatBody["history"]) => {
         return [];
       }
 
+      const createdAt = new Date(message?.createdAt ?? "");
+      const role: "user" | "assistant" =
+        message?.role === "assistant" ? "assistant" : "user";
+
       return [
         {
-          role: message?.role === "assistant" ? "assistant" : "user",
+          id: message?.id?.trim() || createMessageId(),
+          role,
           text,
+          createdAt: Number.isNaN(createdAt.getTime())
+            ? new Date().toISOString()
+            : createdAt.toISOString(),
         },
       ];
     })
-    .slice(-10);
+    .slice(-20);
 };
+
+const requestGraphQL = async (
+  token: string,
+  query: string,
+  variables?: Record<string, unknown>,
+) => {
+  const response = await fetch(GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: buildAuthHeaders(token),
+    cache: "no-store",
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const body = await response.json().catch(() => ({}));
+
+  if (!response.ok || body?.errors?.length) {
+    throw new Error(body?.errors?.[0]?.message || "GraphQL request failed");
+  }
+
+  return body;
+};
+
+const persistHubChat = async ({
+  token,
+  postId,
+  savedPostId,
+  documentTitle,
+  messages,
+}: {
+  token: string;
+  postId: string;
+  savedPostId?: string;
+  documentTitle: string;
+  messages: Array<{
+    id: string;
+    role: "user" | "assistant";
+    text: string;
+    createdAt: string;
+  }>;
+}) => {
+  const body = await requestGraphQL(token, UPSERT_HUB_CHAT_MUTATION, {
+    postId,
+    savedPostId: savedPostId?.trim() || null,
+    documentTitle,
+    messages,
+  });
+
+  return (body?.data?.upsertHubChat ?? null) as HubChatRecord | null;
+};
+
+export async function GET() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("mc_session")?.value;
+
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  try {
+    const body = await requestGraphQL(token, MY_HUB_CHATS_QUERY);
+
+    return NextResponse.json({
+      chats: Array.isArray(body?.data?.myHubChats) ? body.data.myHubChats : [],
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch chat history",
+      },
+      { status: 400 },
+    );
+  }
+}
 
 export async function POST(req: Request) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
@@ -187,33 +360,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
   }
 
-  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-    body: JSON.stringify({ query: MY_ARCHIVE_QUERY }),
-  });
-
-  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
-
-  if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+  let archiveBody: any;
+  try {
+    archiveBody = await requestGraphQL(token, MY_ARCHIVE_QUERY);
+  } catch (error) {
     return NextResponse.json(
       {
         error:
-          graphqlBody?.errors?.[0]?.message || "Failed to load document for AI",
-        details: graphqlBody?.errors ?? null,
+          error instanceof Error
+            ? error.message
+            : "Failed to load document for AI",
       },
       { status: 400 },
     );
   }
 
   const savedPosts: ArchiveSavedPostRecord[] = Array.isArray(
-    graphqlBody?.data?.myArchive?.savedPosts,
+    archiveBody?.data?.myArchive?.savedPosts,
   )
-    ? (graphqlBody.data.myArchive.savedPosts as ArchiveSavedPostRecord[])
+    ? (archiveBody.data.myArchive.savedPosts as ArchiveSavedPostRecord[])
     : [];
 
   const documentLookupId = savedPostId || postId;
@@ -226,37 +391,29 @@ export async function POST(req: Request) {
     ) ?? null;
 
   if (!documentRecord?.post?.id && postId) {
-    const postResponse = await fetch(GRAPHQL_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-      body: JSON.stringify({
-        query: DIRECT_POST_QUERY,
-        variables: { id: postId },
-      }),
-    });
+    try {
+      const postBody = await requestGraphQL(token, DIRECT_POST_QUERY, {
+        id: postId,
+      });
 
-    const postBody = await postResponse.json().catch(() => ({}));
+      if (!postBody?.data?.post) {
+        throw new Error("Document not found");
+      }
 
-    if (!postResponse.ok || postBody?.errors?.length || !postBody?.data?.post) {
+      documentRecord = {
+        id: postBody.data.post.id,
+        postId: postBody.data.post.id,
+        post: postBody.data.post,
+        folder: null,
+      };
+    } catch (error) {
       return NextResponse.json(
         {
-          error: postBody?.errors?.[0]?.message || "Document not found",
-          details: postBody?.errors ?? null,
+          error: error instanceof Error ? error.message : "Document not found",
         },
         { status: 404 },
       );
     }
-
-    documentRecord = {
-      id: postBody.data.post.id,
-      postId: postBody.data.post.id,
-      post: postBody.data.post,
-      folder: null,
-    };
   }
 
   if (!documentRecord?.post?.id) {
@@ -342,59 +499,144 @@ export async function POST(req: Request) {
     text: `User request:\n${prompt}`,
   });
 
-  const geminiResponse = await fetch(
-    `${GEMINI_API_BASE_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [
+  const userMessage = {
+    id: createMessageId(),
+    role: "user" as const,
+    text: prompt,
+    createdAt: new Date().toISOString(),
+  };
+
+  let reply = "";
+  let warning = "";
+
+  try {
+    const geminiResponse = await fetch(
+      `${GEMINI_API_BASE_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [
+              {
+                text:
+                  "You are Ju Intelli, the in-app study assistant for Material Crate. " +
+                  "Answer clearly and concisely using the selected Material Crate document and the conversation context. " +
+                  "Use light Markdown formatting when helpful, such as short headings, bullet lists, numbered steps, and **bold** key terms. " +
+                  "Do not use HTML or code fences unless the user asks for them. " +
+                  "If the document does not contain enough information, say that directly instead of inventing details. " +
+                  "Do not mention Gemini, API keys, or internal implementation details.",
+              },
+            ],
+          },
+          contents: [
             {
-              text:
-                "You are Ju Intelli, the in-app study assistant for Material Crate. " +
-                "Answer clearly and concisely using the selected Material Crate document and the conversation context. " +
-                "Use light Markdown formatting when helpful, such as short headings, bullet lists, numbered steps, and **bold** key terms. " +
-                "Do not use HTML or code fences unless the user asks for them. " +
-                "If the document does not contain enough information, say that directly instead of inventing details. " +
-                "Do not mention Gemini, API keys, or internal implementation details.",
+              role: "user",
+              parts,
             },
           ],
-        },
-        contents: [
-          {
-            role: "user",
-            parts,
+          generationConfig: {
+            maxOutputTokens: 1024,
+            temperature: 0.7,
           },
-        ],
-        generationConfig: {
-          maxOutputTokens: 1024,
-          temperature: 0.7,
-        },
-      }),
-    },
-  );
+        }),
+      },
+    );
 
-  const geminiBody = await geminiResponse.json().catch(() => ({}));
-  const reply = extractReplyText(geminiBody);
+    const geminiBody = await geminiResponse.json().catch(() => ({}));
+    const nextReply = extractReplyText(geminiBody);
 
-  if (!geminiResponse.ok || !reply) {
+    if (!geminiResponse.ok || !nextReply) {
+      throw new Error(
+        geminiBody?.error?.message || "Failed to generate AI response",
+      );
+    }
+
+    reply = nextReply;
+  } catch (error) {
+    warning =
+      error instanceof Error ? error.message : "Failed to generate AI response";
+    reply = `I couldn’t respond right now. ${warning}`;
+  }
+
+  const assistantMessage = {
+    id: createMessageId(),
+    role: "assistant" as const,
+    text: reply,
+    createdAt: new Date().toISOString(),
+  };
+
+  try {
+    const chat = await persistHubChat({
+      token,
+      postId: documentRecord.post.id,
+      savedPostId:
+        savedPostId ||
+        (documentRecord.id !== documentRecord.post.id
+          ? documentRecord.id
+          : undefined),
+      documentTitle,
+      messages: [...priorHistory, userMessage, assistantMessage],
+    });
+
+    return NextResponse.json({
+      ok: true,
+      reply,
+      model,
+      documentTitle,
+      warning: warning || undefined,
+      chat,
+    });
+  } catch (error) {
     return NextResponse.json(
       {
-        error: geminiBody?.error?.message || "Failed to generate AI response",
-        details: geminiBody?.error ?? geminiBody ?? null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to save chat history",
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(req: Request) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("mc_session")?.value;
+
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  let body: HubChatBody;
+  try {
+    body = (await req.json()) as HubChatBody;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const chatId = body.chatId?.trim();
+  if (!chatId) {
+    return NextResponse.json({ error: "chatId is required" }, { status: 400 });
+  }
+
+  try {
+    const graphqlBody = await requestGraphQL(token, CLEAR_HUB_CHAT_MUTATION, {
+      chatId,
+    });
+
+    return NextResponse.json({
+      ok: Boolean(graphqlBody?.data?.clearHubChat),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Failed to clear chat",
       },
       { status: 400 },
     );
   }
-
-  return NextResponse.json({
-    ok: true,
-    reply,
-    model,
-    documentTitle,
-  });
 }

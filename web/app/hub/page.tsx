@@ -11,6 +11,7 @@ import {
 } from "iconsax-reactjs";
 import Alert from "../components/Alert";
 import LoadingBar from "../components/LoadingBar";
+import { useSystemPopup } from "../components/SystemPopup";
 
 type ArchiveFolder = {
   id: string;
@@ -52,9 +53,62 @@ type ChatMessage = {
   createdAt: string;
   documentId: string;
   documentTitle: string;
+  chatId?: string;
 };
 
-const CHAT_HISTORY_STORAGE_KEY = "ju-intelli-chat-history";
+type ChatMeta = {
+  id: string;
+  documentTitle: string;
+  updatedAt: string;
+};
+
+type HubChatRecord = {
+  id: string;
+  postId: string;
+  savedPostId?: string | null;
+  documentTitle: string;
+  messages?: Array<Pick<ChatMessage, "id" | "role" | "text" | "createdAt">>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type HistoryEntry = {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  previewText: string;
+  updatedAt: string;
+};
+
+const mapChatRowsToMessages = (rows: HubChatRecord[]) =>
+  rows
+    .flatMap((chat) =>
+      (Array.isArray(chat.messages) ? chat.messages : []).map((message) => ({
+        ...message,
+        documentId: chat.postId,
+        documentTitle: chat.documentTitle,
+        chatId: chat.id,
+      })),
+    )
+    .sort(
+      (left, right) =>
+        new Date(left.createdAt).getTime() -
+        new Date(right.createdAt).getTime(),
+    );
+
+const mapChatRowsToMeta = (rows: HubChatRecord[]) =>
+  Object.fromEntries(
+    rows
+      .filter((chat) => chat.id && chat.postId)
+      .map((chat) => [
+        chat.postId,
+        {
+          id: chat.id,
+          documentTitle: chat.documentTitle,
+          updatedAt: chat.updatedAt,
+        },
+      ]),
+  ) as Record<string, ChatMeta>;
 
 const PROMPT_SUGGESTIONS = [
   "Summarize the key points from this document.",
@@ -247,6 +301,7 @@ export default function HubPage() {
   const hideHeaderTimerRef = useRef<number | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const popup = useSystemPopup();
 
   const [archive, setArchive] = useState<ArchiveData | null>(null);
   const [directDocument, setDirectDocument] = useState<ArchiveSavedPost | null>(
@@ -255,13 +310,18 @@ export default function HubPage() {
   const [selectedDocumentId, setSelectedDocumentId] = useState("");
   const [prompt, setPrompt] = useState("");
   const [history, setHistory] = useState<ChatMessage[]>([]);
+  const [chatMetaByDocumentId, setChatMetaByDocumentId] = useState<
+    Record<string, ChatMeta>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isResolvingRequestedDocument, setIsResolvingRequestedDocument] =
     useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isClearingChat, setIsClearingChat] = useState(false);
   const [error, setError] = useState("");
 
   const showHeaderTemporarily = useCallback(() => {
@@ -385,33 +445,47 @@ export default function HubPage() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
+    let isCancelled = false;
 
-    try {
-      const rawHistory = window.localStorage.getItem(CHAT_HISTORY_STORAGE_KEY);
-      if (!rawHistory) {
-        return;
-      }
+    const loadChatHistory = async () => {
+      try {
+        setIsLoadingHistory(true);
 
-      const parsedHistory = JSON.parse(rawHistory) as ChatMessage[];
-      if (Array.isArray(parsedHistory)) {
-        setHistory(parsedHistory);
+        const response = await fetch("/api/hub/chat", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const body = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(body?.error || "Failed to load chat history.");
+        }
+
+        const chats = Array.isArray(body?.chats)
+          ? (body.chats as HubChatRecord[])
+          : [];
+
+        if (!isCancelled) {
+          setHistory(mapChatRowsToMessages(chats));
+          setChatMetaByDocumentId(mapChatRowsToMeta(chats));
+        }
+      } catch (historyError) {
+        if (!isCancelled) {
+          console.error("Error loading chat history:", historyError);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingHistory(false);
+        }
       }
-    } catch {}
+    };
+
+    void loadChatHistory();
+
+    return () => {
+      isCancelled = true;
+    };
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    window.localStorage.setItem(
-      CHAT_HISTORY_STORAGE_KEY,
-      JSON.stringify(history),
-    );
-  }, [history]);
 
   const savedDocuments = useMemo(() => archive?.savedPosts ?? [], [archive]);
 
@@ -538,6 +612,14 @@ export default function HubPage() {
     [documents, requestedDocument, selectedDocumentId],
   );
 
+  const selectedChatId = useMemo(
+    () =>
+      selectedDocument
+        ? (chatMetaByDocumentId[selectedDocument.post.id]?.id ?? "")
+        : "",
+    [chatMetaByDocumentId, selectedDocument],
+  );
+
   const conversation = useMemo(
     () =>
       selectedDocument
@@ -550,14 +632,37 @@ export default function HubPage() {
     [history, selectedDocument],
   );
 
-  const historyEntries = useMemo(
-    () =>
-      history
-        .filter((message) => message.role === "user")
-        .slice()
-        .reverse(),
-    [history],
-  );
+  const historyEntries = useMemo<HistoryEntry[]>(() => {
+    return Object.entries(chatMetaByDocumentId)
+      .map(([documentId, meta]) => {
+        const chatMessages = history.filter(
+          (message) =>
+            message.chatId === meta.id ||
+            (!message.chatId && message.documentId === documentId),
+        );
+        const latestUserMessage = chatMessages
+          .slice()
+          .reverse()
+          .find((message) => message.role === "user");
+        const latestMessage = chatMessages[chatMessages.length - 1];
+
+        return {
+          id: meta.id,
+          documentId,
+          documentTitle: meta.documentTitle,
+          previewText:
+            latestUserMessage?.text ||
+            latestMessage?.text ||
+            "Open conversation",
+          updatedAt: latestMessage?.createdAt || meta.updatedAt,
+        };
+      })
+      .sort(
+        (left, right) =>
+          new Date(right.updatedAt).getTime() -
+          new Date(left.updatedAt).getTime(),
+      );
+  }, [chatMetaByDocumentId, history]);
 
   const requestedDocumentMissing =
     Boolean(requestedPostId) &&
@@ -569,6 +674,93 @@ export default function HubPage() {
     setSelectedDocumentId(documentId);
     setIsPickerOpen(false);
   };
+
+  const syncChatFromServer = useCallback((chat: HubChatRecord | null) => {
+    if (!chat?.id || !chat?.postId) {
+      return;
+    }
+
+    setChatMetaByDocumentId((current) => ({
+      ...current,
+      [chat.postId]: {
+        id: chat.id,
+        documentTitle: chat.documentTitle,
+        updatedAt: chat.updatedAt,
+      },
+    }));
+
+    const nextMessages = mapChatRowsToMessages([chat]);
+
+    setHistory((current) => {
+      const remainingMessages = current.filter(
+        (message) =>
+          message.documentId !== chat.postId && message.chatId !== chat.id,
+      );
+
+      return [...remainingMessages, ...nextMessages].sort(
+        (left, right) =>
+          new Date(left.createdAt).getTime() -
+          new Date(right.createdAt).getTime(),
+      );
+    });
+  }, []);
+
+  const handleClearChat = useCallback(async () => {
+    if (!selectedDocument || !selectedChatId || isClearingChat) {
+      return;
+    }
+
+    const confirmed = await popup.confirm({
+      title: "Clear chat?",
+      message:
+        "This will permanently remove this Ju Intelli conversation from your history.",
+      confirmLabel: "Clear",
+      cancelLabel: "Cancel",
+      isDestructive: true,
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsClearingChat(true);
+      setError("");
+
+      const response = await fetch("/api/hub/chat", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          chatId: selectedChatId,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok || !body?.ok) {
+        throw new Error(body?.error || "Failed to clear chat.");
+      }
+
+      setHistory((current) =>
+        current.filter((message) => message.chatId !== selectedChatId),
+      );
+      setChatMetaByDocumentId((current) => {
+        const next = { ...current };
+        delete next[selectedDocument.post.id];
+        return next;
+      });
+      setPrompt("");
+    } catch (clearError) {
+      setError(
+        clearError instanceof Error
+          ? clearError.message
+          : "Failed to clear chat.",
+      );
+    } finally {
+      setIsClearingChat(false);
+    }
+  }, [isClearingChat, popup, selectedChatId, selectedDocument]);
 
   const handleSendPrompt = async () => {
     if (!selectedDocument || !prompt.trim() || isSending) {
@@ -607,8 +799,10 @@ export default function HubPage() {
           postId: selectedDocument.post.id,
           prompt: nextPrompt,
           history: conversation.map((message) => ({
+            id: message.id,
             role: message.role,
             text: message.text,
+            createdAt: message.createdAt,
           })),
         }),
       });
@@ -619,17 +813,26 @@ export default function HubPage() {
         throw new Error(body?.error || "Failed to get Ju Intelli response.");
       }
 
-      setHistory((current) => [
-        ...current,
-        {
-          id: createMessageId(),
-          role: "assistant",
-          text: body.reply,
-          createdAt: new Date().toISOString(),
-          documentId: selectedDocument.post.id,
-          documentTitle,
-        },
-      ]);
+      if (body?.chat) {
+        syncChatFromServer(body.chat as HubChatRecord);
+      } else {
+        setHistory((current) => [
+          ...current,
+          {
+            id: createMessageId(),
+            role: "assistant",
+            text: body.reply,
+            createdAt: new Date().toISOString(),
+            documentId: selectedDocument.post.id,
+            documentTitle,
+            chatId: selectedChatId || undefined,
+          },
+        ]);
+      }
+
+      if (body?.warning) {
+        setError(body.warning);
+      }
     } catch (chatError) {
       const message =
         chatError instanceof Error
@@ -653,12 +856,11 @@ export default function HubPage() {
     }
   };
 
-  const handleUseHistoryEntry = async (entry: ChatMessage) => {
+  const handleUseHistoryEntry = async (entry: HistoryEntry) => {
     const matchingDocument = documents.find((document) =>
       [document.post.id, document.id].includes(entry.documentId),
     );
 
-    setPrompt(entry.text);
     setIsHistoryOpen(false);
 
     if (matchingDocument?.post.id) {
@@ -712,7 +914,7 @@ export default function HubPage() {
         }
       }}
     >
-      {isLoading && <LoadingBar />}
+      {(isLoading || isLoadingHistory) && <LoadingBar />}
       {error ? <Alert type="error" message={error} /> : null}
 
       {isPickerOpen ? (
@@ -839,10 +1041,10 @@ export default function HubPage() {
                       {entry.documentTitle}
                     </p>
                     <p className="mt-1 line-clamp-2 text-sm text-[#202020]">
-                      {entry.text}
+                      {entry.previewText}
                     </p>
                     <p className="mt-1 text-[11px] text-[#8a8a8a]">
-                      {formatHistoryTime(entry.createdAt)}
+                      {formatHistoryTime(entry.updatedAt)}
                     </p>
                   </button>
                 ))}
@@ -906,14 +1108,29 @@ export default function HubPage() {
 
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="shrink-0 border-b border-black/6 px-4 py-3">
-            <p className="text-sm font-medium text-[#202020]">
-              {selectedDocument?.post.title?.trim() || "Choose a document"}
-            </p>
-            <p className="mt-1 text-xs text-[#696969]">
-              {selectedDocument
-                ? `${selectedDocument.post.author?.displayName?.trim() || selectedDocument.post.author?.username?.trim() || "Unknown author"}${selectedDocument.folder?.name ? ` • ${selectedDocument.folder.name}` : selectedDocument.id === selectedDocument.post.id ? " • Opened from app" : " • Saved posts"}`
-                : "You can use any document opened from the app, and saved posts also appear here for quick access."}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[#202020]">
+                  {selectedDocument?.post.title?.trim() || "Choose a document"}
+                </p>
+                <p className="mt-1 text-xs text-[#696969]">
+                  {selectedDocument
+                    ? `${selectedDocument.post.author?.displayName?.trim() || selectedDocument.post.author?.username?.trim() || "Unknown author"}${selectedDocument.folder?.name ? ` • ${selectedDocument.folder.name}` : selectedDocument.id === selectedDocument.post.id ? " • Opened from app" : " • Saved posts"}`
+                    : "You can use any document opened from the app, and saved posts also appear here for quick access."}
+                </p>
+              </div>
+
+              {selectedDocument && conversation.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => void handleClearChat()}
+                  disabled={isClearingChat}
+                  className="shrink-0 rounded-full border border-black/8 bg-white px-3 py-2 text-xs font-medium text-[#202020] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isClearingChat ? "Clearing..." : "Clear chat"}
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div
@@ -976,7 +1193,7 @@ export default function HubPage() {
                   </h2>
                   <p className="mt-2 max-w-md text-sm leading-6 text-[#696969]">
                     Ask Ju Intelli about this document. Only this message area
-                    scrolls, and your chat is kept in local history.
+                    scrolls, and your chat is saved to your account history.
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     {PROMPT_SUGGESTIONS.map((suggestion) => (

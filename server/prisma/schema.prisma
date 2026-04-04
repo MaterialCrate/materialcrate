@@ -61,6 +61,7 @@ model User {
   seoAccounts   SeoAccount[]
   workspace     Workspace?
   archive       Archive?
+  hubChats      HubChat[]
   followerRelations Follow[] @relation("UserFollowers")
   followingRelations Follow[] @relation("UserFollowing")
   sentFollowRequests FollowRequest[] @relation("FollowRequestRequester")
@@ -135,6 +136,7 @@ model Post {
   comments   Comment[]
   savedInWorkspaces WorkspaceSavedPost[]
   savedInArchives ArchiveSavedPost[]
+  hubChats   HubChat[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -239,6 +241,23 @@ model ArchiveSavedPost {
 
   @@unique([archiveId, postId])
   @@index([archiveId, folderId])
+  @@index([postId])
+}
+
+model HubChat {
+  id            String   @id @default(cuid())
+  userId        String
+  postId        String
+  savedPostId   String?
+  documentTitle String
+  messages      Json     @default("[]")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, postId])
+  @@index([userId, updatedAt])
   @@index([postId])
 }
 
