@@ -525,16 +525,40 @@ export default function Home() {
           setEditingPost(null);
         }}
         onPostSaved={(savedPost, mode) => {
+          const normalizedSavedPost: HomePost = {
+            ...savedPost,
+            createdAt: savedPost.createdAt || new Date().toISOString(),
+            likeCount: savedPost.likeCount ?? 0,
+            commentCount: savedPost.commentCount ?? 0,
+            viewerHasLiked: Boolean(savedPost.viewerHasLiked),
+            isAuthorFollowedByCurrentUser:
+              savedPost.isAuthorFollowedByCurrentUser ?? false,
+            isAuthorMutedByCurrentUser:
+              savedPost.isAuthorMutedByCurrentUser ?? false,
+            isAuthorBlockedByCurrentUser:
+              savedPost.isAuthorBlockedByCurrentUser ?? false,
+            author: savedPost.author ||
+              (user
+                ? {
+                    id: user.id,
+                    displayName: user.displayName,
+                    username: user.username,
+                    profilePicture: user.profilePicture ?? null,
+                    subscriptionPlan: user.subscriptionPlan ?? "free",
+                  }
+                : null),
+          };
+
           if (mode === "edit") {
             setPosts((current) =>
               current.map((post) =>
-                post.id === savedPost.id ? savedPost : post,
+                post.id === normalizedSavedPost.id ? normalizedSavedPost : post,
               ),
             );
             return;
           }
 
-          setPosts((current) => [savedPost, ...current]);
+          setPosts((current) => [normalizedSavedPost, ...current]);
           setNextOffset((current) => current + 1);
         }}
       />

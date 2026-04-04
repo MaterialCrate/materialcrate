@@ -18,11 +18,7 @@ const ACTIVE_SUBSCRIPTION_STATUSES = new Set([
   "past_due",
   "paused",
 ]);
-const COMPLETED_TRANSACTION_STATUSES = new Set([
-  "completed",
-  "paid",
-  "billed",
-]);
+const COMPLETED_TRANSACTION_STATUSES = new Set(["completed", "paid", "billed"]);
 const getPaddleApiBase = () => {
   const environment = getOptionalEnv("PADDLE_ENVIRONMENT").toLowerCase();
   if (environment === "sandbox") {
@@ -276,7 +272,9 @@ export const createCustomerPortalUrlForUser = async (userId: string) => {
   }>(`/subscriptions/${encodeURIComponent(user.paddleSubscriptionId)}`);
 
   const portalUrl = findFirstUrl(
-    subscription?.management_urls || subscription?.managementUrls || subscription,
+    subscription?.management_urls ||
+      subscription?.managementUrls ||
+      subscription,
   );
 
   if (!portalUrl) {
@@ -345,16 +343,22 @@ const syncSubscriptionForUser = async (entity: any, eventType: string) => {
   const customUserId = String(
     customData?.userId || customData?.user_id || "",
   ).trim();
-  const customerId = String(entity?.customer_id || entity?.customerId || "").trim();
+  const customerId = String(
+    entity?.customer_id || entity?.customerId || "",
+  ).trim();
   const subscriptionId = String(
-    entity?.id?.startsWith?.("sub_") ? entity.id : entity?.subscription_id || entity?.subscriptionId || "",
+    entity?.id?.startsWith?.("sub_")
+      ? entity.id
+      : entity?.subscription_id || entity?.subscriptionId || "",
   ).trim();
   const status = String(entity?.status || "")
     .trim()
     .toLowerCase();
   const plan = resolvePlanFromEntity(entity);
   const priceId =
-    String(entity?.items?.[0]?.price?.id || entity?.items?.[0]?.price_id || "").trim() ||
+    String(
+      entity?.items?.[0]?.price?.id || entity?.items?.[0]?.price_id || "",
+    ).trim() ||
     getPlanPriceMap()[plan as PaidPlan] ||
     null;
   const nextBilledAt =
@@ -377,7 +381,9 @@ const syncSubscriptionForUser = async (entity: any, eventType: string) => {
   let user: any = null;
 
   if (customUserId) {
-    user = await (prisma as any).user.findUnique({ where: { id: customUserId } });
+    user = await (prisma as any).user.findUnique({
+      where: { id: customUserId },
+    });
   }
 
   if (!user && customerId) {
@@ -415,14 +421,15 @@ const syncSubscriptionForUser = async (entity: any, eventType: string) => {
   });
   const hasFutureScheduledChange = Boolean(
     scheduledChange.effectiveAt &&
-      scheduledChange.effectiveAt.getTime() > Date.now() &&
-      (scheduledChange.action || scheduledChange.pendingPlan),
+    scheduledChange.effectiveAt.getTime() > Date.now() &&
+    (scheduledChange.action || scheduledChange.pendingPlan),
   );
-  const nextPlan = hasFutureScheduledChange && shouldKeepPaidAccess
-    ? currentPlan
-    : shouldKeepPaidAccess
-      ? plan
-      : FREE_PLAN;
+  const nextPlan =
+    hasFutureScheduledChange && shouldKeepPaidAccess
+      ? currentPlan
+      : shouldKeepPaidAccess
+        ? plan
+        : FREE_PLAN;
   const nextEndsAt = toDateOrNull(nextBilledAt);
   const nextStartedAt =
     toDateOrNull(startedAt) ||
@@ -463,7 +470,9 @@ const syncSubscriptionForUser = async (entity: any, eventType: string) => {
 
 export const handlePaddleWebhook = async (rawBody: Buffer) => {
   const payload = JSON.parse(rawBody.toString("utf8")) as PaddleWebhookPayload;
-  const eventType = String(payload?.event_type || payload?.eventType || "").trim();
+  const eventType = String(
+    payload?.event_type || payload?.eventType || "",
+  ).trim();
   const data = payload?.data;
 
   if (!eventType || !data || typeof data !== "object") {

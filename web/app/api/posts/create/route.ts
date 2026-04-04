@@ -36,7 +36,19 @@ const CREATE_POST_MUTATION = `
       categories
       description
       year
+      pinned
       commentsDisabled
+      createdAt
+      likeCount
+      commentCount
+      viewerHasLiked
+      author {
+        id
+        displayName
+        username
+        profilePicture
+        subscriptionPlan
+      }
     }
   }
 `;

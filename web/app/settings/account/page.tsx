@@ -93,7 +93,10 @@ const getPendingSubscriptionCopy = ({
     };
   }
 
-  if (normalizedPendingPlan && normalizedPendingPlan !== normalizedCurrentPlan) {
+  if (
+    normalizedPendingPlan &&
+    normalizedPendingPlan !== normalizedCurrentPlan
+  ) {
     return {
       summary: `${formatSubscriptionPlan(normalizedPendingPlan)} pending${when}`,
       note: `Your plan stays on ${formatSubscriptionPlan(currentPlan)} until the change takes effect.`,

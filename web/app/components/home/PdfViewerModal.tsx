@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CloseCircle } from "iconsax-reactjs";
+import { useAuth } from "@/app/lib/auth-client";
 import type { HomePost } from "./Post";
-import { ExportSquare, CloseCircle } from "iconsax-reactjs";
 
 type PdfViewerModalProps = {
   post: HomePost | null;
@@ -34,6 +35,55 @@ export default function PdfViewerModal({
     : "";
 
   useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const preventContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+
+    const preventShortcutDownloadOrPrint = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if ((event.ctrlKey || event.metaKey) && (key === "s" || key === "p")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+
+    const hideBeforePrint = () => {
+      const container = canvasContainerRef.current;
+      if (container) {
+        container.style.visibility = "hidden";
+      }
+    };
+
+    const restoreAfterPrint = () => {
+      const container = canvasContainerRef.current;
+      if (container) {
+        container.style.visibility = "visible";
+      }
+    };
+
+    document.addEventListener("contextmenu", preventContextMenu);
+    window.addEventListener("keydown", preventShortcutDownloadOrPrint, true);
+    window.addEventListener("beforeprint", hideBeforePrint);
+    window.addEventListener("afterprint", restoreAfterPrint);
+
+    return () => {
+      document.removeEventListener("contextmenu", preventContextMenu);
+      window.removeEventListener(
+        "keydown",
+        preventShortcutDownloadOrPrint,
+        true,
+      );
+      window.removeEventListener("beforeprint", hideBeforePrint);
+      window.removeEventListener("afterprint", restoreAfterPrint);
+      restoreAfterPrint();
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
     const canvasContainer = canvasContainerRef.current;
 
     if (!isOpen || !proxiedFileUrl || !canvasContainer) {
@@ -53,7 +103,12 @@ export default function PdfViewerModal({
           import.meta.url,
         ).toString();
 
-        const response = await fetch(proxiedFileUrl, { cache: "no-store" });
+        const response = await fetch(proxiedFileUrl, {
+          cache: "no-store",
+          headers: {
+            "x-materialcrate-pdf-request": "viewer",
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to load PDF");
         }
@@ -73,7 +128,8 @@ export default function PdfViewerModal({
           const page = await pdf.getPage(pageNumber);
           const viewport = page.getViewport({ scale: 1.25 });
           const wrapper = document.createElement("div");
-          wrapper.className = "overflow-hidden rounded bg-white shadow-sm";
+          wrapper.className =
+            "relative overflow-hidden rounded bg-white shadow-sm select-none";
 
           const canvas = document.createElement("canvas");
           const context = canvas.getContext("2d");
@@ -84,8 +140,9 @@ export default function PdfViewerModal({
 
           canvas.width = viewport.width;
           canvas.height = viewport.height;
-          canvas.className = "h-auto w-full";
+          canvas.className = "h-auto w-full pointer-events-none";
           wrapper.appendChild(canvas);
+
           canvasContainer.appendChild(wrapper);
 
           await page.render({ canvas, canvasContext: context, viewport })
@@ -103,7 +160,7 @@ export default function PdfViewerModal({
         if (!isCancelled) {
           setPdfState({
             isLoading: false,
-            error: "Unable to render this PDF. Try opening it in a new tab.",
+            error: "Unable to render this protected PDF right now.",
             pageCount: 0,
           });
         }
@@ -121,7 +178,10 @@ export default function PdfViewerModal({
   if (!isOpen || !post) return null;
 
   return (
-    <div className="fixed inset-0 z-150 flex items-center justify-center px-4 py-6">
+    <div
+      className="fixed inset-0 z-150 flex items-center justify-center px-4 py-6"
+      onContextMenu={(event) => event.preventDefault()}
+    >
       <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[#F4F1EC] shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-black/8 px-5 py-4">
           <div className="min-w-0">
@@ -132,16 +192,11 @@ export default function PdfViewerModal({
               {post.categories.join(", ")}
               {pdfState.pageCount > 0 && ` • ${pdfState.pageCount} pages`}
             </p>
+            <p className="mt-1 text-xs font-medium text-[#A15D16]">
+              Protected view • download and print shortcuts are blocked in-app
+            </p>
           </div>
           <div className="flex items-center gap-2">
-            <a
-              title="Open in new tab"
-              href={proxiedFileUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <ExportSquare size={28} color="#E1761F" />
-            </a>
             <button type="button" aria-label="Close button" onClick={onClose}>
               <CloseCircle size={28} color="#333333" variant="Bold" />
             </button>

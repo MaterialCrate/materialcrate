@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 type PdfThumbnailProps = {
   postId: string;
-  fileUrl: string;
+  fileUrl?: string;
   thumbnailUrl?: string | null;
   title: string;
 };
@@ -23,7 +23,7 @@ export default function PdfThumbnail({
   const [imageFailed, setImageFailed] = useState(false);
   const proxiedFileUrl = postId
     ? `/api/posts/file?postId=${encodeURIComponent(postId)}`
-    : `/api/posts/file?url=${encodeURIComponent(fileUrl)}`;
+    : "";
   const canUseStoredThumbnail = Boolean(thumbnailUrl && !imageFailed);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function PdfThumbnail({
     }
 
     const canvas = canvasRef.current;
-    if (!canvas || !fileUrl) {
+    if (!canvas || !proxiedFileUrl) {
       setThumbnailState("error");
       return;
     }
@@ -54,7 +54,12 @@ export default function PdfThumbnail({
           import.meta.url,
         ).toString();
 
-        const response = await fetch(proxiedFileUrl, { cache: "no-store" });
+        const response = await fetch(proxiedFileUrl, {
+          cache: "no-store",
+          headers: {
+            "x-materialcrate-pdf-request": "viewer",
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to load PDF");
         }
@@ -99,7 +104,7 @@ export default function PdfThumbnail({
       const context = canvas.getContext("2d");
       context?.clearRect(0, 0, canvas.width, canvas.height);
     };
-  }, [canUseStoredThumbnail, fileUrl, proxiedFileUrl]);
+  }, [canUseStoredThumbnail, proxiedFileUrl]);
 
   return (
     <div className="relative h-40 w-28 shrink-0 overflow-hidden rounded-sm bg-[#E8E8E8]">

@@ -7,6 +7,7 @@ import {
   Heart,
   Messages2,
   Archive,
+  ArrowDown2,
   User,
   Verify,
   Location,
@@ -72,6 +73,7 @@ type PendingProtectedAction =
   | "comment"
   | "archive-add"
   | "archive-remove"
+  | "download"
   | null;
 
 const POST_ACTIVITY_REFRESH_WINDOW_MS = 15000;
@@ -145,6 +147,7 @@ export default function Post({
     Boolean(post.viewerHasLiked),
   );
   const [isLiking, setIsLiking] = useState<boolean>(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [isNearViewport, setIsNearViewport] = useState(false);
   const [alertState, setAlertState] = useState<{
     message: string | null;
@@ -401,6 +404,60 @@ export default function Post({
     }
   }, [post.id, showAlert]);
 
+  const handleDownload = useCallback(
+    async (skipAuthCheck = false) => {
+      if (isDownloading) return;
+      if (!skipAuthCheck && !ensureAuthenticated("download")) return;
+
+      setIsDownloading(true);
+      try {
+        const response = await fetch(
+          `/api/posts/file?postId=${encodeURIComponent(post.id)}`,
+          {
+            method: "GET",
+            cache: "no-store",
+            headers: {
+              "x-materialcrate-pdf-request": "download",
+            },
+          },
+        );
+
+        const errorBody = await response
+          .clone()
+          .json()
+          .catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(errorBody?.error || "Failed to download document");
+        }
+
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        const safeTitle = (post.title?.trim() || "materialcrate-document")
+          .replace(/[<>:"/\\|?*]+/g, "_")
+          .replace(/\s+/g, " ");
+        const fileName = safeTitle.toLowerCase().endsWith(".pdf")
+          ? safeTitle
+          : `${safeTitle}.pdf`;
+
+        anchor.href = downloadUrl;
+        anchor.download = fileName;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+
+        showAlert("Download started", "success");
+      } catch (error) {
+        console.error("Failed to download post:", error);
+        showAlert("Failed to download document", "error");
+      } finally {
+        setIsDownloading(false);
+      }
+    },
+    [ensureAuthenticated, isDownloading, post.id, post.title, showAlert],
+  );
+
   useEffect(() => {
     if (isLoading || !pendingProtectedAction) return;
 
@@ -430,8 +487,14 @@ export default function Post({
 
     if (action === "archive-remove") {
       onArchiveRemoveClick?.(post);
+      return;
+    }
+
+    if (action === "download") {
+      void handleDownload(true);
     }
   }, [
+    handleDownload,
     handleLike,
     isLoading,
     onArchiveClick,
@@ -444,171 +507,199 @@ export default function Post({
   ]);
 
   return (
-    <div ref={postCardRef} className="mt-4 space-y-2">
+    <div ref={postCardRef} className="mt-4">
       <Alert message={alertState.message} type={alertState.type} />
-      <div className="flex justify-between items-start px-6">
-        <button
-          type="button"
-          className="flex items-center space-x-2 text-left"
-          onClick={() => {
-            if (!authorRoute) return;
-            router.push(authorRoute);
-          }}
-          disabled={!authorRoute}
-        >
-          <div className="w-10 h-10 aspect-square bg-[#F3F3F3] rounded-full flex items-center justify-center overflow-hidden">
-            {authorProfilePicture ? (
-              <Image
-                src={authorProfilePicture}
-                alt={`${authorFullName}'s profile picture`}
-                className="object-cover rounded-full"
-                width={40}
-                height={40}
-                unoptimized
-              />
-            ) : (
-              <User size={18} color="#808080" variant="Bold" />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-0.5">
-              <p className="font-medium text-[#202020]">{authorFullName}</p>
-              {hasPaidPlan && <Verify size={18} color="#E1761F" variant="Bold" />}
+      <article className="overflow-hidden rounded-[26px] border border-black/6 bg-white shadow-[0_14px_34px_rgba(0,0,0,0.05)]">
+        <div className="flex items-start justify-between gap-3 px-5 pt-5">
+          <button
+            type="button"
+            className="flex min-w-0 items-center gap-3 text-left"
+            onClick={() => {
+              if (!authorRoute) return;
+              router.push(authorRoute);
+            }}
+            disabled={!authorRoute}
+          >
+            <div className="flex h-11 w-11 aspect-square items-center justify-center overflow-hidden rounded-full bg-[#F3F3F3] ring-1 ring-black/5">
+              {authorProfilePicture ? (
+                <Image
+                  src={authorProfilePicture}
+                  alt={`${authorFullName}'s profile picture`}
+                  className="rounded-full object-cover"
+                  width={44}
+                  height={44}
+                  unoptimized
+                />
+              ) : (
+                <User size={18} color="#808080" variant="Bold" />
+              )}
             </div>
-            <div className="text-[#8C8C8C] text-xs font-medium flex items-center gap-1.5">
-              <p>{authorUsername}</p>
-              <p>&bull;</p>
-              <p>{createdLabel}</p>
-              {showPinnedIndicator && post.pinned && (
-                <>
-                  <p>&bull;</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1">
+                <p className="truncate text-sm font-semibold text-[#202020]">
+                  {authorFullName}
+                </p>
+                {hasPaidPlan && (
+                  <Verify size={16} color="#E1761F" variant="Bold" />
+                )}
+              </div>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-medium text-[#8C8C8C]">
+                <span>{authorUsername}</span>
+                <span>&bull;</span>
+                <span>{createdLabel}</span>
+                {showPinnedIndicator && post.pinned && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF3E7] px-2 py-0.5 text-[#E1761F]">
                     <Location size={12} color="#E1761F" variant="Bold" />
                     <span>Pinned</span>
                   </span>
-                </>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        </button>
-        <button
-          ref={optionsButtonRef}
-          type="button"
-          aria-label="Post options"
-          onClick={() => {
-            const rect = optionsButtonRef.current?.getBoundingClientRect();
-            if (!rect) return;
-            onOptionsClick?.(post, {
-              top: rect.top,
-              right: rect.right,
-              bottom: rect.bottom,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-            });
-          }}
-        >
-          <More size={20} color="#959595" />
-        </button>
-      </div>
-      {post.description && (
-        <div className="px-6">
-          <p className="text-[#373737] text-sm">{post.description}</p>
-        </div>
-      )}
-      <div className="overflow-y-scroll flex gap-3 px-6">
-        <button
-          type="button"
-          aria-label={`Open ${post.title}`}
-          onClick={() => onFileClick?.(post)}
-          className="bg-[#F3F3F3] h-45 w-full rounded-2xl p-2 flex items-center gap-4"
-        >
-          <PdfThumbnail
-            postId={post.id}
-            fileUrl={post.fileUrl}
-            thumbnailUrl={post.thumbnailUrl}
-            title={post.title}
-          />
-          <div className="space-y-1 text-left h-full">
-            <p className="text-[#202020] font-medium text-sm">{post.title}</p>
-            <div className="text-[#8C8C8C] text-xs font-medium flex items-start gap-1.5">
-              <p className="">{post.categories.join(", ")}</p>
-              {post.year && (
-                <>
-                  <p>&bull;</p>
-                  <p>{post.year}</p>
-                </>
-              )}
-            </div>
-          </div>
-        </button>
-      </div>
-      <div className="flex items-center justify-between px-6">
-        <div className="flex items-center gap-10">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 disabled:opacity-60"
-            onClick={() => {
-              void handleLike();
-            }}
-            disabled={isLiking}
-          >
-            <Heart
-              size={20}
-              color={viewerHasLiked ? "#E00505" : "#808080"}
-              variant={viewerHasLiked ? "Bold" : "Linear"}
-            />
-            <p className="text-[#808080] text-xs">{likeCount}</p>
           </button>
           <button
+            ref={optionsButtonRef}
             type="button"
-            className="flex items-center gap-1.5"
+            aria-label="Post options"
             onClick={() => {
-              if (!ensureAuthenticated("comment")) return;
-              onCommentClick?.(post);
+              const rect = optionsButtonRef.current?.getBoundingClientRect();
+              if (!rect) return;
+              onOptionsClick?.(post, {
+                top: rect.top,
+                right: rect.right,
+                bottom: rect.bottom,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+              });
             }}
+            className="rounded-full bg-[#F7F7F7] p-2 transition hover:bg-[#EFEFEF]"
           >
-            <Messages2 size={20} color="#808080" />
-            <p className="text-[#808080] text-xs">{commentCount}</p>
-          </button>
-          <button
-            aria-label="Archive"
-            type="button"
-            className={`flex items-center gap-1.5 rounded-full px-3 py-2 transition-colors 
-           ${isArchiveBusy && "opacity-60"}`}
-            disabled={isArchiveBusy}
-            onClick={() => {
-              if (
-                !ensureAuthenticated(
-                  isArchived ? "archive-remove" : "archive-add",
-                )
-              ) {
-                return;
-              }
-              if (isArchived) {
-                onArchiveRemoveClick?.(post);
-                return;
-              }
-              onArchiveClick?.(post);
-            }}
-          >
-            <Archive
-              size={20}
-              color={isArchived ? "#E1761F" : "#808080"}
-              variant={isArchived ? "Bold" : "Linear"}
-            />
+            <More size={18} color="#6F6F6F" />
           </button>
         </div>
-        <button
-          type="button"
-          aria-label="share"
-          onClick={() => {
-            void copyPostLink();
-          }}
-        >
-          <Send2 size={20} color="#808080" />
-        </button>
-      </div>
+
+        {post.description && (
+          <p className="px-5 pt-3 text-sm leading-6 text-[#373737]">
+            {post.description}
+          </p>
+        )}
+
+        <div className="px-5 pt-4">
+          <button
+            type="button"
+            aria-label={`Open ${post.title}`}
+            onClick={() => onFileClick?.(post)}
+            className="group flex w-full items-center gap-4 rounded-[22px] bg-[#F6F3EE] p-3 text-left transition hover:bg-[#F2ECE4]"
+          >
+            <PdfThumbnail
+              postId={post.id}
+              fileUrl={post.fileUrl}
+              thumbnailUrl={post.thumbnailUrl}
+              title={post.title}
+            />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {post.categories.map((category) => (
+                  <span
+                    key={category}
+                    className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8A5A2B]"
+                  >
+                    {category}
+                  </span>
+                ))}
+                {post.year && (
+                  <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6A6A6A]">
+                    {post.year}
+                  </span>
+                )}
+              </div>
+              <p className="line-clamp-2 text-sm font-semibold text-[#202020]">
+                {post.title}
+              </p>
+              <p className="text-xs text-[#7B7B7B]">
+                Open document preview inside Material Crate.
+              </p>
+            </div>
+          </button>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-black/6 px-5 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition disabled:opacity-60 ${
+                viewerHasLiked
+                  ? "bg-[#FDE9E9] text-[#C53B3B]"
+                  : "bg-[#F6F6F6] text-[#666666] hover:bg-[#EEEEEE]"
+              }`}
+              onClick={() => {
+                void handleLike();
+              }}
+              disabled={isLiking}
+            >
+              <Heart
+                size={18}
+                color={viewerHasLiked ? "#E00505" : "#808080"}
+                variant={viewerHasLiked ? "Bold" : "Linear"}
+              />
+              <span>{likeCount}</span>
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:bg-[#EEEEEE]"
+              onClick={() => {
+                if (!ensureAuthenticated("comment")) return;
+                onCommentClick?.(post);
+              }}
+            >
+              <Messages2 size={18} color="#808080" />
+              <span>{commentCount}</span>
+            </button>
+            <button
+              aria-label="Archive"
+              type="button"
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition ${
+                isArchived
+                  ? "bg-[#FFF3E7] text-[#E1761F]"
+                  : "bg-[#F6F6F6] text-[#666666] hover:bg-[#EEEEEE]"
+              } ${isArchiveBusy ? "opacity-60" : ""}`}
+              disabled={isArchiveBusy}
+              onClick={() => {
+                if (
+                  !ensureAuthenticated(
+                    isArchived ? "archive-remove" : "archive-add",
+                  )
+                ) {
+                  return;
+                }
+                if (isArchived) {
+                  onArchiveRemoveClick?.(post);
+                  return;
+                }
+                onArchiveClick?.(post);
+              }}
+            >
+              <Archive
+                size={18}
+                color={isArchived ? "#E1761F" : "#808080"}
+                variant={isArchived ? "Bold" : "Linear"}
+              />
+              <span>{isArchived ? "Saved" : "Save"}</span>
+            </button>
+          </div>
+          <button
+            type="button"
+            aria-label="Share post"
+            onClick={() => {
+              void copyPostLink();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:bg-[#EEEEEE]"
+          >
+            <Send2 size={18} color="#808080" />
+            <span>Share</span>
+          </button>
+        </div>
+      </article>
     </div>
   );
 }
