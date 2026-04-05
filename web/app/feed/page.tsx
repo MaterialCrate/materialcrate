@@ -36,7 +36,7 @@ const NOTIFICATION_INDICATOR_MIN_REFRESH_INTERVAL_MS = 1500;
 
 export default function Home() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: isLoadingAuth } = useAuth();
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<HomePost | null>(null);
@@ -76,7 +76,37 @@ export default function Home() {
   const notificationRefreshTimeoutRef = useRef<number | null>(null);
   const lastNotificationRefreshAtRef = useRef(0);
 
+  const requireAuthenticatedAccess = useCallback(() => {
+    if (isLoadingAuth) {
+      return false;
+    }
+
+    if (user) {
+      return true;
+    }
+
+    setMoreOptionsOpen(false);
+    setIsUploadDrawerOpen(false);
+    setEditingPost(null);
+    setIsCommentDrawerOpen(false);
+    setIsPostOptionsDrawerOpen(false);
+    setIsArchiveDrawerOpen(false);
+    setActiveCommentPostId(null);
+    setActiveCommentPost(null);
+    setActiveOptionsPost(null);
+    setActiveOptionsAnchor(null);
+    setActiveArchivePost(null);
+    setActivePdfPost(null);
+    router.push("/login");
+    return false;
+  }, [isLoadingAuth, router, user]);
+
   const refreshNotificationIndicators = useCallback(async () => {
+    if (!user?.id) {
+      setUnreadNotificationCount(0);
+      setHasUnopenedNotifications(false);
+      return;
+    }
     try {
       const response = await fetch(
         "/api/notifications?limit=100&unreadOnly=true",
@@ -119,7 +149,7 @@ export default function Home() {
         notifications.length > 0 && newestUnreadAt > lastOpenedAt,
       );
     } catch {}
-  }, []);
+  }, [user?.id]);
 
   const scheduleNotificationIndicatorRefresh = useCallback(
     (delay = NOTIFICATION_INDICATOR_REFRESH_DEBOUNCE_MS) => {
@@ -665,6 +695,10 @@ export default function Home() {
           aria-label="Upload button"
           type="button"
           onClick={() => {
+            if (!requireAuthenticatedAccess()) {
+              return;
+            }
+
             setEditingPost(null);
             setIsUploadDrawerOpen(true);
             setIsPostOptionsDrawerOpen(false);
@@ -696,6 +730,10 @@ export default function Home() {
               : "opacity-0 translate-x-3 scale-95 pointer-events-none"
           }`}
           onClick={() => {
+            if (!requireAuthenticatedAccess()) {
+              return;
+            }
+
             if (typeof window !== "undefined") {
               window.localStorage.setItem(
                 NOTIFICATIONS_LAST_OPENED_AT_STORAGE_KEY,

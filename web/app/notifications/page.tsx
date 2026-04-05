@@ -157,7 +157,7 @@ const getGroupLabel = (time: string) => {
 
 export default function Page() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: isLoadingAuth } = useAuth();
   const [notifications, setNotifications] = React.useState<
     ApiNotificationItem[]
   >([]);
@@ -165,6 +165,12 @@ export default function Page() {
   const [error, setError] = React.useState<string | null>(null);
   const realtimeRefreshTimeoutRef = React.useRef<number | null>(null);
   const lastRealtimeRefreshAtRef = React.useRef(0);
+
+  React.useEffect(() => {
+    if (!isLoadingAuth && !user) {
+      router.replace("/login");
+    }
+  }, [isLoadingAuth, router, user]);
 
   const formatNotificationTime = (value: string) => {
     const parsed = new Date(value);
@@ -183,6 +189,15 @@ export default function Page() {
   const fetchNotifications = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
       try {
+        if (!user?.id) {
+          setNotifications([]);
+          setError(null);
+          if (!silent) {
+            setIsLoading(false);
+          }
+          return;
+        }
+
         if (!silent) {
           setIsLoading(true);
         }
@@ -215,7 +230,7 @@ export default function Page() {
         }
       }
     },
-    [],
+    [user?.id],
   );
 
   const notificationGroups = useMemo(() => {

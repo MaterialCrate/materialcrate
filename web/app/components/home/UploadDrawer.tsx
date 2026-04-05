@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowDown2,
   CloseCircle,
@@ -13,6 +14,7 @@ import {
   POST_CATEGORIES,
   normalizeAllowedCategory,
 } from "@/app/lib/post-categories";
+import { useAuth } from "@/app/lib/auth-client";
 import ActionButton from "../ActionButton";
 import Alert from "../Alert";
 import type { HomePost } from "./Post";
@@ -32,6 +34,8 @@ export default function UploadDrawer({
   post,
   onPostSaved,
 }: UploadDrawerProps) {
+  const router = useRouter();
+  const { user, isLoading: isLoadingAuth } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState<string>("");
   const [categoryQuery, setCategoryQuery] = useState<string>("");
@@ -50,6 +54,7 @@ export default function UploadDrawer({
   const [thumbnailBase64, setThumbnailBase64] = useState<string | null>(null);
   const [isGeneratingThumbnail, setIsGeneratingThumbnail] =
     useState<boolean>(false);
+  const thumbnailRequestIdRef = useRef(0);
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 60 }, (_, index) =>
     String(currentYear - index),
@@ -57,8 +62,18 @@ export default function UploadDrawer({
   const isEditMode = Boolean(post);
 
   useEffect(() => {
+    if (!isOpen || isLoadingAuth) return;
+
+    if (!user) {
+      onClose();
+      router.push("/login");
+    }
+  }, [isLoadingAuth, isOpen, onClose, router, user]);
+
+  useEffect(() => {
     if (!isOpen) return;
 
+    thumbnailRequestIdRef.current += 1;
     setAlertMessage("");
     setAlertType("error");
     setIsPublishing(false);
@@ -83,6 +98,7 @@ export default function UploadDrawer({
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
     if (file && file.size > MAX_UPLOAD_FILE_BYTES) {
+      thumbnailRequestIdRef.current += 1;
       setAlertType("error");
       setAlertMessage("File size exceeds 20MB limit.");
       setSelectedFile(null);
@@ -100,27 +116,41 @@ export default function UploadDrawer({
     event.target.value = "";
 
     if (!file) {
+      thumbnailRequestIdRef.current += 1;
       setIsGeneratingThumbnail(false);
       return;
     }
 
+    const requestId = thumbnailRequestIdRef.current + 1;
+    thumbnailRequestIdRef.current = requestId;
     setIsGeneratingThumbnail(true);
 
-    try {
-      const nextThumbnailBase64 = await createPdfThumbnailBase64(file);
-      setThumbnailBase64(nextThumbnailBase64);
-    } catch {
-      setThumbnailBase64(null);
-    } finally {
-      setIsGeneratingThumbnail(false);
-    }
+    void (async () => {
+      try {
+        const nextThumbnailBase64 = await createPdfThumbnailBase64(file);
+        if (thumbnailRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setThumbnailBase64(nextThumbnailBase64);
+      } catch {
+        if (thumbnailRequestIdRef.current !== requestId) {
+          return;
+        }
+
+        setThumbnailBase64(null);
+      } finally {
+        if (thumbnailRequestIdRef.current === requestId) {
+          setIsGeneratingThumbnail(false);
+        }
+      }
+    })();
   }
 
   const disabled =
     title.length < 3 ||
     selectedCategories.length === 0 ||
     isPublishing ||
-    isGeneratingThumbnail ||
     (!isEditMode && !selectedFile);
 
   const filteredCategoryOptions = POST_CATEGORIES.filter((categoryOption) => {
@@ -315,7 +345,7 @@ export default function UploadDrawer({
                           </p>
                           {isGeneratingThumbnail && (
                             <p className="text-[#B0B0B0] text-[10px] font-medium">
-                              Generating preview...
+                              Generating preview… you can still publish now.
                             </p>
                           )}
                         </div>
@@ -324,6 +354,7 @@ export default function UploadDrawer({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
+                          thumbnailRequestIdRef.current += 1;
                           setSelectedFile(null);
                           setThumbnailBase64(null);
                           setIsGeneratingThumbnail(false);
@@ -489,15 +520,13 @@ export default function UploadDrawer({
             onClick={handlePublish}
             disabled={disabled}
           >
-            {isGeneratingThumbnail
-              ? "Preparing preview..."
-              : isPublishing
-                ? isEditMode
-                  ? "Saving..."
-                  : "Publishing..."
-                : isEditMode
-                  ? "Save changes"
-                  : "Publish"}
+            {isPublishing
+              ? isEditMode
+                ? "Saving..."
+                : "Publishing..."
+              : isEditMode
+                ? "Save changes"
+                : "Publish"}
           </ActionButton>
         </div>
       </div>
