@@ -429,9 +429,7 @@ export default function Page() {
       });
       setSuccessMessage("Profile updated successfully.");
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save profile",
-      );
+      setError(err instanceof Error ? err.message : "Failed to save profile");
       console.error("Failed to save profile", err);
     } finally {
       setIsSubmitChecking(false);

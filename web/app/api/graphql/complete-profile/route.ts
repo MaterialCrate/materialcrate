@@ -92,7 +92,8 @@ export async function POST(req: Request) {
     body.username = typeof username === "string" ? username : undefined;
     body.displayName =
       typeof displayName === "string" ? displayName : undefined;
-    body.institution = typeof institution === "string" ? institution : undefined;
+    body.institution =
+      typeof institution === "string" ? institution : undefined;
     body.program = typeof program === "string" ? program : undefined;
     body.profileBackground =
       typeof profileBackground === "string" ? profileBackground : undefined;
@@ -113,7 +114,8 @@ export async function POST(req: Request) {
       }
 
       const arrayBuffer = await file.arrayBuffer();
-      body.profilePictureFileBase64 = Buffer.from(arrayBuffer).toString("base64");
+      body.profilePictureFileBase64 =
+        Buffer.from(arrayBuffer).toString("base64");
       body.profilePictureFileName = file.name;
       body.profilePictureMimeType = file.type;
     }
@@ -150,8 +152,7 @@ export async function POST(req: Request) {
   if (!body.username || !body.displayName || !body.institution) {
     return NextResponse.json(
       {
-        error:
-          "Username, display name, and institution are required",
+        error: "Username, display name, and institution are required",
       },
       { status: 400 },
     );

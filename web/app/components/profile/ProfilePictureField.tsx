@@ -209,7 +209,9 @@ export default function ProfilePictureField({
       handleCancelCrop();
     } catch (cropError: unknown) {
       onError(
-        cropError instanceof Error ? cropError.message : "Failed to crop image.",
+        cropError instanceof Error
+          ? cropError.message
+          : "Failed to crop image.",
       );
     }
   };
