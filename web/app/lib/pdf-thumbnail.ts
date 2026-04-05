@@ -4,19 +4,29 @@ const THUMBNAIL_WIDTH = 280;
 const THUMBNAIL_WEBP_QUALITY = 0.82;
 const THUMBNAIL_GENERATION_TIMEOUT_MS = 8000;
 
-const isLegacyIOSDevice = () => {
+const isUnsupportedBrowser = () => {
   if (typeof navigator === "undefined") {
     return false;
   }
 
-  const userAgent = navigator.userAgent || "";
-  if (!/(iPhone|iPad|iPod)/i.test(userAgent)) {
-    return false;
+  const ua = navigator.userAgent || "";
+
+  // Detect iOS <= 15 (any browser on iOS uses WebKit)
+  if (/(iPhone|iPad|iPod)/i.test(ua)) {
+    const match = ua.match(/OS (\d+)[._]/i);
+    const ver = Number.parseInt(match?.[1] || "", 10);
+    if (Number.isFinite(ver) && ver <= 15) return true;
   }
 
-  const match = userAgent.match(/OS (\d+)[._]/i);
-  const majorVersion = Number.parseInt(match?.[1] || "", 10);
-  return Number.isFinite(majorVersion) && majorVersion <= 15;
+  // Detect old desktop Safari (< 16) — lacks module worker support
+  // Safari UA contains "Version/X.Y Safari/" but NOT "Chrome" or "Chromium"
+  if (/Safari\//i.test(ua) && !/Chrome|Chromium|Edg|OPR/i.test(ua)) {
+    const match = ua.match(/Version\/(\d+)/i);
+    const ver = Number.parseInt(match?.[1] || "", 10);
+    if (Number.isFinite(ver) && ver < 16) return true;
+  }
+
+  return false;
 };
 
 const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number) => {
@@ -57,7 +67,7 @@ const canvasToBlob = (canvas: HTMLCanvasElement) =>
 export async function createPdfThumbnailBase64(
   file: File,
 ): Promise<string | null> {
-  if (typeof window === "undefined" || isLegacyIOSDevice()) {
+  if (typeof window === "undefined" || isUnsupportedBrowser()) {
     return null;
   }
 

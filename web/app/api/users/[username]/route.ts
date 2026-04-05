@@ -19,6 +19,7 @@ const USER_BY_USERNAME_QUERY = `
       followersCount
       followingCount
       subscriptionPlan
+      isBot
       institution
       institutionVisibility
       program
@@ -50,6 +51,7 @@ const LEGACY_USER_BY_USERNAME_QUERY = `
       followersCount
       followingCount
       subscriptionPlan
+      isBot
       institution
       program
       createdAt

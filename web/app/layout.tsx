@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Inter, Libre_Baskerville } from "next/font/google";
 import AuthSplashGate from "./components/AuthSplashGate";
@@ -22,6 +22,13 @@ const libreBaskerville = Libre_Baskerville({
   variable: "--font-libre-baskerville",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "Material Crate",
   description: "Home to your studies.",
@@ -31,7 +38,6 @@ export const metadata: Metadata = {
     apple: [{ url: "/logo.png", type: "image/png" }],
   },
 };
-
 
 const themeInitScript = `
   try {

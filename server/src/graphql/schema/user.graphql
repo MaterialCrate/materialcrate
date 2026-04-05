@@ -44,6 +44,7 @@ type User {
   institutionVisibility: String!
   program: String
   programVisibility: String!
+  isBot: Boolean!
   createdAt: String
 }
 

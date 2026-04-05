@@ -1,0 +1,25 @@
+extend type Mutation {
+  adminCreateBot(
+    username: String!
+    displayName: String!
+    institution: String
+    program: String
+    profilePicture: String
+  ): User!
+
+  adminCreatePostAsBot(
+    botId: ID!
+    fileBase64: String!
+    thumbnailBase64: String
+    fileName: String!
+    mimeType: String!
+    title: String!
+    categories: [String!]!
+    description: String
+    year: Int
+  ): Post!
+}
+
+extend type Query {
+  adminListBots: [User!]!
+}

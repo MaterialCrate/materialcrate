@@ -28,6 +28,7 @@ const TOGGLE_POST_COMMENTS_MUTATION = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }
@@ -78,4 +79,3 @@ export async function POST(req: Request) {
     post: graphqlBody?.data?.togglePostComments ?? null,
   });
 }
-

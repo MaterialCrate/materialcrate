@@ -28,6 +28,7 @@ const PIN_POST_MUTATION = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }
@@ -76,4 +77,3 @@ export async function POST(req: Request) {
     post: graphqlBody?.data?.pinPostToProfile ?? null,
   });
 }
-

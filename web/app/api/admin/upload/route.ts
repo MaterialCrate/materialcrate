@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { normalizeAllowedCategory } from "@/app/lib/post-categories";
+import { ADMIN_COOKIE_NAME, verifyAdminToken } from "@/app/lib/admin-auth";
 
 export const runtime = "nodejs";
 
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
+const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";
 const MAX_UPLOAD_FILE_BYTES = 20 * 1024 * 1024;
 
-const CREATE_POST_MUTATION = `
-  mutation CreatePost(
+const ADMIN_CREATE_POST_MUTATION = `
+  mutation AdminCreatePostAsBot(
+    $botId: ID!
     $fileBase64: String!
     $thumbnailBase64: String
     $fileName: String!
@@ -19,7 +21,8 @@ const CREATE_POST_MUTATION = `
     $description: String
     $year: Int
   ) {
-    createPost(
+    adminCreatePostAsBot(
+      botId: $botId
       fileBase64: $fileBase64
       thumbnailBase64: $thumbnailBase64
       fileName: $fileName
@@ -36,18 +39,12 @@ const CREATE_POST_MUTATION = `
       categories
       description
       year
-      pinned
-      commentsDisabled
       createdAt
-      likeCount
-      commentCount
-      viewerHasLiked
       author {
         id
         displayName
         username
         profilePicture
-        subscriptionPlan
         isBot
       }
     }
@@ -56,18 +53,26 @@ const CREATE_POST_MUTATION = `
 
 export async function POST(req: Request) {
   const cookieStore = await cookies();
-  const token = cookieStore.get("mc_session")?.value;
-  if (!token) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
+  if (!token || !verifyAdminToken(token)) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 401 });
   }
 
   const formData = await req.formData();
+  const botId = formData.get("botId");
   const file = formData.get("file");
   const title = formData.get("title");
   const rawCategories = formData.getAll("categories");
   const description = formData.get("description");
   const thumbnailBase64 = formData.get("thumbnailBase64");
   const yearValue = formData.get("year");
+
+  if (typeof botId !== "string" || !botId.trim()) {
+    return NextResponse.json(
+      { error: "Bot selection is required" },
+      { status: 400 },
+    );
+  }
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "File is required" }, { status: 400 });
@@ -80,45 +85,45 @@ export async function POST(req: Request) {
     );
   }
 
-  if (typeof title !== "string") {
-    return NextResponse.json({ error: "Title is required" }, { status: 400 });
+  if (typeof title !== "string" || title.trim().length < 3) {
+    return NextResponse.json(
+      { error: "Title must be at least 3 characters" },
+      { status: 400 },
+    );
   }
 
-  const normalizedCategories = rawCategories
-    .map((c) => (typeof c === "string" ? normalizeAllowedCategory(c) : null))
-    .filter(Boolean) as string[];
+  const categories = rawCategories
+    .map((c) => (typeof c === "string" ? c.trim() : ""))
+    .filter(Boolean);
 
-  if (normalizedCategories.length === 0 || normalizedCategories.length > 3) {
+  if (categories.length === 0 || categories.length > 3) {
     return NextResponse.json(
-      { error: "Please select between 1 and 3 valid categories" },
+      { error: "Select between 1 and 3 categories" },
       { status: 400 },
     );
   }
 
   const arrayBuffer = await file.arrayBuffer();
   const fileBase64 = Buffer.from(arrayBuffer).toString("base64");
+
   let parsedYear: number | null = null;
   if (typeof yearValue === "string" && yearValue.trim().length) {
-    const trimmedYear = yearValue.trim();
-    if (!/^\d{4}$/.test(trimmedYear)) {
-      return NextResponse.json(
-        { error: "Year must be a 4-digit number" },
-        { status: 400 },
-      );
+    const trimmed = yearValue.trim();
+    if (/^\d{4}$/.test(trimmed)) {
+      parsedYear = Number.parseInt(trimmed, 10);
     }
-
-    parsedYear = Number.parseInt(trimmedYear, 10);
   }
 
-  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
+  const res = await fetch(GRAPHQL_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      "x-admin-secret": ADMIN_SECRET,
     },
     body: JSON.stringify({
-      query: CREATE_POST_MUTATION,
+      query: ADMIN_CREATE_POST_MUTATION,
       variables: {
+        botId: botId.trim(),
         fileBase64,
         thumbnailBase64:
           typeof thumbnailBase64 === "string" && thumbnailBase64.trim()
@@ -127,7 +132,7 @@ export async function POST(req: Request) {
         fileName: file.name,
         mimeType: file.type || "application/pdf",
         title: title.trim(),
-        categories: normalizedCategories,
+        categories,
         description:
           typeof description === "string" ? description.trim() : null,
         year: Number.isFinite(parsedYear) ? parsedYear : null,
@@ -135,17 +140,17 @@ export async function POST(req: Request) {
     }),
   });
 
-  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
+  const body = await res.json().catch(() => ({}));
 
-  if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+  if (!res.ok || body?.errors?.length) {
     return NextResponse.json(
-      {
-        error: graphqlBody?.errors?.[0]?.message || "Failed to create post",
-        details: graphqlBody?.errors ?? null,
-      },
+      { error: body?.errors?.[0]?.message || "Failed to upload post" },
       { status: 400 },
     );
   }
 
-  return NextResponse.json({ ok: true, post: graphqlBody?.data?.createPost });
+  return NextResponse.json({
+    ok: true,
+    post: body?.data?.adminCreatePostAsBot,
+  });
 }

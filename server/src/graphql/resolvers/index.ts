@@ -1,4 +1,5 @@
 import { UserResolver } from "./user.resolver.js";
+import { AdminResolver } from "./admin.resolver.js";
 import { ArchiveResolver } from "./archive.resolver.js";
 import { HubChatResolver } from "./hub-chat.resolver.js";
 import { PostResolver } from "./post.resolver.js";
@@ -16,6 +17,7 @@ export const resolvers = {
     ...WorkspaceResolver.Query,
     ...NotificationResolver.Query,
     ...ReportResolver.Query,
+    ...AdminResolver.Query,
   },
   Mutation: {
     ...UserResolver.Mutation,
@@ -26,6 +28,7 @@ export const resolvers = {
     ...NotificationResolver.Mutation,
     ...ReportResolver.Mutation,
     ...SupportResolver.Mutation,
+    ...AdminResolver.Mutation,
   },
   Post: {
     ...PostResolver.Post,

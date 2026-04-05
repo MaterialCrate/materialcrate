@@ -26,6 +26,7 @@ const POST_QUERY = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }
@@ -62,6 +63,7 @@ const AUTHENTICATED_POST_QUERY = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }

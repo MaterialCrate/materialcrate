@@ -28,6 +28,7 @@ type ProfileUser = {
   followersCount?: number | null;
   followingCount?: number | null;
   subscriptionPlan?: string | null;
+  isBot?: boolean;
   institution?: string | null;
   institutionVisibility?: string | null;
   program?: string | null;
@@ -584,6 +585,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         followers={followerCount}
         following={followingCount}
         subscriptionPlan={profile?.subscriptionPlan ?? "free"}
+        isBot={profile?.isBot ?? false}
         institution={profile?.institution}
         institutionVisible={showInstitution}
         program={profile?.program}

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Edit2, Setting2, Verify } from "iconsax-reactjs";
+import { Edit2, Setting2, Verify, Cpu } from "iconsax-reactjs";
 import proStar from "@/assets/icons/pro-star.svg";
 import {
   getProfileBackgroundPresentation,
@@ -24,6 +24,7 @@ type ProfileHeaderProps = {
   followers?: number;
   following?: number;
   subscriptionPlan?: string | null;
+  isBot?: boolean;
   institution?: string | null;
   institutionVisible?: boolean;
   program?: string | null;
@@ -46,6 +47,7 @@ export default function Header({
   followers = 0,
   following = 0,
   subscriptionPlan = "free",
+  isBot = false,
   institution,
   institutionVisible = true,
   program,
@@ -146,9 +148,11 @@ export default function Header({
                 >
                   {displayName}
                 </p>
-                {hasPaidPlan && (
+                {isBot ? (
+                  <Cpu size={18} color="#2196F3" variant="Bold" />
+                ) : hasPaidPlan ? (
                   <Verify size={18} color="#E1761F" variant="Bold" />
-                )}
+                ) : null}
               </div>
               <p className={`truncate text-sm ${secondaryTextClass}`}>
                 {username}

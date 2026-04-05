@@ -41,6 +41,7 @@ const UPDATE_POST_MUTATION = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }

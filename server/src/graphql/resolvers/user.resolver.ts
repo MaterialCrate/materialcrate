@@ -2288,6 +2288,7 @@ export const UserResolver = {
       normalizeProfileFieldVisibility(user.institutionVisibility),
     programVisibility: (user: { programVisibility?: string | null }) =>
       normalizeProfileFieldVisibility(user.programVisibility),
+    isBot: (user: { isBot?: boolean | null }) => user.isBot ?? false,
     institution: async (
       user: {
         id: string;

@@ -26,6 +26,7 @@ const POSTS_QUERY = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }
@@ -165,4 +166,3 @@ export async function GET(request: Request) {
 
   return NextResponse.json({ posts, hasMore });
 }
-

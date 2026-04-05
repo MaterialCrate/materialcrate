@@ -26,6 +26,7 @@ const POST_HISTORY_QUERY = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
     postVersions(postId: $postId) {
@@ -45,6 +46,7 @@ const POST_HISTORY_QUERY = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }
@@ -81,7 +83,8 @@ export async function GET(
   if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
     return NextResponse.json(
       {
-        error: graphqlBody?.errors?.[0]?.message || "Failed to fetch post history",
+        error:
+          graphqlBody?.errors?.[0]?.message || "Failed to fetch post history",
       },
       { status: 400 },
     );

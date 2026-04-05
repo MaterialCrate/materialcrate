@@ -14,6 +14,7 @@ const SEARCH_QUERY = `
       followersCount
       followingCount
       subscriptionPlan
+      isBot
       institution
       program
     }
@@ -36,6 +37,7 @@ const SEARCH_QUERY = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }
@@ -60,6 +62,7 @@ const AUTHENTICATED_SEARCH_QUERY = `
       followersCount
       followingCount
       subscriptionPlan
+      isBot
       institution
       program
     }
@@ -82,6 +85,7 @@ const AUTHENTICATED_SEARCH_QUERY = `
         username
         profilePicture
         subscriptionPlan
+        isBot
       }
     }
   }

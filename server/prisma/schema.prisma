@@ -51,6 +51,7 @@ model User {
   disabled      Boolean  @default(false)
   disabledAt    DateTime?
   disabledUntil DateTime?
+  isBot         Boolean  @default(false)
   institution   String?
   institutionVisibility String @default("everyone")
   program       String?
