@@ -559,6 +559,23 @@ export default function Home() {
             return;
           }
 
+          const isOwnPost = Boolean(
+            (normalizedSavedPost.author?.id &&
+              user?.id &&
+              normalizedSavedPost.author.id === user.id) ||
+            (normalizedSavedPost.author?.username &&
+              user?.username &&
+              normalizedSavedPost.author.username.trim().toLowerCase() ===
+                user.username.trim().toLowerCase()),
+          );
+
+          if (isOwnPost) {
+            setPosts((current) =>
+              current.filter((post) => post.id !== normalizedSavedPost.id),
+            );
+            return;
+          }
+
           setPosts((current) => [normalizedSavedPost, ...current]);
           setNextOffset((current) => current + 1);
         }}

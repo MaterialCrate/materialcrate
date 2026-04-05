@@ -563,6 +563,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         followers={followerCount}
         following={followingCount}
         subscriptionPlan={profile?.subscriptionPlan ?? "free"}
+        institution={profile?.institution}
+        program={profile?.program}
         isOwner={isOwner}
         postsLabel={postsHeading}
         followLabel={followLabel}

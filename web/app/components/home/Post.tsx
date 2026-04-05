@@ -624,9 +624,6 @@ export default function Post({
               <p className="line-clamp-2 text-sm font-semibold text-[#202020]">
                 {post.title}
               </p>
-              <p className="text-xs text-[#7B7B7B]">
-                Open document preview inside Material Crate.
-              </p>
             </div>
           </button>
         </div>

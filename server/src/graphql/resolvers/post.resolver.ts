@@ -706,9 +706,12 @@ const getMixedFeedPosts = async (
     Math.max((safeOffset + safeLimit) * 5, 60),
     240,
   );
+  const feedExcludedAuthorIds = Array.from(
+    new Set([...inaccessibleAuthorIds, ...(viewerId ? [viewerId] : [])]),
+  );
   const visiblePostWhere = buildVisiblePostWhere(
     uninterestedPostIds,
-    inaccessibleAuthorIds,
+    feedExcludedAuthorIds,
   );
 
   const [recentCandidates, followedCandidates, interestCandidates] =
@@ -725,9 +728,9 @@ const getMixedFeedPosts = async (
               ...visiblePostWhere,
               authorId: {
                 in: Array.from(signals.followingIds),
-                ...(inaccessibleAuthorIds.length > 0
+                ...(feedExcludedAuthorIds.length > 0
                   ? {
-                      notIn: inaccessibleAuthorIds,
+                      notIn: feedExcludedAuthorIds,
                     }
                   : {}),
               },
