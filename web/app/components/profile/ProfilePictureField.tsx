@@ -15,8 +15,10 @@ const ALLOWED_PROFILE_PICTURE_MIME_TYPES = [
 ];
 const INVALID_PROFILE_PICTURE_TYPE_MESSAGE =
   "Use JPG, PNG, WEBP, or HEIC/HEIF only.";
-const CROPPED_PROFILE_PICTURE_FILE_NAME = "profile-picture.jpg";
-const CROPPED_PROFILE_PICTURE_OUTPUT_MIME_TYPE = "image/jpeg";
+const CROPPED_PROFILE_PICTURE_FILE_NAME = "profile-picture.webp";
+const CROPPED_PROFILE_PICTURE_OUTPUT_MIME_TYPE = "image/webp";
+const CROPPED_PROFILE_PICTURE_FALLBACK_MIME_TYPE = "image/jpeg";
+const CROPPED_PROFILE_PICTURE_FALLBACK_FILE_NAME = "profile-picture.jpg";
 const CROPPED_PROFILE_PICTURE_MAX_DIMENSION = 1200;
 const CROPPED_PROFILE_PICTURE_QUALITY = 0.9;
 
@@ -91,11 +93,22 @@ const getCroppedProfilePictureBlob = async (
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
-        if (!blob) {
-          reject(new Error("Failed to crop image"));
+        if (blob) {
+          resolve(blob);
           return;
         }
-        resolve(blob);
+        // Fallback to JPEG if WebP isn't supported
+        canvas.toBlob(
+          (jpegBlob) => {
+            if (!jpegBlob) {
+              reject(new Error("Failed to crop image"));
+              return;
+            }
+            resolve(jpegBlob);
+          },
+          CROPPED_PROFILE_PICTURE_FALLBACK_MIME_TYPE,
+          CROPPED_PROFILE_PICTURE_QUALITY,
+        );
       },
       CROPPED_PROFILE_PICTURE_OUTPUT_MIME_TYPE,
       CROPPED_PROFILE_PICTURE_QUALITY,
@@ -194,10 +207,13 @@ export default function ProfilePictureField({
         pendingProfilePictureUrl,
         croppedAreaPixels,
       );
+      const isWebp = croppedBlob.type === "image/webp";
       const croppedFile = new File(
         [croppedBlob],
-        CROPPED_PROFILE_PICTURE_FILE_NAME,
-        { type: CROPPED_PROFILE_PICTURE_OUTPUT_MIME_TYPE },
+        isWebp
+          ? CROPPED_PROFILE_PICTURE_FILE_NAME
+          : CROPPED_PROFILE_PICTURE_FALLBACK_FILE_NAME,
+        { type: croppedBlob.type },
       );
 
       if (croppedFile.size > MAX_PROFILE_PICTURE_BYTES) {

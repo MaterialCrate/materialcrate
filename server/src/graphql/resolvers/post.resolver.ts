@@ -1225,18 +1225,30 @@ export const PostResolver = {
             thumbnailBuffer.length > 0 &&
             thumbnailBuffer.length <= MAX_POST_THUMBNAIL_BYTES
           ) {
+            const isWebp =
+              thumbnailBuffer.length >= 12 &&
+              thumbnailBuffer[0] === 0x52 &&
+              thumbnailBuffer[1] === 0x49 &&
+              thumbnailBuffer[2] === 0x46 &&
+              thumbnailBuffer[3] === 0x46 &&
+              thumbnailBuffer[8] === 0x57 &&
+              thumbnailBuffer[9] === 0x45 &&
+              thumbnailBuffer[10] === 0x42 &&
+              thumbnailBuffer[11] === 0x50;
+            const thumbnailExt = isWebp ? ".webp" : ".jpg";
+            const thumbnailContentType = isWebp ? "image/webp" : "image/jpeg";
             const thumbnailBaseName =
               fileName.replace(/\.pdf$/i, "") || "document";
             const thumbnailKey = `thumbnails/${Date.now()}-${randomUUID()}-${sanitizeFileName(
               thumbnailBaseName,
-            )}.webp`;
+            )}${thumbnailExt}`;
 
             await s3.send(
               new PutObjectCommand({
                 Bucket: bucket,
                 Key: thumbnailKey,
                 Body: thumbnailBuffer,
-                ContentType: "image/webp",
+                ContentType: thumbnailContentType,
               }),
             );
 

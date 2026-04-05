@@ -24,6 +24,8 @@ interface UploadDrawerProps {
   onClose: () => void;
   post?: HomePost | null;
   onPostSaved?: (post: HomePost, mode: "create" | "edit") => void;
+  onUploadStarted?: () => void;
+  onUploadFinished?: () => void;
 }
 
 const MAX_UPLOAD_FILE_BYTES = 20 * 1024 * 1024;
@@ -33,6 +35,8 @@ export default function UploadDrawer({
   onClose,
   post,
   onPostSaved,
+  onUploadStarted,
+  onUploadFinished,
 }: UploadDrawerProps) {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
@@ -166,6 +170,14 @@ export default function UploadDrawer({
     setIsPublishing(true);
     setAlertMessage("");
 
+    const isCreate = !isEditMode || !post;
+
+    // For new posts, close drawer immediately and show loading bar
+    if (isCreate) {
+      onUploadStarted?.();
+      onClose();
+    }
+
     try {
       let response: Response;
 
@@ -238,7 +250,9 @@ export default function UploadDrawer({
       if (body?.post) {
         onPostSaved?.(body.post, isEditMode ? "edit" : "create");
       }
-      onClose();
+      if (!isCreate) {
+        onClose();
+      }
     } catch (error: unknown) {
       setAlertType("error");
       setAlertMessage(
@@ -247,6 +261,9 @@ export default function UploadDrawer({
       console.error("Error details:", error);
     } finally {
       setIsPublishing(false);
+      if (isCreate) {
+        onUploadFinished?.();
+      }
     }
   }
 

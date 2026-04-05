@@ -12,6 +12,7 @@ import {
   getProfileBackgroundPresentation,
   isDefaultProfileBackground,
 } from "@/app/lib/profile-background";
+import { compressImageToWebp } from "@/app/lib/compress-image";
 import { refreshAuth, useAuth } from "@/app/lib/auth-client";
 import {
   getSubscriptionBadgeLabel,
@@ -526,13 +527,24 @@ export default function Page() {
     setSuccessMessage("");
 
     const previewUrl = URL.createObjectURL(file);
-    setProfileBackgroundFile(file);
     setProfileBackgroundPreviewUrl((previous) => {
       if (previous) {
         URL.revokeObjectURL(previous);
       }
       return previewUrl;
     });
+
+    void (async () => {
+      try {
+        const compressed = await compressImageToWebp(file, {
+          maxDimension: 1920,
+          quality: 0.82,
+        });
+        setProfileBackgroundFile(compressed);
+      } catch {
+        setProfileBackgroundFile(file);
+      }
+    })();
   };
 
   const handleResetProfileBackground = () => {

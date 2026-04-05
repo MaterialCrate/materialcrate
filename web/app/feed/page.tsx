@@ -59,6 +59,7 @@ export default function Home() {
   const [activeArchivePost, setActiveArchivePost] = useState<HomePost | null>(
     null,
   );
+  const [isUploading, setIsUploading] = useState(false);
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [isLoadingMorePosts, setIsLoadingMorePosts] = useState(false);
@@ -554,6 +555,8 @@ export default function Home() {
           setIsUploadDrawerOpen(false);
           setEditingPost(null);
         }}
+        onUploadStarted={() => setIsUploading(true)}
+        onUploadFinished={() => setIsUploading(false)}
         onPostSaved={(savedPost, mode) => {
           const normalizedSavedPost: HomePost = {
             ...savedPost,
@@ -768,7 +771,7 @@ export default function Home() {
           />
         </button>
       </div>
-      <Header />
+      <Header forceVisible={isUploading} showLoadingBar={isUploading} />
       <main>
         {isLoadingPosts ? (
           <p className="px-6 py-8 text-sm text-[#696969]">Loading posts...</p>
