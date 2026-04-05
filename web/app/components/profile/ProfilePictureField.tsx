@@ -5,20 +5,50 @@ import Image from "next/image";
 import { Edit, User } from "iconsax-reactjs";
 import Cropper, { type Area } from "react-easy-crop";
 
-const MAX_PROFILE_PICTURE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_PROFILE_PICTURE_MIME_TYPES = ["image/jpeg", "image/png"];
-const INVALID_PROFILE_PICTURE_TYPE_MESSAGE = "Use JPG, JPEG, or PNG only.";
-const CROPPED_PROFILE_PICTURE_FILE_NAME = "profile-picture.png";
+const MAX_PROFILE_PICTURE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PROFILE_PICTURE_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+];
+const INVALID_PROFILE_PICTURE_TYPE_MESSAGE =
+  "Use JPG, PNG, WEBP, or HEIC/HEIF only.";
+const CROPPED_PROFILE_PICTURE_FILE_NAME = "profile-picture.jpg";
+const CROPPED_PROFILE_PICTURE_OUTPUT_MIME_TYPE = "image/jpeg";
+const CROPPED_PROFILE_PICTURE_MAX_DIMENSION = 1200;
+const CROPPED_PROFILE_PICTURE_QUALITY = 0.9;
 
 const createImageElement = (url: string) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new window.Image();
     image.addEventListener("load", () => resolve(image));
     image.addEventListener("error", () =>
-      reject(new Error("Failed to load selected image")),
+      reject(
+        new Error(
+          "This image format could not be loaded. Try converting it to JPG or PNG.",
+        ),
+      ),
     );
     image.src = url;
   });
+
+const getNormalizedProfilePictureType = (file: File) => {
+  const normalizedType = file.type.toLowerCase().trim();
+  if (normalizedType) {
+    return normalizedType;
+  }
+
+  const normalizedName = file.name.toLowerCase();
+  if (/\.jpe?g$/i.test(normalizedName)) return "image/jpeg";
+  if (/\.png$/i.test(normalizedName)) return "image/png";
+  if (/\.webp$/i.test(normalizedName)) return "image/webp";
+  if (/\.heic$/i.test(normalizedName)) return "image/heic";
+  if (/\.heif$/i.test(normalizedName)) return "image/heif";
+
+  return "";
+};
 
 const getCroppedProfilePictureBlob = async (
   imageUrl: string,
@@ -26,14 +56,26 @@ const getCroppedProfilePictureBlob = async (
 ): Promise<Blob> => {
   const image = await createImageElement(imageUrl);
   const canvas = document.createElement("canvas");
-  canvas.width = cropArea.width;
-  canvas.height = cropArea.height;
+  const longestSide = Math.max(cropArea.width, cropArea.height, 1);
+  const scale =
+    longestSide > CROPPED_PROFILE_PICTURE_MAX_DIMENSION
+      ? CROPPED_PROFILE_PICTURE_MAX_DIMENSION / longestSide
+      : 1;
+  const outputWidth = Math.max(1, Math.round(cropArea.width * scale));
+  const outputHeight = Math.max(1, Math.round(cropArea.height * scale));
+
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
 
   const context = canvas.getContext("2d");
   if (!context) {
     throw new Error("Failed to crop image");
   }
 
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, outputWidth, outputHeight);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
   context.drawImage(
     image,
     cropArea.x,
@@ -42,18 +84,22 @@ const getCroppedProfilePictureBlob = async (
     cropArea.height,
     0,
     0,
-    cropArea.width,
-    cropArea.height,
+    outputWidth,
+    outputHeight,
   );
 
   return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error("Failed to crop image"));
-        return;
-      }
-      resolve(blob);
-    }, "image/png");
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Failed to crop image"));
+          return;
+        }
+        resolve(blob);
+      },
+      CROPPED_PROFILE_PICTURE_OUTPUT_MIME_TYPE,
+      CROPPED_PROFILE_PICTURE_QUALITY,
+    );
   });
 };
 
@@ -98,14 +144,14 @@ export default function ProfilePictureField({
 
     if (!file) return;
 
-    const normalizedType = file.type.toLowerCase();
+    const normalizedType = getNormalizedProfilePictureType(file);
     if (!ALLOWED_PROFILE_PICTURE_MIME_TYPES.includes(normalizedType)) {
       onError(INVALID_PROFILE_PICTURE_TYPE_MESSAGE);
       return;
     }
 
     if (file.size > MAX_PROFILE_PICTURE_BYTES) {
-      onError("Profile picture must be 5MB or smaller.");
+      onError("Profile picture must be 10MB or smaller.");
       return;
     }
 
@@ -151,8 +197,13 @@ export default function ProfilePictureField({
       const croppedFile = new File(
         [croppedBlob],
         CROPPED_PROFILE_PICTURE_FILE_NAME,
-        { type: "image/png" },
+        { type: CROPPED_PROFILE_PICTURE_OUTPUT_MIME_TYPE },
       );
+
+      if (croppedFile.size > MAX_PROFILE_PICTURE_BYTES) {
+        onError("Profile picture is still too large after cropping.");
+        return;
+      }
 
       onImageReady(croppedFile, URL.createObjectURL(croppedBlob));
       handleCancelCrop();
@@ -232,7 +283,7 @@ export default function ProfilePictureField({
         <input
           ref={profilePictureInputRef}
           type="file"
-          accept="image/jpeg,image/png"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
           className="hidden"
           onChange={handleProfilePictureChange}
           aria-hidden="true"

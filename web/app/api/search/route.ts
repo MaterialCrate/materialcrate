@@ -87,6 +87,12 @@ const AUTHENTICATED_SEARCH_QUERY = `
   }
 `;
 
+const TRACK_FEED_INTERACTION_MUTATION = `
+  mutation TrackFeedInteraction($input: FeedInteractionInput!) {
+    trackFeedInteraction(input: $input)
+  }
+`;
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
@@ -155,9 +161,32 @@ export async function GET(request: Request) {
     ).filter(Boolean),
   );
 
-  const documents = (Array.isArray(graphqlBody?.data?.searchPosts)
-    ? graphqlBody.data.searchPosts
-    : []
+  if (token && query.length >= 2) {
+    await fetch(GRAPHQL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      cache: "no-store",
+      body: JSON.stringify({
+        query: TRACK_FEED_INTERACTION_MUTATION,
+        variables: {
+          input: {
+            interactionType: "SEARCH",
+            signalKind: "positive",
+            searchTerm: query,
+            metadata: JSON.stringify({ source: "search-route", limit }),
+          },
+        },
+      }),
+    }).catch(() => null);
+  }
+
+  const documents = (
+    Array.isArray(graphqlBody?.data?.searchPosts)
+      ? graphqlBody.data.searchPosts
+      : []
   ).map((post: Record<string, unknown>) => {
     const author = (post.author ?? null) as {
       id?: string | null;
@@ -184,4 +213,3 @@ export async function GET(request: Request) {
     documents,
   });
 }
-

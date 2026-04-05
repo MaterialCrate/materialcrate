@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { CloseCircle } from "iconsax-reactjs";
+import { trackFeedInteraction } from "@/app/lib/feed-tracking";
 import type { HomePost } from "./Post";
 
 type PdfViewerModalProps = {
@@ -81,6 +82,28 @@ export default function PdfViewerModal({
       restoreAfterPrint();
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || !post?.id) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void trackFeedInteraction({
+        postId: post.id,
+        interactionType: "LONG_VIEW",
+        signalKind: "positive",
+        durationMs: 8000,
+        metadata: {
+          source: "pdf-viewer",
+        },
+      });
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [isOpen, post?.id]);
 
   useEffect(() => {
     const canvasContainer = canvasContainerRef.current;

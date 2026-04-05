@@ -46,6 +46,16 @@ type Comment {
   updatedAt: String!
 }
 
+input FeedInteractionInput {
+  postId: ID
+  interactionType: String!
+  signalKind: String
+  category: String
+  searchTerm: String
+  durationMs: Int
+  metadata: String
+}
+
 extend type Query {
   post(id: ID!): Post
   postVersions(postId: ID!): [PostVersion!]!
@@ -82,6 +92,7 @@ extend type Mutation {
   pinPostToProfile(postId: ID!): Post!
   togglePostComments(postId: ID!): Post!
   markPostNotInterested(postId: ID!): Boolean!
+  trackFeedInteraction(input: FeedInteractionInput!): Boolean!
   createComment(postId: ID!, content: String!, parentCommentId: ID): Comment!
   toggleCommentLike(commentId: ID!): Comment!
 }

@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
-const MAX_PROFILE_PICTURE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_PROFILE_PICTURE_MIME_TYPES = new Set(["image/jpeg", "image/png"]);
+const MAX_PROFILE_PICTURE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PROFILE_PICTURE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 const MAX_PROFILE_BACKGROUND_BYTES = 5 * 1024 * 1024;
 const ALLOWED_PROFILE_BACKGROUND_MIME_TYPES = new Set([
   "image/jpeg",
@@ -97,13 +101,13 @@ export async function POST(req: Request) {
       const normalizedType = file.type.toLowerCase();
       if (!ALLOWED_PROFILE_PICTURE_MIME_TYPES.has(normalizedType)) {
         return NextResponse.json(
-          { error: "Use JPG, JPEG, or PNG only." },
+          { error: "Use JPG, PNG, or WEBP only." },
           { status: 400 },
         );
       }
       if (file.size > MAX_PROFILE_PICTURE_BYTES) {
         return NextResponse.json(
-          { error: "Profile picture must be 5MB or smaller" },
+          { error: "Profile picture must be 10MB or smaller" },
           { status: 400 },
         );
       }

@@ -22,6 +22,11 @@ const FILE_URL_QUERY = `
     }
   }
 `;
+const TRACK_FEED_INTERACTION_MUTATION = `
+  mutation TrackFeedInteraction($input: FeedInteractionInput!) {
+    trackFeedInteraction(input: $input)
+  }
+`;
 
 const isAllowedFileUrl = (value: string) => {
   try {
@@ -108,6 +113,29 @@ export async function GET(req: Request) {
     );
   }
 
+  await fetch(GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    cache: "no-store",
+    body: JSON.stringify({
+      query: TRACK_FEED_INTERACTION_MUTATION,
+      variables: {
+        input: {
+          postId,
+          interactionType: isDownloadRequest ? "DOWNLOAD" : "OPEN_PREVIEW",
+          signalKind: "positive",
+          metadata: JSON.stringify({
+            source: "protected-pdf-route",
+            requestIntent: isDownloadRequest ? "download" : "viewer",
+          }),
+        },
+      },
+    }),
+  }).catch(() => null);
+
   return new NextResponse(upstreamResponse.body, {
     status: 200,
     headers: {
@@ -125,7 +153,8 @@ export async function GET(req: Request) {
       "X-Frame-Options": "SAMEORIGIN",
       "Cross-Origin-Resource-Policy": "same-origin",
       "Cross-Origin-Opener-Policy": "same-origin",
-      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'self'; sandbox",
+      "Content-Security-Policy":
+        "default-src 'none'; frame-ancestors 'self'; sandbox",
     },
   });
 }

@@ -62,6 +62,7 @@ model User {
   workspace     Workspace?
   archive       Archive?
   hubChats      HubChat[]
+  feedInteractions FeedInteraction[]
   followerRelations Follow[] @relation("UserFollowers")
   followingRelations Follow[] @relation("UserFollowing")
   sentFollowRequests FollowRequest[] @relation("FollowRequestRequester")
@@ -137,6 +138,7 @@ model Post {
   savedInWorkspaces WorkspaceSavedPost[]
   savedInArchives ArchiveSavedPost[]
   hubChats   HubChat[]
+  feedInteractions FeedInteraction[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -346,6 +348,29 @@ model Mute {
   @@id([muterId, mutedId])
   @@index([muterId])
   @@index([mutedId])
+}
+
+model FeedInteraction {
+  id              String   @id @default(cuid())
+  userId          String
+  postId          String?
+  interactionType String
+  signalKind      String   @default("positive")
+  category        String?
+  searchTerm      String?
+  durationMs      Int?
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([userId, interactionType, createdAt])
+  @@index([userId, signalKind, createdAt])
+  @@index([postId, createdAt])
+  @@index([category, createdAt])
+  @@index([searchTerm, createdAt])
 }
 
 model Report {

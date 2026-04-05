@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/app/lib/auth-client";
 import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
 import { hasPaidSubscription } from "@/app/lib/subscription";
+import { trackFeedInteraction } from "@/app/lib/feed-tracking";
 import Alert from "@/app/components/Alert";
 import Image from "next/image";
 import PdfThumbnail from "./PdfThumbnail";
@@ -396,6 +397,14 @@ export default function Post({
         document.body.removeChild(textarea);
       }
 
+      void trackFeedInteraction({
+        postId: post.id,
+        interactionType: "SHARE",
+        signalKind: "positive",
+        metadata: {
+          source: "copy-link",
+        },
+      });
       showAlert("Post link copied", "success");
     } catch (error) {
       console.error("Failed to copy post link:", error);

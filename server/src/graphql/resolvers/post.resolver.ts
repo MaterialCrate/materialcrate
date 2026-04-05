@@ -37,6 +37,16 @@ type TogglePostCommentsArgs = {
   postId: string;
 };
 
+type TrackFeedInteractionArgs = {
+  postId?: string | null;
+  interactionType: string;
+  signalKind?: string | null;
+  category?: string | null;
+  searchTerm?: string | null;
+  durationMs?: number | null;
+  metadata?: string | Record<string, unknown> | null;
+};
+
 type GraphQLContext = {
   user?: {
     sub?: string;
@@ -64,6 +74,93 @@ const buildS3FileUrl = (bucket: string, region: string, key: string) =>
 const POST_FILE_SIGNED_URL_TTL_SECONDS = 60 * 60;
 const POST_THUMBNAIL_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
 const MAX_POST_THUMBNAIL_BYTES = 2 * 1024 * 1024;
+const FEED_INTERACTION_SIGNAL_WEIGHTS: Record<
+  string,
+  { authorWeight: number; categoryWeight: number; keywordWeight: number }
+> = {
+  SEARCH: { authorWeight: 0, categoryWeight: 5, keywordWeight: 10 },
+  OPEN_PREVIEW: { authorWeight: 2, categoryWeight: 3, keywordWeight: 0 },
+  LONG_VIEW: { authorWeight: 6, categoryWeight: 9, keywordWeight: 0 },
+  DOWNLOAD: { authorWeight: 8, categoryWeight: 12, keywordWeight: 0 },
+  SHARE: { authorWeight: 6, categoryWeight: 8, keywordWeight: 4 },
+  LIKE: { authorWeight: 4, categoryWeight: 6, keywordWeight: 0 },
+  COMMENT: { authorWeight: 4, categoryWeight: 6, keywordWeight: 0 },
+  COMMENT_REPLY: { authorWeight: 3, categoryWeight: 5, keywordWeight: 0 },
+  TAG_CLICK: { authorWeight: 0, categoryWeight: 9, keywordWeight: 8 },
+  NOT_INTERESTED: { authorWeight: 10, categoryWeight: 14, keywordWeight: 6 },
+  DISMISS: { authorWeight: 7, categoryWeight: 10, keywordWeight: 4 },
+};
+
+const normalizeFeedSignalKind = (value?: string | null) => {
+  const normalized = String(value || "positive")
+    .trim()
+    .toLowerCase();
+  if (normalized === "negative" || normalized === "context") {
+    return normalized;
+  }
+
+  return "positive";
+};
+
+const recordFeedInteraction = async (
+  viewerId: string | undefined,
+  input: TrackFeedInteractionArgs,
+) => {
+  if (!viewerId) {
+    return false;
+  }
+
+  const interactionType = String(input.interactionType || "")
+    .trim()
+    .toUpperCase();
+  if (!interactionType) {
+    return false;
+  }
+
+  const normalizedPostId = input.postId?.trim() || null;
+  const signalKind = normalizeFeedSignalKind(input.signalKind);
+  const category = input.category?.trim().toLowerCase() || null;
+  const searchTerm = input.searchTerm?.trim().toLowerCase() || null;
+  const durationMs =
+    typeof input.durationMs === "number" && Number.isFinite(input.durationMs)
+      ? Math.max(0, Math.round(input.durationMs))
+      : null;
+
+  let metadata: Record<string, unknown> | null = null;
+  if (typeof input.metadata === "string" && input.metadata.trim()) {
+    try {
+      const parsed = JSON.parse(input.metadata);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        metadata = parsed as Record<string, unknown>;
+      }
+    } catch {
+      metadata = {
+        note: input.metadata.trim().slice(0, 500),
+      };
+    }
+  } else if (
+    input.metadata &&
+    typeof input.metadata === "object" &&
+    !Array.isArray(input.metadata)
+  ) {
+    metadata = input.metadata;
+  }
+
+  await (prisma as any).feedInteraction.create({
+    data: {
+      userId: viewerId,
+      postId: normalizedPostId,
+      interactionType,
+      signalKind,
+      category,
+      searchTerm,
+      durationMs,
+      metadata,
+    },
+  });
+
+  return true;
+};
 
 const extractS3KeyFromUrl = (
   fileUrl: string,
@@ -112,6 +209,19 @@ const getBlockedUserIdsForViewer = async (viewerId?: string) => {
   });
 
   return Array.isArray(viewer?.blockedUserIds) ? viewer.blockedUserIds : [];
+};
+
+const getMutedUserIdsForViewer = async (viewerId?: string) => {
+  if (!viewerId) {
+    return [];
+  }
+
+  const mutedUsers = await (prisma as any).mute.findMany({
+    where: { muterId: viewerId },
+    select: { mutedId: true },
+  });
+
+  return mutedUsers.map((entry: { mutedId: string }) => entry.mutedId);
 };
 
 const getPrivatePostAuthorIds = async (viewerId?: string) => {
@@ -214,6 +324,458 @@ const mapPostForGraphQL = (post: any, viewerId?: string) => ({
   commentCount: post?._count?.comments ?? 0,
   viewerHasLiked: viewerId ? (post?.likes?.length ?? 0) > 0 : false,
 });
+
+type FeedViewerSignals = {
+  followingIds: Set<string>;
+  categoryWeights: Map<string, number>;
+  authorWeights: Map<string, number>;
+  keywordWeights: Map<string, number>;
+  isNewUser: boolean;
+};
+
+type RankedFeedCandidate = {
+  post: any;
+  score: number;
+  isFollowed: boolean;
+};
+
+const incrementWeight = (
+  map: Map<string, number>,
+  key: string | null | undefined,
+  amount: number,
+) => {
+  const normalizedKey = typeof key === "string" ? key.trim().toLowerCase() : "";
+  if (!normalizedKey) {
+    return;
+  }
+
+  map.set(normalizedKey, (map.get(normalizedKey) ?? 0) + amount);
+};
+
+const addCategoryWeights = (
+  map: Map<string, number>,
+  categories: unknown,
+  amount: number,
+) => {
+  for (const category of normalizeCategories(categories)) {
+    incrementWeight(map, category, amount);
+  }
+};
+
+const buildViewerFeedSignals = async (
+  viewerId?: string,
+): Promise<FeedViewerSignals> => {
+  if (!viewerId) {
+    return {
+      followingIds: new Set<string>(),
+      categoryWeights: new Map<string, number>(),
+      authorWeights: new Map<string, number>(),
+      keywordWeights: new Map<string, number>(),
+      isNewUser: true,
+    };
+  }
+
+  const viewer = await prisma.user.findUnique({
+    where: { id: viewerId },
+    select: {
+      followingRelations: {
+        select: { followingId: true },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      },
+      likes: {
+        select: {
+          post: {
+            select: {
+              authorId: true,
+              categories: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      },
+      comments: {
+        select: {
+          post: {
+            select: {
+              authorId: true,
+              categories: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 30,
+      },
+      posts: {
+        where: { deleted: false },
+        select: { categories: true },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+      },
+      archive: {
+        select: {
+          savedPosts: {
+            select: {
+              post: {
+                select: {
+                  authorId: true,
+                  categories: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          },
+        },
+      },
+      workspace: {
+        select: {
+          savedPosts: {
+            select: {
+              post: {
+                select: {
+                  authorId: true,
+                  categories: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+            take: 50,
+          },
+        },
+      },
+      feedInteractions: {
+        select: {
+          interactionType: true,
+          signalKind: true,
+          category: true,
+          searchTerm: true,
+          durationMs: true,
+          post: {
+            select: {
+              authorId: true,
+              categories: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 120,
+      },
+    },
+  });
+
+  const followingIds = new Set(
+    (viewer?.followingRelations ?? []).map((entry) => entry.followingId),
+  );
+  const categoryWeights = new Map<string, number>();
+  const authorWeights = new Map<string, number>();
+  const keywordWeights = new Map<string, number>();
+
+  for (const relation of viewer?.followingRelations ?? []) {
+    incrementWeight(authorWeights, relation.followingId, 18);
+  }
+
+  for (const like of viewer?.likes ?? []) {
+    incrementWeight(authorWeights, like.post?.authorId, 12);
+    addCategoryWeights(categoryWeights, like.post?.categories, 8);
+  }
+
+  for (const comment of viewer?.comments ?? []) {
+    incrementWeight(authorWeights, comment.post?.authorId, 8);
+    addCategoryWeights(categoryWeights, comment.post?.categories, 5);
+  }
+
+  for (const savedPost of viewer?.archive?.savedPosts ?? []) {
+    incrementWeight(authorWeights, savedPost.post?.authorId, 10);
+    addCategoryWeights(categoryWeights, savedPost.post?.categories, 10);
+  }
+
+  for (const savedPost of viewer?.workspace?.savedPosts ?? []) {
+    incrementWeight(authorWeights, savedPost.post?.authorId, 10);
+    addCategoryWeights(categoryWeights, savedPost.post?.categories, 10);
+  }
+
+  for (const post of viewer?.posts ?? []) {
+    addCategoryWeights(categoryWeights, post.categories, 4);
+  }
+
+  for (const interaction of viewer?.feedInteractions ?? []) {
+    const interactionType = String(interaction.interactionType || "")
+      .trim()
+      .toUpperCase();
+    const weighting = FEED_INTERACTION_SIGNAL_WEIGHTS[interactionType] ?? {
+      authorWeight: 2,
+      categoryWeight: 3,
+      keywordWeight: 2,
+    };
+    const signalKind = normalizeFeedSignalKind(interaction.signalKind);
+    const multiplier =
+      signalKind === "negative" ? -1 : signalKind === "context" ? 0.5 : 1;
+
+    incrementWeight(
+      authorWeights,
+      interaction.post?.authorId,
+      weighting.authorWeight * multiplier,
+    );
+    addCategoryWeights(
+      categoryWeights,
+      interaction.post?.categories,
+      weighting.categoryWeight * multiplier,
+    );
+    incrementWeight(
+      categoryWeights,
+      interaction.category,
+      weighting.categoryWeight * 0.75 * multiplier,
+    );
+    incrementWeight(
+      keywordWeights,
+      interaction.searchTerm,
+      weighting.keywordWeight * multiplier,
+    );
+    incrementWeight(
+      keywordWeights,
+      interaction.category,
+      weighting.keywordWeight * 0.6 * multiplier,
+    );
+  }
+
+  const interactionCount =
+    (viewer?.followingRelations?.length ?? 0) +
+    (viewer?.likes?.length ?? 0) +
+    (viewer?.comments?.length ?? 0) +
+    (viewer?.archive?.savedPosts?.length ?? 0) +
+    (viewer?.workspace?.savedPosts?.length ?? 0);
+
+  return {
+    followingIds,
+    categoryWeights,
+    authorWeights,
+    keywordWeights,
+    isNewUser: interactionCount < 5,
+  };
+};
+
+const scorePostForFeed = (
+  post: any,
+  viewerId: string | undefined,
+  signals: FeedViewerSignals,
+) => {
+  const authorId = typeof post?.authorId === "string" ? post.authorId : "";
+  const categories = normalizeCategories(post?.categories);
+  const matchedCategoryWeight = categories.reduce(
+    (total, category) => total + (signals.categoryWeights.get(category) ?? 0),
+    0,
+  );
+  const matchedCategoryCount = categories.filter((category) =>
+    signals.categoryWeights.has(category),
+  ).length;
+  const likeCount = post?._count?.likes ?? 0;
+  const commentCount = post?._count?.comments ?? 0;
+  const searchableText = [
+    post?.title,
+    post?.description,
+    ...(Array.isArray(post?.categories) ? post.categories : []),
+    post?.author?.username,
+    post?.author?.displayName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const keywordBoost = Array.from(signals.keywordWeights.entries()).reduce(
+    (total, [keyword, weight]) =>
+      keyword && searchableText.includes(keyword) ? total + weight : total,
+    0,
+  );
+  const createdAtMs = new Date(post?.createdAt ?? Date.now()).getTime();
+  const ageHours = Number.isFinite(createdAtMs)
+    ? Math.max(0, (Date.now() - createdAtMs) / (1000 * 60 * 60))
+    : 72;
+  const followBoost = authorId && signals.followingIds.has(authorId) ? 90 : 0;
+  const authorAffinityBoost = authorId
+    ? (signals.authorWeights.get(authorId.toLowerCase()) ?? 0)
+    : 0;
+  const engagementBoost =
+    Math.min(likeCount, 30) * 1.4 + Math.min(commentCount, 20) * 1.8;
+  const freshnessBoost = Math.max(0, 72 - ageHours) * 0.75;
+  const interestBoost = matchedCategoryWeight + matchedCategoryCount * 6;
+  const explorationBoost =
+    !followBoost && matchedCategoryCount > 0 ? 12 : signals.isNewUser ? 8 : 0;
+  const pinnedBoost = post?.pinned ? 20 : 0;
+  const ownPostPenalty = viewerId && authorId === viewerId ? 18 : 0;
+
+  return (
+    followBoost +
+    authorAffinityBoost +
+    interestBoost +
+    Math.max(-40, Math.min(keywordBoost, 40)) +
+    engagementBoost +
+    freshnessBoost +
+    explorationBoost +
+    pinnedBoost -
+    ownPostPenalty
+  );
+};
+
+const pickNextFeedCandidate = (
+  pool: RankedFeedCandidate[],
+  lastAuthorId?: string | null,
+): RankedFeedCandidate | null => {
+  if (pool.length === 0) {
+    return null;
+  }
+
+  const preferredIndex = lastAuthorId
+    ? pool.findIndex((candidate) => candidate.post?.authorId !== lastAuthorId)
+    : 0;
+  const nextIndex = preferredIndex >= 0 ? preferredIndex : 0;
+
+  return pool.splice(nextIndex, 1)[0] ?? null;
+};
+
+const mixRankedFeedCandidates = (
+  rankedCandidates: RankedFeedCandidate[],
+  limit: number,
+  offset: number,
+) => {
+  const followedCandidates = rankedCandidates
+    .filter((candidate) => candidate.isFollowed)
+    .sort((left, right) => right.score - left.score);
+  const recommendedCandidates = rankedCandidates
+    .filter((candidate) => !candidate.isFollowed)
+    .sort((left, right) => right.score - left.score);
+  const mixedPosts: any[] = [];
+  const targetSize = Math.min(
+    rankedCandidates.length,
+    Math.max(limit + offset, limit) + Math.max(limit * 2, 12),
+  );
+  const pattern: Array<"followed" | "recommended"> =
+    followedCandidates.length > 0
+      ? ["followed", "followed", "recommended"]
+      : ["recommended"];
+  let lastAuthorId: string | null = null;
+
+  while (
+    mixedPosts.length < targetSize &&
+    (followedCandidates.length > 0 || recommendedCandidates.length > 0)
+  ) {
+    const previousLength = mixedPosts.length;
+
+    for (const slot of pattern) {
+      const primaryPool =
+        slot === "followed" ? followedCandidates : recommendedCandidates;
+      const fallbackPool =
+        slot === "followed" ? recommendedCandidates : followedCandidates;
+      const nextCandidate: RankedFeedCandidate | null =
+        pickNextFeedCandidate(primaryPool, lastAuthorId) ??
+        pickNextFeedCandidate(fallbackPool, lastAuthorId);
+
+      if (!nextCandidate) {
+        continue;
+      }
+
+      mixedPosts.push(nextCandidate.post);
+      lastAuthorId = nextCandidate.post?.authorId ?? null;
+
+      if (mixedPosts.length >= targetSize) {
+        break;
+      }
+    }
+
+    if (mixedPosts.length === previousLength) {
+      break;
+    }
+  }
+
+  return mixedPosts;
+};
+
+const getMixedFeedPosts = async (
+  viewerId: string | undefined,
+  safeLimit: number,
+  safeOffset: number,
+  uninterestedPostIds: string[],
+  inaccessibleAuthorIds: string[],
+) => {
+  const signals = await buildViewerFeedSignals(viewerId);
+  const topInterestCategories = Array.from(signals.categoryWeights.entries())
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 5)
+    .map(([category]) => category);
+  const candidateTake = Math.min(
+    Math.max((safeOffset + safeLimit) * 5, 60),
+    240,
+  );
+  const visiblePostWhere = buildVisiblePostWhere(
+    uninterestedPostIds,
+    inaccessibleAuthorIds,
+  );
+
+  const [recentCandidates, followedCandidates, interestCandidates] =
+    await Promise.all([
+      prisma.post.findMany({
+        where: visiblePostWhere,
+        include: buildPostInclude(viewerId),
+        orderBy: [{ pinned: "desc" }, { createdAt: "desc" }] as any,
+        take: candidateTake,
+      }),
+      signals.followingIds.size > 0
+        ? prisma.post.findMany({
+            where: {
+              ...visiblePostWhere,
+              authorId: {
+                in: Array.from(signals.followingIds),
+                ...(inaccessibleAuthorIds.length > 0
+                  ? {
+                      notIn: inaccessibleAuthorIds,
+                    }
+                  : {}),
+              },
+            },
+            include: buildPostInclude(viewerId),
+            orderBy: [{ pinned: "desc" }, { createdAt: "desc" }] as any,
+            take: candidateTake,
+          })
+        : Promise.resolve([]),
+      topInterestCategories.length > 0
+        ? prisma.post.findMany({
+            where: {
+              ...visiblePostWhere,
+              categories: {
+                hasSome: topInterestCategories,
+              },
+            },
+            include: buildPostInclude(viewerId),
+            orderBy: [{ pinned: "desc" }, { createdAt: "desc" }] as any,
+            take: candidateTake,
+          })
+        : Promise.resolve([]),
+    ]);
+
+  const dedupedPosts = Array.from(
+    new Map(
+      [...recentCandidates, ...followedCandidates, ...interestCandidates].map(
+        (post) => [post.id, post],
+      ),
+    ).values(),
+  );
+  const rankedCandidates = dedupedPosts
+    .map((post) => ({
+      post,
+      score: scorePostForFeed(post, viewerId, signals),
+      isFollowed: signals.followingIds.has(post.authorId ?? ""),
+    }))
+    .sort((left, right) => right.score - left.score);
+  const mixedPosts = mixRankedFeedCandidates(
+    rankedCandidates,
+    safeLimit,
+    safeOffset,
+  );
+
+  return mixedPosts
+    .slice(safeOffset, safeOffset + safeLimit)
+    .map((post) => mapPostForGraphQL(post, viewerId));
+};
 
 const buildPostVersionSnapshot = (
   post: {
@@ -390,41 +952,55 @@ export const PostResolver = {
       const uninterestedPostIds = Array.isArray(viewer?.uninterestedPostIds)
         ? viewer.uninterestedPostIds
         : [];
-      const [blockedByIds, blockedIds, privatePostIds] = await Promise.all([
-        getInaccessibleAuthorIds(viewerId),
-        getBlockedUserIdsForViewer(viewerId),
-        getPrivatePostAuthorIds(viewerId),
-      ]);
+      const [blockedByIds, blockedIds, privatePostIds, mutedUserIds] =
+        await Promise.all([
+          getInaccessibleAuthorIds(viewerId),
+          getBlockedUserIdsForViewer(viewerId),
+          getPrivatePostAuthorIds(viewerId),
+          getMutedUserIdsForViewer(viewerId),
+        ]);
       const inaccessibleAuthorIds = normalizedAuthorUsername
         ? Array.from(new Set([...blockedByIds]))
         : Array.from(
-            new Set([...blockedByIds, ...blockedIds, ...privatePostIds]),
+            new Set([
+              ...blockedByIds,
+              ...blockedIds,
+              ...privatePostIds,
+              ...mutedUserIds,
+            ]),
           );
+
+      if (!normalizedAuthorUsername) {
+        return getMixedFeedPosts(
+          viewerId,
+          safeLimit,
+          safeOffset,
+          uninterestedPostIds,
+          inaccessibleAuthorIds,
+        );
+      }
+
       const posts = await prisma.post.findMany({
-        where: normalizedAuthorUsername
-          ? {
-              deleted: false,
-              ...(inaccessibleAuthorIds.length > 0
-                ? {
-                    authorId: {
-                      notIn: inaccessibleAuthorIds,
-                    },
-                  }
-                : {}),
-              author: {
-                username: {
-                  equals: normalizedAuthorUsername,
-                  mode: "insensitive",
+        where: {
+          deleted: false,
+          ...(inaccessibleAuthorIds.length > 0
+            ? {
+                authorId: {
+                  notIn: inaccessibleAuthorIds,
                 },
-                deleted: false,
-                disabled: false,
-              },
-            }
-          : buildVisiblePostWhere(uninterestedPostIds, inaccessibleAuthorIds),
+              }
+            : {}),
+          author: {
+            username: {
+              equals: normalizedAuthorUsername,
+              mode: "insensitive",
+            },
+            deleted: false,
+            disabled: false,
+          },
+        },
         include: buildPostInclude(viewerId),
-        orderBy: (normalizedAuthorUsername
-          ? [{ pinned: "desc" }, { createdAt: "desc" }]
-          : { createdAt: "desc" }) as any,
+        orderBy: [{ pinned: "desc" }, { createdAt: "desc" }] as any,
         take: safeLimit,
         skip: safeOffset,
       });
@@ -949,7 +1525,25 @@ export const PostResolver = {
         });
       }
 
+      await recordFeedInteraction(viewerId, {
+        postId: normalizedPostId,
+        interactionType: "NOT_INTERESTED",
+        signalKind: "negative",
+      });
+
       return true;
+    },
+    trackFeedInteraction: async (
+      _: unknown,
+      { input }: { input: TrackFeedInteractionArgs },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      return recordFeedInteraction(viewerId, input);
     },
     deletePost: async (
       _: unknown,
@@ -1084,6 +1678,12 @@ export const PostResolver = {
             profilePicture: actor?.profilePicture,
           });
         }
+
+        await recordFeedInteraction(viewerId, {
+          postId,
+          interactionType: "LIKE",
+          signalKind: "positive",
+        });
       }
 
       const updatedPost = await prisma.post.findUnique({
@@ -1161,6 +1761,14 @@ export const PostResolver = {
           content: normalizedContent,
         },
         include: buildCommentInclude(viewerId),
+      });
+
+      await recordFeedInteraction(viewerId, {
+        postId,
+        interactionType: normalizedParentCommentId
+          ? "COMMENT_REPLY"
+          : "COMMENT",
+        signalKind: "positive",
       });
 
       if (post.authorId && post.authorId !== viewerId) {

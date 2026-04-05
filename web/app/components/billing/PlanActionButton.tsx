@@ -8,11 +8,15 @@ import {
   PREMIUM_SUBSCRIPTION_PLAN,
   PRO_SUBSCRIPTION_PLAN,
   formatSubscriptionPlan,
+  hasSubscriptionAccess,
   normalizeSubscriptionPlan,
 } from "@/app/lib/subscription";
 
 type PlanActionButtonProps = {
-  plan: "free" | typeof PRO_SUBSCRIPTION_PLAN | typeof PREMIUM_SUBSCRIPTION_PLAN;
+  plan:
+    | "free"
+    | typeof PRO_SUBSCRIPTION_PLAN
+    | typeof PREMIUM_SUBSCRIPTION_PLAN;
   defaultLabel: string;
   className?: string;
 };
@@ -29,6 +33,11 @@ export default function PlanActionButton({
 
   const currentPlan = normalizeSubscriptionPlan(user?.subscriptionPlan);
   const isCurrentPlan = Boolean(user) && currentPlan === plan;
+  const isIncludedInCurrentPlan =
+    Boolean(user) &&
+    plan !== "free" &&
+    !isCurrentPlan &&
+    hasSubscriptionAccess(currentPlan, plan);
 
   const label = useMemo(() => {
     const formattedPlan = formatSubscriptionPlan(plan);
@@ -41,19 +50,16 @@ export default function PlanActionButton({
       return `Continue with ${formattedPlan}`;
     }
 
+    if (isIncludedInCurrentPlan) {
+      return `Included in ${formatSubscriptionPlan(currentPlan)}`;
+    }
+
     if (!user) {
       return defaultLabel;
     }
 
     if (plan === "free") {
       return "Downgrade to Free";
-    }
-
-    if (
-      currentPlan === PREMIUM_SUBSCRIPTION_PLAN &&
-      plan === PRO_SUBSCRIPTION_PLAN
-    ) {
-      return "Downgrade to Pro";
     }
 
     if (plan === PRO_SUBSCRIPTION_PLAN) {
@@ -65,7 +71,15 @@ export default function PlanActionButton({
     }
 
     return defaultLabel;
-  }, [currentPlan, defaultLabel, isBusy, isCurrentPlan, plan, user]);
+  }, [
+    currentPlan,
+    defaultLabel,
+    isBusy,
+    isCurrentPlan,
+    isIncludedInCurrentPlan,
+    plan,
+    user,
+  ]);
 
   const handleOpenPortal = async () => {
     const response = await fetch("/api/billing/portal", {
@@ -100,7 +114,7 @@ export default function PlanActionButton({
 
     setIsBusy(true);
     try {
-      if (isCurrentPlan) {
+      if (isCurrentPlan || isIncludedInCurrentPlan) {
         await handleOpenPortal();
         return;
       }
@@ -133,9 +147,7 @@ export default function PlanActionButton({
       >
         {label}
       </button>
-      {error ? (
-        <p className="mt-2 text-xs text-[#B84E4E]">{error}</p>
-      ) : null}
+      {error ? <p className="mt-2 text-xs text-[#B84E4E]">{error}</p> : null}
     </div>
   );
 }

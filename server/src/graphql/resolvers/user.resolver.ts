@@ -294,8 +294,12 @@ const sanitizeFileName = (name: string) =>
 
 const buildS3FileUrl = (bucket: string, region: string, key: string) =>
   `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-const MAX_PROFILE_PICTURE_BYTES = 5 * 1024 * 1024;
-const ALLOWED_PROFILE_PICTURE_MIME_TYPES = new Set(["image/jpeg", "image/png"]);
+const MAX_PROFILE_PICTURE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PROFILE_PICTURE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 const PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 const PROFILE_PICTURE_MAX_DIMENSION = 512;
 const PROFILE_PICTURE_WEBP_QUALITY = 82;
@@ -2011,7 +2015,7 @@ export const UserResolver = {
 
           const normalizedMime = profilePictureMimeType.toLowerCase();
           if (!ALLOWED_PROFILE_PICTURE_MIME_TYPES.has(normalizedMime)) {
-            throw new Error("Use JPG, JPEG, or PNG only.");
+            throw new Error("Use JPG, PNG, or WEBP only.");
           }
 
           const fileBuffer = Buffer.from(profilePictureFileBase64, "base64");
@@ -2019,7 +2023,7 @@ export const UserResolver = {
             throw new Error("Uploaded profile picture is empty");
           }
           if (fileBuffer.length > MAX_PROFILE_PICTURE_BYTES) {
-            throw new Error("Profile picture must be 5MB or smaller");
+            throw new Error("Profile picture must be 10MB or smaller");
           }
 
           let processedImageBuffer: Buffer;
