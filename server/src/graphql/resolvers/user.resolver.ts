@@ -105,6 +105,17 @@ const findUserByEmailInsensitive = (email: string) =>
   });
 
 const PAID_SUBSCRIPTION_PLANS = new Set(["pro", "premium"]);
+const PROFILE_FIELD_VISIBILITY_VALUES = [
+  "everyone",
+  "followers",
+  "only_you",
+] as const;
+
+type ProfileFieldVisibility = (typeof PROFILE_FIELD_VISIBILITY_VALUES)[number];
+
+const PROFILE_FIELD_VISIBILITY_SET = new Set<ProfileFieldVisibility>(
+  PROFILE_FIELD_VISIBILITY_VALUES,
+);
 
 const hasPaidSubscriptionPlan = (plan: unknown) =>
   PAID_SUBSCRIPTION_PLANS.has(
@@ -112,6 +123,50 @@ const hasPaidSubscriptionPlan = (plan: unknown) =>
       .trim()
       .toLowerCase(),
   );
+
+const normalizeProfileFieldVisibility = (
+  value: unknown,
+): ProfileFieldVisibility => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  return PROFILE_FIELD_VISIBILITY_SET.has(normalized as ProfileFieldVisibility)
+    ? (normalized as ProfileFieldVisibility)
+    : "everyone";
+};
+
+const canViewerSeeProfileField = async (
+  user: { id?: string | null },
+  visibility: unknown,
+  viewerId?: string | null,
+) => {
+  const normalizedVisibility = normalizeProfileFieldVisibility(visibility);
+
+  if (viewerId && user.id === viewerId) {
+    return true;
+  }
+
+  if (normalizedVisibility === "everyone") {
+    return true;
+  }
+
+  if (!viewerId || !user.id || normalizedVisibility === "only_you") {
+    return false;
+  }
+
+  const follow = await (prisma as any).follow.findUnique({
+    where: {
+      followerId_followingId: {
+        followerId: viewerId,
+        followingId: user.id,
+      },
+    },
+    select: { followerId: true },
+  });
+
+  return Boolean(follow);
+};
 
 const getDeletedAccountRestoreDeadline = (deletedAt: unknown) => {
   if (!deletedAt) return null;
@@ -1880,6 +1935,14 @@ export const UserResolver = {
       const profilePictureFileBase64 = args.profilePictureFileBase64;
       const profilePictureFileName = args.profilePictureFileName?.trim();
       const profilePictureMimeType = args.profilePictureMimeType?.trim();
+      const hasInstitutionVisibilityArg = Object.prototype.hasOwnProperty.call(
+        args,
+        "institutionVisibility",
+      );
+      const hasProgramVisibilityArg = Object.prototype.hasOwnProperty.call(
+        args,
+        "programVisibility",
+      );
       const hasProfilePictureArg = Object.prototype.hasOwnProperty.call(
         args,
         "profilePicture",
@@ -1925,6 +1988,18 @@ export const UserResolver = {
           institution,
           program: args.program ?? null,
         };
+
+        if (hasInstitutionVisibilityArg) {
+          updateData.institutionVisibility = normalizeProfileFieldVisibility(
+            args.institutionVisibility,
+          );
+        }
+
+        if (hasProgramVisibilityArg) {
+          updateData.programVisibility = normalizeProfileFieldVisibility(
+            args.programVisibility,
+          );
+        }
 
         const hasPaidPlan = hasPaidSubscriptionPlan(
           existingUser.subscriptionPlan,
@@ -2209,6 +2284,54 @@ export const UserResolver = {
     visibilityOnlineStatus: (user: {
       visibilityOnlineStatus?: boolean | null;
     }) => user.visibilityOnlineStatus ?? true,
+    institutionVisibility: (user: { institutionVisibility?: string | null }) =>
+      normalizeProfileFieldVisibility(user.institutionVisibility),
+    programVisibility: (user: { programVisibility?: string | null }) =>
+      normalizeProfileFieldVisibility(user.programVisibility),
+    institution: async (
+      user: {
+        id: string;
+        institution?: string | null;
+        institutionVisibility?: string | null;
+      },
+      _: unknown,
+      ctx: any,
+    ) => {
+      const value = user.institution?.trim();
+      if (!value) {
+        return null;
+      }
+
+      return (await canViewerSeeProfileField(
+        user,
+        user.institutionVisibility,
+        ctx.user?.sub,
+      ))
+        ? value
+        : null;
+    },
+    program: async (
+      user: {
+        id: string;
+        program?: string | null;
+        programVisibility?: string | null;
+      },
+      _: unknown,
+      ctx: any,
+    ) => {
+      const value = user.program?.trim();
+      if (!value) {
+        return null;
+      }
+
+      return (await canViewerSeeProfileField(
+        user,
+        user.programVisibility,
+        ctx.user?.sub,
+      ))
+        ? value
+        : null;
+    },
     emailNotificationsAccountActivity: (user: {
       emailNotificationsAccountActivity?: boolean | null;
     }) => user.emailNotificationsAccountActivity ?? true,

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Edit2 } from "iconsax-reactjs";
+import { Edit2, Eye, EyeSlash } from "iconsax-reactjs";
 import { IoMdCheckmarkCircle, IoMdCloseCircle } from "react-icons/io";
 import Alert from "@/app/components/Alert";
 import Header from "@/app/components/Header";
@@ -18,13 +18,37 @@ import {
   hasPaidSubscription,
 } from "@/app/lib/subscription";
 
+type ProfileFieldVisibility = "everyone" | "only_you";
+
 type UserProfile = {
   username: string;
   displayName: string;
   profilePictureUrl?: string;
   profileBackground: string;
   institution: string;
+  institutionVisibility: ProfileFieldVisibility;
   program: string;
+  programVisibility: ProfileFieldVisibility;
+};
+
+type EditableTextInput = {
+  label: string;
+  value: string;
+  onchange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  key: "displayName" | "institution" | "program";
+  minLength: number;
+  maxLength: number;
+  visibilityKey?: "institutionVisibility" | "programVisibility";
+};
+
+const normalizeProfileFieldVisibility = (
+  value: unknown,
+): ProfileFieldVisibility => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase();
+
+  return normalized === "everyone" ? "everyone" : "only_you";
 };
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
@@ -43,7 +67,9 @@ export default function Page() {
     username: "",
     displayName: "",
     institution: "",
+    institutionVisibility: "everyone",
     program: "",
+    programVisibility: "everyone",
     profilePictureUrl: "",
     profileBackground: DEFAULT_PROFILE_BACKGROUND,
   });
@@ -150,7 +176,13 @@ export default function Page() {
           username: body.user.username ?? "",
           displayName: body.user.displayName ?? "",
           institution: body.user.institution ?? "",
+          institutionVisibility: normalizeProfileFieldVisibility(
+            body.user.institutionVisibility,
+          ),
           program: body.user.program ?? "",
+          programVisibility: normalizeProfileFieldVisibility(
+            body.user.programVisibility,
+          ),
           profilePictureUrl:
             body.user.profilePicture ?? body.user.profilePictureUrl ?? "",
           profileBackground:
@@ -160,7 +192,13 @@ export default function Page() {
           username: body.user.username ?? "",
           displayName: body.user.displayName ?? "",
           institution: body.user.institution ?? "",
+          institutionVisibility: normalizeProfileFieldVisibility(
+            body.user.institutionVisibility,
+          ),
           program: body.user.program ?? "",
+          programVisibility: normalizeProfileFieldVisibility(
+            body.user.programVisibility,
+          ),
           profilePictureUrl:
             body.user.profilePicture ?? body.user.profilePictureUrl ?? "",
           profileBackground:
@@ -256,7 +294,7 @@ export default function Page() {
     };
   }, [checkUsernameAvailability, getValidationError, profile.username]);
 
-  const textInputs = [
+  const textInputs: EditableTextInput[] = [
     {
       label: "Display Name",
       value: profile.displayName,
@@ -274,6 +312,7 @@ export default function Page() {
       key: "institution",
       minLength: 3,
       maxLength: 50,
+      visibilityKey: "institutionVisibility",
     },
     {
       label: "Program",
@@ -283,6 +322,7 @@ export default function Page() {
       key: "program",
       minLength: 3,
       maxLength: 50,
+      visibilityKey: "programVisibility",
     },
   ];
 
@@ -290,7 +330,9 @@ export default function Page() {
     ? profile.username.trim() !== initialProfile.username.trim() ||
       profile.displayName.trim() !== initialProfile.displayName.trim() ||
       profile.institution.trim() !== initialProfile.institution.trim() ||
+      profile.institutionVisibility !== initialProfile.institutionVisibility ||
       profile.program.trim() !== initialProfile.program.trim() ||
+      profile.programVisibility !== initialProfile.programVisibility ||
       profile.profileBackground !== initialProfile.profileBackground
     : false;
   const hasProfilePictureChange = Boolean(profilePictureFile);
@@ -347,10 +389,12 @@ export default function Page() {
       formData.append("username", trimmedUsername);
       formData.append("displayName", profile.displayName.trim());
       formData.append("institution", profile.institution.trim());
+      formData.append("institutionVisibility", profile.institutionVisibility);
       const trimmedProgram = profile.program.trim();
       if (trimmedProgram) {
         formData.append("program", trimmedProgram);
       }
+      formData.append("programVisibility", profile.programVisibility);
       if (
         !profileBackgroundFile &&
         initialProfile &&
@@ -386,7 +430,13 @@ export default function Page() {
           username: updatedUser.username ?? profile.username,
           displayName: updatedUser.displayName ?? profile.displayName,
           institution: updatedUser.institution ?? profile.institution,
+          institutionVisibility: normalizeProfileFieldVisibility(
+            updatedUser.institutionVisibility ?? profile.institutionVisibility,
+          ),
           program: updatedUser.program ?? profile.program,
+          programVisibility: normalizeProfileFieldVisibility(
+            updatedUser.programVisibility ?? profile.programVisibility,
+          ),
           profilePictureUrl:
             updatedUser.profilePicture ??
             updatedUser.profilePictureUrl ??
@@ -405,7 +455,9 @@ export default function Page() {
                 username: profile.username,
                 displayName: profile.displayName,
                 institution: profile.institution,
+                institutionVisibility: profile.institutionVisibility,
                 program: profile.program,
+                programVisibility: profile.programVisibility,
                 profileBackground: profile.profileBackground,
               }
             : previous,
@@ -659,23 +711,59 @@ export default function Page() {
               </div>
               <p className="text-[12px] text-red-500">{usernameMessage}</p>
             </div>
-            {textInputs.map((input) => (
-              <div className="space-y-1 mt-4" key={input.key}>
-                <p className="text-[#5B5B5B] text-sm font-medium">
-                  {input.label}
-                </p>
-                <input
-                  placeholder={input.value}
-                  value={input.value}
-                  onChange={input.onchange}
-                  disabled={isLoading || isSaving}
-                  required
-                  minLength={input.minLength}
-                  maxLength={input.maxLength}
-                  className="w-full rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 text-sm placeholder:text-[#B1B1B1] focus:outline-none"
-                />
-              </div>
-            ))}
+            {textInputs.map((input) => {
+              const visibilityKey = input.visibilityKey;
+              const visibilityValue = visibilityKey
+                ? profile[visibilityKey]
+                : null;
+
+              return (
+                <div className="space-y-1 mt-4" key={input.key}>
+                  <p className="text-[#5B5B5B] text-sm font-medium">
+                    {input.label}
+                  </p>
+                  <div className="relative">
+                    <input
+                      placeholder={input.value}
+                      value={input.value}
+                      onChange={input.onchange}
+                      disabled={isLoading || isSaving}
+                      required
+                      minLength={input.minLength}
+                      maxLength={input.maxLength}
+                      className={`w-full rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 text-sm placeholder:text-[#B1B1B1] focus:outline-none ${visibilityKey ? "pr-12" : ""}`}
+                    />
+                    {visibilityKey ? (
+                      <button
+                        type="button"
+                        aria-label={`${input.label} visibility: ${visibilityValue === "everyone" ? "Everyone" : "Only you"}`}
+                        title={
+                          visibilityValue === "everyone"
+                            ? `Hide ${input.label.toLowerCase()} from your profile`
+                            : `Show ${input.label.toLowerCase()} to everyone`
+                        }
+                        onClick={() =>
+                          setProfile((current) => ({
+                            ...current,
+                            [visibilityKey]:
+                              current[visibilityKey] === "everyone"
+                                ? "only_you"
+                                : "everyone",
+                          }))
+                        }
+                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#A95A13] transition hover:bg-black/5"
+                      >
+                        {visibilityValue === "everyone" ? (
+                          <Eye size={18} color="#A95A13" variant="Bulk" />
+                        ) : (
+                          <EyeSlash size={18} color="#A95A13" variant="Bulk" />
+                        )}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </form>
       )}

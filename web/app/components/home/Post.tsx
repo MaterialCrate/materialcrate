@@ -597,7 +597,7 @@ export default function Post({
             type="button"
             aria-label={`Open ${post.title}`}
             onClick={() => onFileClick?.(post)}
-            className="group flex w-full items-center gap-4 rounded-[22px] bg-[#F6F3EE] p-3 text-left transition hover:bg-[#F2ECE4]"
+            className="group flex w-full items-start gap-4 rounded-[22px] bg-[#F6F3EE] p-3 text-left transition hover:bg-[#F2ECE4]"
           >
             <PdfThumbnail
               postId={post.id}

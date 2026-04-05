@@ -20,7 +20,9 @@ type CompleteProfileBody = {
   username?: string;
   displayName?: string;
   institution?: string;
+  institutionVisibility?: string;
   program?: string;
+  programVisibility?: string;
   profilePicture?: string | null;
   profileBackground?: string;
   profileBackgroundFileBase64?: string;
@@ -36,6 +38,52 @@ const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
 const COMPLETE_PROFILE_MUTATION = `
+  mutation CompleteProfile(
+    $username: String!
+    $displayName: String!
+    $institution: String!
+    $institutionVisibility: String
+    $program: String
+    $programVisibility: String
+    $profilePicture: String
+    $profileBackground: String
+    $profileBackgroundFileBase64: String
+    $profileBackgroundFileName: String
+    $profileBackgroundMimeType: String
+    $profilePictureFileBase64: String
+    $profilePictureFileName: String
+    $profilePictureMimeType: String
+  ) {
+    completeProfile(
+      username: $username
+      displayName: $displayName
+      institution: $institution
+      institutionVisibility: $institutionVisibility
+      program: $program
+      programVisibility: $programVisibility
+      profilePicture: $profilePicture
+      profileBackground: $profileBackground
+      profileBackgroundFileBase64: $profileBackgroundFileBase64
+      profileBackgroundFileName: $profileBackgroundFileName
+      profileBackgroundMimeType: $profileBackgroundMimeType
+      profilePictureFileBase64: $profilePictureFileBase64
+      profilePictureFileName: $profilePictureFileName
+      profilePictureMimeType: $profilePictureMimeType
+    ) {
+      email
+      username
+      displayName
+      institution
+      institutionVisibility
+      program
+      programVisibility
+      profilePicture
+      profileBackground
+    }
+  }
+`;
+
+const LEGACY_COMPLETE_PROFILE_MUTATION = `
   mutation CompleteProfile(
     $username: String!
     $displayName: String!
@@ -75,6 +123,24 @@ const COMPLETE_PROFILE_MUTATION = `
   }
 `;
 
+const runProfileMutation = async (
+  token: string,
+  query: string,
+  variables: Record<string, unknown>,
+) => {
+  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
+  return { graphqlResponse, graphqlBody };
+};
+
 export async function POST(req: Request) {
   let body: CompleteProfileBody = {};
   const contentType = req.headers.get("content-type") ?? "";
@@ -86,7 +152,9 @@ export async function POST(req: Request) {
     const username = formData.get("username");
     const displayName = formData.get("displayName");
     const institution = formData.get("institution");
+    const institutionVisibility = formData.get("institutionVisibility");
     const program = formData.get("program");
+    const programVisibility = formData.get("programVisibility");
     const profileBackground = formData.get("profileBackground");
 
     body.username = typeof username === "string" ? username : undefined;
@@ -94,7 +162,13 @@ export async function POST(req: Request) {
       typeof displayName === "string" ? displayName : undefined;
     body.institution =
       typeof institution === "string" ? institution : undefined;
+    body.institutionVisibility =
+      typeof institutionVisibility === "string"
+        ? institutionVisibility
+        : undefined;
     body.program = typeof program === "string" ? program : undefined;
+    body.programVisibility =
+      typeof programVisibility === "string" ? programVisibility : undefined;
     body.profileBackground =
       typeof profileBackground === "string" ? profileBackground : undefined;
 
@@ -167,56 +241,82 @@ export async function POST(req: Request) {
     );
   }
 
-  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      query: COMPLETE_PROFILE_MUTATION,
-      variables: {
-        username: body.username,
-        displayName: body.displayName,
-        institution: body.institution,
-        program: body.program,
-        profilePicture:
-          typeof body.profilePicture === "string"
-            ? body.profilePicture.trim() || null
-            : undefined,
-        profileBackground:
-          typeof body.profileBackground === "string"
-            ? body.profileBackground.trim() || undefined
-            : undefined,
-        profileBackgroundFileBase64:
-          typeof body.profileBackgroundFileBase64 === "string"
-            ? body.profileBackgroundFileBase64
-            : undefined,
-        profileBackgroundFileName:
-          typeof body.profileBackgroundFileName === "string"
-            ? body.profileBackgroundFileName.trim()
-            : undefined,
-        profileBackgroundMimeType:
-          typeof body.profileBackgroundMimeType === "string"
-            ? body.profileBackgroundMimeType.trim()
-            : undefined,
-        profilePictureFileBase64:
-          typeof body.profilePictureFileBase64 === "string"
-            ? body.profilePictureFileBase64
-            : undefined,
-        profilePictureFileName:
-          typeof body.profilePictureFileName === "string"
-            ? body.profilePictureFileName.trim()
-            : undefined,
-        profilePictureMimeType:
-          typeof body.profilePictureMimeType === "string"
-            ? body.profilePictureMimeType.trim()
-            : undefined,
-      },
-    }),
-  });
+  const variables = {
+    username: body.username,
+    displayName: body.displayName,
+    institution: body.institution,
+    institutionVisibility:
+      typeof body.institutionVisibility === "string"
+        ? body.institutionVisibility.trim() || undefined
+        : undefined,
+    program: body.program,
+    programVisibility:
+      typeof body.programVisibility === "string"
+        ? body.programVisibility.trim() || undefined
+        : undefined,
+    profilePicture:
+      typeof body.profilePicture === "string"
+        ? body.profilePicture.trim() || null
+        : undefined,
+    profileBackground:
+      typeof body.profileBackground === "string"
+        ? body.profileBackground.trim() || undefined
+        : undefined,
+    profileBackgroundFileBase64:
+      typeof body.profileBackgroundFileBase64 === "string"
+        ? body.profileBackgroundFileBase64
+        : undefined,
+    profileBackgroundFileName:
+      typeof body.profileBackgroundFileName === "string"
+        ? body.profileBackgroundFileName.trim()
+        : undefined,
+    profileBackgroundMimeType:
+      typeof body.profileBackgroundMimeType === "string"
+        ? body.profileBackgroundMimeType.trim()
+        : undefined,
+    profilePictureFileBase64:
+      typeof body.profilePictureFileBase64 === "string"
+        ? body.profilePictureFileBase64
+        : undefined,
+    profilePictureFileName:
+      typeof body.profilePictureFileName === "string"
+        ? body.profilePictureFileName.trim()
+        : undefined,
+    profilePictureMimeType:
+      typeof body.profilePictureMimeType === "string"
+        ? body.profilePictureMimeType.trim()
+        : undefined,
+  };
 
-  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
+  let { graphqlResponse, graphqlBody } = await runProfileMutation(
+    token,
+    COMPLETE_PROFILE_MUTATION,
+    variables,
+  );
+
+  const hasVisibilitySchemaDrift = Array.isArray(graphqlBody?.errors)
+    ? graphqlBody.errors.some((error: { message?: string }) =>
+        /(institutionVisibility|programVisibility)/i.test(error?.message ?? ""),
+      )
+    : false;
+
+  if (
+    (!graphqlResponse.ok || graphqlBody?.errors?.length) &&
+    hasVisibilitySchemaDrift
+  ) {
+    console.warn("[complete-profile] Falling back to legacy mutation", {
+      status: graphqlResponse.status,
+      errors: graphqlBody?.errors ?? null,
+    });
+
+    const legacyResult = await runProfileMutation(
+      token,
+      LEGACY_COMPLETE_PROFILE_MUTATION,
+      variables,
+    );
+    graphqlResponse = legacyResult.graphqlResponse;
+    graphqlBody = legacyResult.graphqlBody;
+  }
 
   if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
     return NextResponse.json(

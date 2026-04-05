@@ -41,7 +41,9 @@ type User {
   disabledAt: String
   disabledUntil: String
   institution: String
+  institutionVisibility: String!
   program: String
+  programVisibility: String!
   createdAt: String
 }
 
@@ -128,7 +130,9 @@ type Mutation {
     username: String!
     displayName: String!
     institution: String!
+    institutionVisibility: String
     program: String
+    programVisibility: String
     profilePicture: String
     profileBackground: String
     profileBackgroundFileBase64: String

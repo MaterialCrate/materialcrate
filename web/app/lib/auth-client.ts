@@ -26,7 +26,9 @@ type User = {
   followersCount: number;
   followingCount: number;
   institution?: string | null;
+  institutionVisibility?: string | null;
   program?: string | null;
+  programVisibility?: string | null;
   emailNotificationsAccountActivity: boolean;
   emailNotificationsWeeklySummary: boolean;
   emailNotificationsProductUpdates: boolean;

@@ -19,20 +19,6 @@ import Alert from "../components/Alert";
 
 const settingPages = [
   {
-    eyebrow: "Identity",
-    title: "Profile",
-    description: "Update how your account looks to other people.",
-    icon: ProfileCircle,
-    buttons: [
-      {
-        key: "edit-profile",
-        text: "Edit Profile",
-        note: "Username, photo, school and program",
-        href: "/settings/profile",
-      },
-    ],
-  },
-  {
     eyebrow: "Access",
     title: "Account",
     description: "See account details, plan info, and linked services.",

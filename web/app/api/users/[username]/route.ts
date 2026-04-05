@@ -20,6 +20,37 @@ const USER_BY_USERNAME_QUERY = `
       followingCount
       subscriptionPlan
       institution
+      institutionVisibility
+      program
+      programVisibility
+      createdAt
+      followers {
+        username
+      }
+      following {
+        username
+      }
+    }
+    pendingFollowRequestId(username: $username)
+  }
+`;
+
+const LEGACY_USER_BY_USERNAME_QUERY = `
+  query UserByUsername($username: String!) {
+    me {
+      username
+    }
+    userByUsername(username: $username) {
+      id
+      username
+      displayName
+      profilePicture
+      profileBackground
+      visibilityPublicProfile
+      followersCount
+      followingCount
+      subscriptionPlan
+      institution
       program
       createdAt
       followers {
@@ -39,6 +70,27 @@ type RouteContext = {
   }>;
 };
 
+const fetchUserProfile = async (
+  token: string | undefined,
+  query: string,
+  username: string,
+) => {
+  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      query,
+      variables: { username },
+    }),
+  });
+
+  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
+  return { graphqlResponse, graphqlBody };
+};
+
 export async function GET(_: Request, context: RouteContext) {
   const { username } = await context.params;
   const normalizedUsername = decodeURIComponent(username || "").trim();
@@ -53,19 +105,30 @@ export async function GET(_: Request, context: RouteContext) {
   const cookieStore = await cookies();
   const token = cookieStore.get("mc_session")?.value;
 
-  const graphqlResponse = await fetch(GRAPHQL_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({
-      query: USER_BY_USERNAME_QUERY,
-      variables: { username: normalizedUsername },
-    }),
-  });
+  let { graphqlResponse, graphqlBody } = await fetchUserProfile(
+    token,
+    USER_BY_USERNAME_QUERY,
+    normalizedUsername,
+  );
 
-  const graphqlBody = await graphqlResponse.json().catch(() => ({}));
+  const hasVisibilitySchemaDrift = Array.isArray(graphqlBody?.errors)
+    ? graphqlBody.errors.some((error: { message?: string }) =>
+        /(institutionVisibility|programVisibility)/i.test(error?.message ?? ""),
+      )
+    : false;
+
+  if (
+    (!graphqlResponse.ok || graphqlBody?.errors?.length) &&
+    hasVisibilitySchemaDrift
+  ) {
+    const legacyResult = await fetchUserProfile(
+      token,
+      LEGACY_USER_BY_USERNAME_QUERY,
+      normalizedUsername,
+    );
+    graphqlResponse = legacyResult.graphqlResponse;
+    graphqlBody = legacyResult.graphqlBody;
+  }
 
   if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
     return NextResponse.json(

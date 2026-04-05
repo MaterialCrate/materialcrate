@@ -30,7 +30,9 @@ const ME_QUERY = `
       followersCount
       followingCount
       institution
+      institutionVisibility
       program
+      programVisibility
       emailNotificationsAccountActivity
       emailNotificationsWeeklySummary
       emailNotificationsProductUpdates
@@ -103,7 +105,7 @@ export async function GET() {
   const primary = await fetchMe(token, ME_QUERY);
   const missingFieldError = Array.isArray(primary.body?.errors)
     ? primary.body.errors.some((error: { message?: string }) =>
-        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus|emailNotificationsAccountActivity|emailNotificationsWeeklySummary|emailNotificationsProductUpdates|emailNotificationsMarketing|pendingSubscriptionPlan|pendingSubscriptionAction|pendingSubscriptionEffectiveAt)"/.test(
+        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus|emailNotificationsAccountActivity|emailNotificationsWeeklySummary|emailNotificationsProductUpdates|emailNotificationsMarketing|pendingSubscriptionPlan|pendingSubscriptionAction|pendingSubscriptionEffectiveAt|institutionVisibility|programVisibility)"/.test(
           error?.message ?? "",
         ),
       )
@@ -147,6 +149,8 @@ export async function GET() {
         pendingSubscriptionPlan: null,
         pendingSubscriptionAction: null,
         pendingSubscriptionEffectiveAt: null,
+        institutionVisibility: "everyone",
+        programVisibility: "everyone",
         theme: "light",
       },
     });

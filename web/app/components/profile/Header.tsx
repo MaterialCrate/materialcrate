@@ -25,7 +25,9 @@ type ProfileHeaderProps = {
   following?: number;
   subscriptionPlan?: string | null;
   institution?: string | null;
+  institutionVisible?: boolean;
   program?: string | null;
+  programVisible?: boolean;
   isOwner?: boolean;
   postsLabel?: string;
   followLabel?: "Follow" | "Following" | "Follow back" | "Requested";
@@ -45,7 +47,9 @@ export default function Header({
   following = 0,
   subscriptionPlan = "free",
   institution,
+  institutionVisible = true,
   program,
+  programVisible = true,
   isOwner = false,
   postsLabel = "Posts",
   followLabel = "Follow",
@@ -93,11 +97,11 @@ export default function Header({
   const planBadgeLabel = getSubscriptionBadgeLabel(subscriptionPlan);
   const profileDetails: Array<{ label: string; value: string }> = [];
 
-  if (institution?.trim()) {
+  if (institutionVisible && institution?.trim()) {
     profileDetails.push({ label: "School", value: institution.trim() });
   }
 
-  if (program?.trim()) {
+  if (programVisible && program?.trim()) {
     profileDetails.push({ label: "Program", value: program.trim() });
   }
 
@@ -133,19 +137,25 @@ export default function Header({
             )}
           </div>
           <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-0.5">
-              <p className={`truncate text-lg font-medium ${primaryTextClass}`}>
-                {displayName}
+            <div
+              className={`${(institutionVisible || programVisible) && "flex items-center gap-2"}`}
+            >
+              <div className="flex items-center gap-0.5">
+                <p
+                  className={`truncate text-lg font-medium ${primaryTextClass}`}
+                >
+                  {displayName}
+                </p>
+                {hasPaidPlan && (
+                  <Verify size={18} color="#E1761F" variant="Bold" />
+                )}
+              </div>
+              <p className={`truncate text-sm ${secondaryTextClass}`}>
+                {username}
               </p>
-              {hasPaidPlan ? (
-                <Verify size={18} color="#E1761F" variant="Bold" />
-              ) : null}
             </div>
-            <p className={`truncate text-sm ${secondaryTextClass}`}>
-              {username}
-            </p>
-            {profileDetails.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5 pt-1">
+            {profileDetails.length > 0 && (
+              <div className="flex  gap-1.5 pt-1">
                 {profileDetails.map((detail) => (
                   <span
                     key={detail.label}
@@ -156,7 +166,7 @@ export default function Header({
                   </span>
                 ))}
               </div>
-            ) : null}
+            )}
           </div>
         </div>
         {isOwner &&
@@ -182,7 +192,7 @@ export default function Header({
           ) : (
             <button
               type="button"
-              className="px-3 py-2 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
+              className="px-3 py-1.5 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
             >
               <Image src={proStar} alt="Plan badge" width={16} height={16} />
               <p className="text-white text-sm font-medium">{planBadgeLabel}</p>
@@ -216,7 +226,7 @@ export default function Header({
           normalizedSubscriptionPlan === "free" ? (
             <button
               type="button"
-              className="px-3 py-2 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
+              className="px-3 py-1.5 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
               onClick={() => router.push("/plans")}
             >
               <Image src={proStar} alt="View plans" width={16} height={16} />

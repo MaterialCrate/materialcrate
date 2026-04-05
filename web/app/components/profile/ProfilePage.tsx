@@ -17,6 +17,8 @@ import UploadDrawer from "@/app/components/home/UploadDrawer";
 import FollowersnFollowingList from "./FollowersnFollowingList";
 import Alert from "../Alert";
 
+type ProfileFieldVisibility = "everyone" | "followers" | "only_you";
+
 type ProfileUser = {
   id: string;
   username: string;
@@ -27,7 +29,9 @@ type ProfileUser = {
   followingCount?: number | null;
   subscriptionPlan?: string | null;
   institution?: string | null;
+  institutionVisibility?: string | null;
   program?: string | null;
+  programVisibility?: string | null;
   visibilityPublicProfile?: boolean;
   isFollowedByCurrentUser?: boolean;
   isFollowingCurrentUser?: boolean;
@@ -40,6 +44,18 @@ type ProfilePageProps = {
 
 const normalizeUsername = (value?: string | null) =>
   value?.trim().toLowerCase() || "";
+
+const normalizeProfileFieldVisibility = (
+  value?: string | null,
+): ProfileFieldVisibility => {
+  const normalized = value?.trim().toLowerCase();
+
+  if (normalized === "followers" || normalized === "only_you") {
+    return normalized;
+  }
+
+  return "everyone";
+};
 
 export default function ProfilePage({ username }: ProfilePageProps) {
   const router = useRouter();
@@ -275,6 +291,11 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const isFollower = Boolean(profile?.isFollowedByCurrentUser);
   const hasPendingRequest = Boolean(profile?.hasPendingFollowRequest);
   const canViewContent = isOwner || !isPrivateProfile || isFollower;
+  const showInstitution =
+    normalizeProfileFieldVisibility(profile?.institutionVisibility) !==
+    "only_you";
+  const showProgram =
+    normalizeProfileFieldVisibility(profile?.programVisibility) !== "only_you";
   const followLabel: "Follow" | "Following" | "Follow back" | "Requested" =
     profile?.isFollowedByCurrentUser
       ? "Following"
@@ -564,7 +585,9 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         following={followingCount}
         subscriptionPlan={profile?.subscriptionPlan ?? "free"}
         institution={profile?.institution}
+        institutionVisible={showInstitution}
         program={profile?.program}
+        programVisible={showProgram}
         isOwner={isOwner}
         postsLabel={postsHeading}
         followLabel={followLabel}
@@ -627,7 +650,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                   No posts yet.
                 </p>
               ) : (
-                posts.map((post, index) => (
+                posts.map((post) => (
                   <div key={post.id}>
                     <Post
                       post={post}
@@ -666,11 +689,6 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                         setActiveOptionsAnchor(null);
                       }}
                     />
-                    {index < posts.length - 1 && (
-                      <div className="px-6">
-                        <div className="mt-4 h-px w-full bg-black/20" />
-                      </div>
-                    )}
                   </div>
                 ))
               )}

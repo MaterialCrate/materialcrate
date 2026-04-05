@@ -52,7 +52,9 @@ model User {
   disabledAt    DateTime?
   disabledUntil DateTime?
   institution   String?
+  institutionVisibility String @default("everyone")
   program       String?
+  programVisibility String @default("everyone")
   posts         Post[]   @relation("UserPosts")
   postVersions  PostVersion[] @relation("PostVersionEditor")
   likes         Like[]
