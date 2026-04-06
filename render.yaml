@@ -28,16 +28,12 @@ services:
         generateValue: true
       - key: GRAPHQL_BODY_LIMIT
         value: 35mb
-      - key: PADDLE_API_KEY
+      - key: GUMROAD_SELLER_ID
         sync: false
-      - key: PADDLE_WEBHOOK_SECRET
+      - key: GUMROAD_PRO_PERMALINK
         sync: false
-      - key: PADDLE_PRO_PRICE_ID
+      - key: GUMROAD_PREMIUM_PERMALINK
         sync: false
-      - key: PADDLE_PREMIUM_PRICE_ID
-        sync: false
-      - key: PADDLE_DEFAULT_CURRENCY
-        value: USD
       - key: AWS_REGION
         sync: false
       - key: AWS_S3_BUCKET_NAME
@@ -83,22 +79,18 @@ services:
         value: https://materialcrate-api.onrender.com/graphql
       - key: APP_BASE_URL
         value: https://www.materialcrate.com
-      - key: NEXT_PUBLIC_PADDLE_ENVIRONMENT
-        value: production
-      - key: NEXT_PUBLIC_PADDLE_CLIENT_TOKEN
+      - key: NEXT_PUBLIC_GUMROAD_PRO_PERMALINK
         sync: false
-      - key: NEXT_PUBLIC_PADDLE_PRO_PRICE_ID
-        sync: false
-      - key: NEXT_PUBLIC_PADDLE_PREMIUM_PRICE_ID
+      - key: NEXT_PUBLIC_GUMROAD_PREMIUM_PERMALINK
         sync: false
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
         value: gemini-2.5-flash-lite
       - key: NEXT_PUBLIC_LAUNCH_AT
-        value: 2026-04-06T20:00:00
+        value: 2026-06-01T20:00:00
       - key: LAUNCH_AT
-        value: 2026-04-06T20:00:00
+        value: 2026-06-01T20:00:00
       - key: LAUNCH_PROTECTED_HOSTS
         value: materialcrate.com,www.materialcrate.com,materialcrate-web.onrender.com
       - key: GOOGLE_CLIENT_ID

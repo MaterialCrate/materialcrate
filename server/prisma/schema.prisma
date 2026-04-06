@@ -39,10 +39,8 @@ model User {
   pendingSubscriptionPlan      String?
   pendingSubscriptionAction    String?
   pendingSubscriptionEffectiveAt DateTime?
-  paddleCustomerId             String?  @unique
-  paddleSubscriptionId     String?  @unique
-  paddleSubscriptionStatus String?
-  paddlePriceId            String?
+  gumroadSubscriptionId String? @unique
+  gumroadSaleId         String? @unique
   emailVerified Boolean  @default(false)
   emailVerificationToken          String?
   emailVerificationTokenExpiresAt DateTime?

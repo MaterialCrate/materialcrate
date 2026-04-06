@@ -111,23 +111,23 @@ export default function LaunchPage() {
               priority
             />
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/90">
-              Material Crate Launch
+              Material Crate
             </span>
           </div>
         </div>
 
         <section className="mt-10 flex flex-1 flex-col items-center justify-center text-center sm:mt-12">
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.28em] text-[#ff9a62]">
-            Countdown in Progress
+            Still Cooking
           </p>
           <h1
             className={`${orbitron.className} text-balance text-4xl font-extrabold uppercase leading-[0.95] tracking-[0.04em] text-white sm:text-6xl md:text-7xl`}
           >
-            We launch soon
+            Not yet lol
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">
-            Full access opens on {launchDateLabel}. Until then, this launch
-            screen is the only page available on the live domain.
+            We promise it&apos;ll be worth the wait. Probably. Our target is{" "}
+            {launchDateLabel} — but honestly who&apos;s counting.
           </p>
 
           <div className="mt-8 grid w-full max-w-3xl grid-cols-2 gap-3 sm:mt-10 sm:grid-cols-4 sm:gap-4">
@@ -150,8 +150,8 @@ export default function LaunchPage() {
 
           <div className="mt-7 rounded-full border border-white/15 bg-black/25 px-5 py-2 text-xs tracking-[0.18em] text-white/80 sm:text-sm">
             {isLaunched
-              ? "Launch unlocked. Redirecting..."
-              : "See you at 8:00 PM"}
+              ? "Aight let's go. Redirecting..."
+              : "Go touch some grass in the meantime"}
           </div>
 
           {process.env.NODE_ENV !== "production" ? (

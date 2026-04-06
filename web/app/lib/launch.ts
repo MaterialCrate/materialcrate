@@ -1,4 +1,4 @@
-const DEFAULT_LAUNCH_AT = "2026-04-06T20:00:00";
+const DEFAULT_LAUNCH_AT = "2026-06-01T20:00:00";
 const LAUNCH_PAGE_PATH = "/launch";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);

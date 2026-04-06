@@ -5,11 +5,7 @@ import { ApolloServer } from "apollo-server-express";
 import { context } from "./auth/context.js";
 import { typeDefs, resolvers } from "./graphql/index.js";
 import { registerPostActivityRealtime } from "./realtime/postActivity.js";
-import {
-  createCustomerPortalUrlForUser,
-  handlePaddleWebhook,
-  verifyPaddleWebhookSignature,
-} from "./billing/paddle.js";
+import { handleGumroadWebhook } from "./billing/gumroad.js";
 
 const GRAPHQL_BODY_LIMIT = process.env.GRAPHQL_BODY_LIMIT?.trim() || "35mb";
 
@@ -68,54 +64,22 @@ export const createHttpServer = () => {
       });
 
       app.post(
-        "/billing/portal",
-        express.json({ limit: "16kb" }),
-        requireAuthenticatedUser,
+        "/billing/gumroad/webhook",
+        express.urlencoded({ extended: false, limit: "16kb" }),
         async (req, res) => {
           try {
-            const userId = (req as AuthenticatedRequest).user?.sub;
-            if (!userId) {
-              res.status(401).json({ error: "Not authenticated" });
-              return;
-            }
-
-            const url = await createCustomerPortalUrlForUser(userId);
-            res.status(200).json({ url });
-          } catch (error) {
-            console.error("Failed to create Paddle portal session", error);
-            res.status(400).json({
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "Failed to open billing portal",
-            });
-          }
-        },
-      );
-
-      app.post(
-        "/billing/paddle/webhook",
-        express.raw({ type: "application/json" }),
-        async (req, res) => {
-          try {
-            if (!Buffer.isBuffer(req.body)) {
-              res.status(500).json({ error: "Webhook body must be raw" });
-              return;
-            }
-
-            verifyPaddleWebhookSignature(
-              req.body,
-              req.headers["paddle-signature"],
+            const body = new URLSearchParams(
+              req.body as Record<string, string>,
             );
-            const result = await handlePaddleWebhook(req.body);
+            const result = await handleGumroadWebhook(body);
             res.status(200).json(result);
           } catch (error) {
-            console.error("Paddle webhook rejected", error);
+            console.error("Gumroad webhook rejected", error);
             res.status(400).json({
               error:
                 error instanceof Error
                   ? error.message
-                  : "Invalid Paddle webhook",
+                  : "Invalid Gumroad webhook",
             });
           }
         },

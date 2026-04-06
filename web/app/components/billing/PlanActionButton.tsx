@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { refreshAuth, useAuth } from "@/app/lib/auth-client";
-import { openPaddleSubscriptionCheckout } from "@/app/lib/paddle";
+import { useAuth } from "@/app/lib/auth-client";
+import { openGumroadCheckout } from "@/app/lib/gumroad";
 import {
   PREMIUM_SUBSCRIPTION_PLAN,
   PRO_SUBSCRIPTION_PLAN,
@@ -81,20 +81,6 @@ export default function PlanActionButton({
     user,
   ]);
 
-  const handleOpenPortal = async () => {
-    const response = await fetch("/api/billing/portal", {
-      method: "POST",
-    });
-    const body = await response.json().catch(() => ({}));
-    const url = typeof body?.url === "string" ? body.url.trim() : "";
-
-    if (!response.ok || !/^https?:\/\//i.test(url)) {
-      throw new Error(body?.error || "Unable to open billing portal");
-    }
-
-    window.location.assign(url);
-  };
-
   const handleClick = async () => {
     if (isBusy || isLoading) {
       return;
@@ -115,17 +101,15 @@ export default function PlanActionButton({
     setIsBusy(true);
     try {
       if (isCurrentPlan || isIncludedInCurrentPlan) {
-        await handleOpenPortal();
+        window.open(
+          "https://app.gumroad.com/subscriptions",
+          "_blank",
+          "noopener,noreferrer",
+        );
         return;
       }
 
-      await refreshAuth();
-      await openPaddleSubscriptionCheckout({
-        plan,
-        email: user.email,
-        userId: user.id,
-        successUrl: `${window.location.origin}/settings/account?billing=success&plan=${plan}`,
-      });
+      openGumroadCheckout({ plan, email: user.email });
     } catch (caughtError: unknown) {
       setError(
         caughtError instanceof Error
