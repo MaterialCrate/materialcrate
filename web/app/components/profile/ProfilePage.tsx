@@ -581,7 +581,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         post={activePdfPost}
         onClose={() => setActivePdfPost(null)}
       />
-      <div className="mx-auto flex w-full max-w-140 flex-col gap-4 lg:px-4">
+      <div className="mx-auto flex w-full max-w-140 flex-col gap-2 lg:px-4">
         <Header
           displayName={displayName}
           username={profileUsername}

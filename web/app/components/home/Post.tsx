@@ -521,7 +521,7 @@ export default function Post({
     <div ref={postCardRef}>
       <Alert message={alertState.message} type={alertState.type} />
       <article className="lg:rounded-xl lg:border lg:border-black/6 lg:mb-4 lg:bg-white lg:shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-start justify-between px-2">
+        <div className="flex items-start justify-between px-2 pt-2">
           <button
             type="button"
             className="cursor-pointer flex min-w-0 items-center gap-3 text-left rounded-xl py-1 -ml-1 pl-1 transition-colors duration-200 hover:bg-black/3 active:bg-black/5"
