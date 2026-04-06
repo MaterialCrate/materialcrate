@@ -176,13 +176,14 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
+    <div className="min-h-dvh bg-[#F7F7F7]">
       <Alert message={success} type="success" />
       <Alert message={error} type="error" />
       <Header
         title="Push Notifications"
         isLoading={isLoading || isSavingKey !== null}
       />
+      <div className="mx-auto max-w-2xl px-4 pb-10 pt-20 sm:px-6">
       <div className="mb-4 rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
           Notifications
@@ -222,6 +223,7 @@ export default function Page() {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </div>
   );

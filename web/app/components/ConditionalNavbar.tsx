@@ -4,19 +4,16 @@ import { usePathname } from "next/navigation";
 import Navbar from "./Navbar";
 import useScrollVisibility from "./useScrollVisibility";
 
-const HIDDEN_PATHS = new Set(["/"]);
-
-const NAV_PATHS = new Set(["/feed", "/hub", "/saved"]);
+const NAV_PATHS = new Set(["/", "/hub", "/saved"]);
 
 export default function ConditionalNavbar() {
   const pathname = usePathname();
   const isVisible = useScrollVisibility();
 
   const shouldShowNavbar =
-    !HIDDEN_PATHS.has(pathname) &&
-    (NAV_PATHS.has(pathname) ||
-      pathname.startsWith("/saved/folder/") ||
-      pathname.startsWith("/user/"));
+    NAV_PATHS.has(pathname) ||
+    pathname.startsWith("/saved/folder/") ||
+    pathname.startsWith("/user/");
 
   if (!shouldShowNavbar) {
     return null;

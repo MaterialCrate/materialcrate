@@ -191,7 +191,7 @@ export default function SearchPage() {
         {isLoading && <LoadingBar />}
       </>
 
-      <main>
+      <main className="mx-auto max-w-2xl">
         {visibleResults.length === 0 && hasQuery ? (
           <section>
             <p className="text-sm leading-6 text-[#7f6d5a] px-4 ">

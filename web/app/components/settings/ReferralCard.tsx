@@ -16,12 +16,16 @@ export default function ReferralCard() {
         If someone register with your referral link, you both get free credits
         to use in MaterialCrate.
       </p>
-      <div className="px-2 py-2 bg-white/40 rounded-2xl mt-5 border border-white/80 flex justify-between">
+      <button
+        type="button"
+        className="mt-5 flex w-full items-center justify-between rounded-2xl border border-white/80 bg-white/40 px-2 py-2 transition-colors hover:bg-white/55 active:bg-white/30"
+        aria-label="Copy referral link"
+      >
         <p className="text-sm text-white font-medium">
           materialcrate.com/ref/@juma_or_not?...
         </p>
         <Copy size={24} color="#FFFFFF" variant="Bold" />
-      </div>
+      </button>
     </div>
   );
 }

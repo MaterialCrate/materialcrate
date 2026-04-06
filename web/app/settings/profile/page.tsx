@@ -606,7 +606,7 @@ export default function Page() {
   };
 
   return (
-    <div className="relative h-screen bg-[#F7F7F7]">
+    <div className="relative min-h-screen bg-[#F7F7F7]">
       {successMessage && <Alert type="success" message={successMessage} />}
       {error && <Alert type="error" message={error} />}
       <Header
@@ -626,7 +626,7 @@ export default function Page() {
       {isLoadingAuth ? null : !user ? null : (
         <form
           id="profile-form"
-          className="relative z-0 flex flex-col items-center gap-6 px-4 pt-24 pb-8"
+          className="relative z-0 mx-auto flex max-w-2xl flex-col items-center gap-6 px-4 pb-8 pt-24 sm:px-6"
           onSubmit={handleSave}
         >
           <div className="w-full rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">

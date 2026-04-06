@@ -22,7 +22,7 @@ export default function DesktopSidebarOffset({
     <div
       className={
         hasSidebar
-          ? "lg:ml-18 xl:ml-55 transition-[margin] duration-300 ease-out"
+          ? "lg:ml-18 lg:mr-18 xl:ml-55 xl:mr-55 transition-[margin] duration-300 ease-out"
           : ""
       }
     >

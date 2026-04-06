@@ -30,12 +30,13 @@ export default function Header({
         isVisible ? "translate-y-0" : "-translate-y-full"
       } ${!query ? "pb-6" : ""}`}
     >
-      <div className="px-5 pt-6">
+      <div className="mx-auto max-w-2xl px-5 pt-6">
         <div className="flex items-center gap-3">
           <button
             type="button"
             aria-label="Go back"
             onClick={() => router.back()}
+            className="transition-opacity hover:opacity-60 active:opacity-40"
           >
             <ArrowLeft2 size={20} color="#202020" />
           </button>

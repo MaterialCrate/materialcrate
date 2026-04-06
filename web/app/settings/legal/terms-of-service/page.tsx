@@ -25,8 +25,9 @@ const sections = [
 
 export default function Page() {
   return (
-    <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F4F0EA_100%)] px-6 pt-20 pb-5">
+    <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F4F0EA_100%)]">
       <Header title="Terms of Service" isLoading={false} />
+      <div className="mx-auto max-w-2xl px-4 pb-10 pt-20 sm:px-6">
       <div className="mb-5 rounded-[28px] bg-[#1F1F1F] px-5 py-5 text-white">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
           Legal
@@ -61,6 +62,7 @@ export default function Page() {
           share, you accept the risk and responsibility for that decision. The
           platform may remove the content and take action on the account.
         </p>
+      </div>
       </div>
     </div>
   );

@@ -101,8 +101,9 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-6 pb-8 pt-20">
+    <div className="min-h-dvh bg-[#F7F7F7]">
       <Header title="Blocked Users" isLoading={isLoading} />
+      <div className="mx-auto max-w-2xl px-4 pb-8 pt-20 sm:px-6">
       {alert && (
         <Alert
           key={`${alert.type}-${alert.message}`}
@@ -163,7 +164,7 @@ export default function Page() {
                 type="button"
                 aria-label={`Unblock ${user.username}`}
                 disabled={busyIds.has(user.id) || isUnblockingAll}
-                className="disabled:opacity-40"
+                className="transition-opacity hover:opacity-70 active:opacity-40 disabled:opacity-40"
                 onClick={() => handleUnblock(user)}
               >
                 <Trash size={18} color="#E00505" />
@@ -181,6 +182,7 @@ export default function Page() {
           {isUnblockingAll ? "Unblocking..." : "Unblock all"}
         </ActionButton>
       )}
+      </div>
     </div>
   );
 }

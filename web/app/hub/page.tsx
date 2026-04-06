@@ -1042,6 +1042,7 @@ export default function HubPage() {
                 type="button"
                 aria-label="Close"
                 onClick={() => setIsPickerOpen(false)}
+                className="transition-opacity hover:opacity-70 active:opacity-40"
               >
                 <CloseCircle size={24} color="#8a8a8a" />
               </button>
@@ -1063,7 +1064,7 @@ export default function HubPage() {
                       key={document.id}
                       type="button"
                       onClick={() => handleSelectDocument(document.post.id)}
-                      className={`flex w-full items-start gap-3 rounded-[20px] border px-3 py-3 text-left transition ${
+                      className={`flex w-full items-start gap-3 rounded-[20px] border px-3 py-3 text-left transition hover:opacity-80 active:opacity-60 ${
                         isSelected
                           ? "border-[#202020] bg-[#f7f7f7]"
                           : "border-black/6 bg-white"
@@ -1126,6 +1127,7 @@ export default function HubPage() {
                 type="button"
                 aria-label="Close history"
                 onClick={() => setIsHistoryOpen(false)}
+                className="transition-opacity hover:opacity-70 active:opacity-40"
               >
                 <CloseCircle size={24} color="#8a8a8a" />
               </button>
@@ -1138,7 +1140,7 @@ export default function HubPage() {
                     key={entry.id}
                     type="button"
                     onClick={() => handleUseHistoryEntry(entry)}
-                    className="w-full rounded-[20px] border border-black/6 bg-white px-3 py-3 text-left"
+                    className="w-full rounded-[20px] border border-black/6 bg-white px-3 py-3 text-left transition-colors hover:bg-[#FAFAFA] active:opacity-70"
                   >
                     <p className="text-xs font-medium text-[#7f6d5a]">
                       {entry.documentTitle}
@@ -1181,7 +1183,7 @@ export default function HubPage() {
               type="button"
               aria-label="View history"
               onClick={() => setIsHistoryOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-black/8 bg-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-black/8 bg-white transition-colors hover:bg-[#F5F5F5] active:opacity-70"
             >
               <Clock size={18} color="#202020" />
             </button>
@@ -1189,7 +1191,7 @@ export default function HubPage() {
               type="button"
               aria-label="Choose a saved document"
               onClick={() => setIsPickerOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-black/8 bg-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-black/8 bg-white transition-colors hover:bg-[#F5F5F5] active:opacity-70"
             >
               <Add size={18} color="#202020" />
             </button>
@@ -1209,6 +1211,7 @@ export default function HubPage() {
           </section>
         ) : null}
 
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:rounded-2xl lg:border lg:border-black/6 lg:bg-white lg:shadow-sm">
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="shrink-0 border-b border-black/6 px-4 py-3">
             <div className="flex items-start justify-between gap-3">
@@ -1228,7 +1231,7 @@ export default function HubPage() {
                   type="button"
                   onClick={() => void handleClearChat()}
                   disabled={isClearingChat}
-                  className="shrink-0 rounded-full border border-black/8 bg-white px-3 py-2 text-xs font-medium text-[#202020] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="shrink-0 rounded-full border border-black/8 bg-white px-3 py-2 text-xs font-medium text-[#202020] transition-colors hover:bg-[#F5F5F5] active:opacity-70 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isClearingChat ? "Clearing..." : "Clear chat"}
                 </button>
@@ -1304,7 +1307,7 @@ export default function HubPage() {
                         key={suggestion}
                         type="button"
                         onClick={() => setPrompt(suggestion)}
-                        className="rounded-full border border-black/8 bg-white px-3 py-2 text-xs text-[#202020]"
+                        className="rounded-full border border-black/8 bg-white px-3 py-2 text-xs text-[#202020] transition-colors hover:bg-[#F5F5F5] active:opacity-70"
                       >
                         {suggestion}
                       </button>
@@ -1324,7 +1327,7 @@ export default function HubPage() {
                 <button
                   type="button"
                   onClick={() => setIsPickerOpen(true)}
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#202020] px-4 py-2 text-sm font-medium text-white"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-[#202020] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#333333] active:opacity-80"
                 >
                   <Add size={16} color="#ffffff" />
                   Pick from Saved
@@ -1334,7 +1337,7 @@ export default function HubPage() {
           </div>
         </section>
 
-        <section className="mt-3 shrink-0">
+        <section className="mt-3 shrink-0 lg:mt-0 lg:border-t lg:border-black/6">
           <div className="flex items-end gap-2 px-2 py-1">
             <textarea
               ref={promptTextareaRef}
@@ -1342,19 +1345,20 @@ export default function HubPage() {
               onChange={(event) => setPrompt(event.target.value)}
               rows={1}
               placeholder="Message Ju Intelli about this document..."
-              className="min-h-12 max-h-28 flex-1 resize-none rounded-3xl border border-black/6 bg-white shadow-sm px-4 py-3 text-sm placeholder:text-sm text-[#202020] outline-none"
+              className="min-h-12 max-h-28 flex-1 resize-none rounded-3xl border border-black/6 bg-white shadow-sm px-4 py-3 text-sm placeholder:text-sm text-[#202020] outline-none lg:rounded-2xl lg:border-0 lg:shadow-none lg:bg-transparent"
             />
             <button
               type="button"
               aria-label="Send message"
               onClick={handleSendPrompt}
               disabled={isSending || !selectedDocument || !prompt.trim()}
-              className="flex p-3 items-center justify-center rounded-full bg-[#202020] disabled:cursor-not-allowed disabled:bg-[#c9c9c9]"
+              className="flex p-3 items-center justify-center rounded-full bg-[#202020] transition-colors hover:bg-[#333333] active:scale-95 disabled:cursor-not-allowed disabled:bg-[#c9c9c9]"
             >
               <ArrowRight2 size={18} color="#ffffff" />
             </button>
           </div>
         </section>
+        </div>
       </main>
 
       <div
@@ -1373,7 +1377,7 @@ export default function HubPage() {
               type="button"
               aria-label="Close"
               onClick={() => setIsLimitDrawerOpen(false)}
-              className="absolute right-0"
+              className="absolute right-0 transition-opacity hover:opacity-70 active:opacity-40"
             >
               <CloseCircle size={24} color="#959595" />
             </button>

@@ -515,7 +515,8 @@ export default function Page() {
     <>
       <Alert type="success" message={success} />
       <Alert type="error" message={error} />
-      <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
+      <div className="min-h-dvh bg-[#F7F7F7]">
+      <div className="mx-auto max-w-2xl px-4 pt-20 pb-10 sm:px-6">
         <Header
           title="Account Information"
           isLoading={
@@ -554,7 +555,7 @@ export default function Page() {
                 <button
                   type="button"
                   onClick={() => router.push("/settings/account/verify")}
-                  className="mt-3 text-sm font-medium text-[#A15D16]"
+                  className="mt-3 text-sm font-medium text-[#A15D16] transition-opacity hover:opacity-70 active:opacity-50"
                 >
                   Continue verification
                 </button>
@@ -601,7 +602,7 @@ export default function Page() {
                         ? isSubmittingPassword
                         : false
                   }
-                  className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[#3D3D3D] active:opacity-60 ${
+                  className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[#3D3D3D] transition-colors hover:bg-[#F7F3EE] active:opacity-60 ${
                     index < section.items.length - 1 &&
                     "border-b border-black/6"
                   }`}
@@ -643,7 +644,7 @@ export default function Page() {
               <button
                 type="button"
                 onClick={handleManageBilling}
-                className="rounded-full bg-[#1D1D1D] px-4 py-2 text-sm font-medium text-white"
+                className="rounded-full bg-[#1D1D1D] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#333333] active:opacity-70"
               >
                 Manage Billing
               </button>
@@ -651,7 +652,7 @@ export default function Page() {
             <button
               type="button"
               onClick={() => router.push("/plans")}
-              className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-[#202020]"
+              className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-[#202020] transition-colors hover:bg-[#F3F3F3] active:opacity-70"
             >
               {hasPaidSubscription(user?.subscriptionPlan)
                 ? "Change plan"
@@ -688,6 +689,7 @@ export default function Page() {
             {isDeletingAccount ? "Deleting..." : "Delete Account"}
           </button>
         </div>
+      </div>
       </div>
     </>
   );

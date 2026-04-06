@@ -289,7 +289,7 @@ export default function SavedFolderPage() {
               type="button"
               aria-label="Back to saved files"
               onClick={() => router.push("/saved")}
-              className="absolute left-0 top-1/2 -translate-y-1/2"
+              className="absolute left-0 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-60 active:opacity-40"
             >
               <ArrowLeft size={22} color="#202020" />
             </button>
@@ -338,7 +338,7 @@ export default function SavedFolderPage() {
             <button
               aria-label="Delete folder"
               type="button"
-              className="absolute right-0 top-1/2 -translate-y-1/2"
+              className="absolute right-0 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-60 active:opacity-40 disabled:opacity-30"
               onClick={() => void handleDeleteFolder()}
               disabled={isDeleting}
             >
@@ -350,9 +350,9 @@ export default function SavedFolderPage() {
       </div>
 
       {!isLoading && (
-        <main className="space-y-6 px-6">
+        <main className="mx-auto max-w-2xl space-y-6 px-4 sm:px-6">
           {!folder ? (
-            <div className="rounded-[28px] bg-white px-5 py-6 shadow-sm">
+            <div className="rounded-[28px] bg-white px-5 py-6 shadow-sm lg:rounded-3xl lg:border lg:border-black/6">
               <p className="text-base font-medium text-[#202020]">
                 Folder not found.
               </p>
@@ -362,6 +362,7 @@ export default function SavedFolderPage() {
             </div>
           ) : (
             <>
+              <div className="space-y-6 lg:rounded-3xl lg:border lg:border-black/6 lg:bg-white lg:p-5 lg:shadow-sm">
               <section className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <DocumentText size={20} color="#202020" />
@@ -405,6 +406,7 @@ export default function SavedFolderPage() {
                   </div>
                 )}
               </section>
+              </div>
             </>
           )}
         </main>

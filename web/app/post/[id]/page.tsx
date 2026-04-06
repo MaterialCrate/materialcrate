@@ -97,6 +97,7 @@ export default function PostDetailPage() {
           type="button"
           onClick={() => router.back()}
           aria-label="Go back"
+          className="transition-opacity hover:opacity-60 active:opacity-40"
         >
           <ArrowLeft size={24} color="#202020" />
         </button>

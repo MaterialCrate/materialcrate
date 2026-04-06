@@ -45,7 +45,7 @@ export default function SavedFileCard({
         <button
           aria-label="Saved document"
           type="button"
-          className="text-left"
+          className="text-left transition-opacity hover:opacity-80 active:opacity-50"
           onClick={() => onOpenFile(savedPost.post)}
         >
           {savedPost.post.thumbnailUrl ? (
@@ -85,7 +85,7 @@ export default function SavedFileCard({
               aria-label="remove saved file"
               onClick={() => onRemove(savedPost)}
               disabled={isRemoving}
-              className={`${isRemoving && "opacity-50"}`}
+              className={`transition-opacity hover:opacity-70 active:opacity-40 ${isRemoving && "opacity-50"}`}
             >
               <CloseCircle size={24} color="#9e9e9e" />
             </button>
@@ -98,7 +98,7 @@ export default function SavedFileCard({
               {onUseInHub ? (
                 <button
                   type="button"
-                  className="text-sm font-medium text-[#7f6d5a]"
+                  className="text-sm font-medium text-[#7f6d5a] transition-opacity hover:opacity-70 active:opacity-50"
                   onClick={() => onUseInHub(savedPost)}
                 >
                   Use in Hub
@@ -106,7 +106,7 @@ export default function SavedFileCard({
               ) : null}
               <button
                 type="button"
-                className="inline-flex items-center gap-1 text-sm font-medium text-[#202020]"
+                className="inline-flex items-center gap-1 text-sm font-medium text-[#202020] transition-opacity hover:opacity-70 active:opacity-50"
                 onClick={() => onOpenPost(savedPost.postId)}
               >
                 View full post

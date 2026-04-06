@@ -117,8 +117,9 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
+    <div className="min-h-dvh bg-[#F7F7F7]">
       <Header title="Theme" isLoading={isLoading || saving} />
+      <div className="mx-auto max-w-2xl px-4 pb-10 pt-20 sm:px-6">
       <p className="mb-4 text-sm text-[#5B5B5B]">
         Choose how Material Crate looks across the app.
       </p>
@@ -178,6 +179,7 @@ export default function Page() {
             </button>
           );
         })}
+      </div>
       </div>
     </div>
   );

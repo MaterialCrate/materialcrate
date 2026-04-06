@@ -30,8 +30,9 @@ const supportItems = [
 
 export default function Page() {
   return (
-    <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F2EEE7_100%)] px-6 pt-20">
+    <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F2EEE7_100%)]">
       <Header title="Help & Support" isLoading={false} />
+      <div className="mx-auto max-w-2xl px-4 pb-10 pt-20 sm:px-6">
       <div className="mb-5 rounded-[28px] bg-[#FFF4EA] px-5 py-5">
         <p className="text-[11px] uppercase tracking-[0.16em] text-[#B46B28]">
           Support
@@ -91,6 +92,7 @@ export default function Page() {
             </button>
           );
         })}
+      </div>
       </div>
     </div>
   );

@@ -143,9 +143,10 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-4 pb-8 pt-20">
+    <div className="min-h-dvh bg-[#F7F7F7]">
       {error && <Alert message={error} type="error" />}
       <Header title="Settings" isLoading={isLoggingOut} />
+      <div className="mx-auto max-w-2xl px-4 pb-8 pt-20 sm:px-6">
       <div className="w-full space-y-3">
         {settingPages.map((section) => (
           <div
@@ -201,6 +202,7 @@ export default function Settings() {
         <Logout size={20} color="#FFFFFF" />
         <p className="font-medium text-white">Logout</p>
       </ActionButton>
+      </div>
     </div>
   );
 }

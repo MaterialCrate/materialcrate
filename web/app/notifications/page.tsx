@@ -462,11 +462,11 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-4 pb-28 pt-20">
+    <div className="min-h-dvh bg-[#F7F7F7]">
       <Header title="Notifications" isLoading={isLoading} />
       {error && <Alert message={error} type="error" />}
 
-      <main className="space-y-5">
+      <main className="mx-auto max-w-2xl space-y-5 px-4 pb-28 pt-20 sm:px-6">
         {notificationGroups.map((group) => (
           <section key={group.label}>
             <div className="mb-2 flex items-center justify-between">
@@ -478,7 +478,7 @@ export default function Page() {
                 onClick={() => {
                   void markAllAsRead();
                 }}
-                className="text-xs font-medium text-[#8A8A8A]"
+                className="text-xs font-medium text-[#8A8A8A] transition-colors hover:text-[#555555] active:opacity-60"
               >
                 Mark all as read
               </button>
@@ -488,7 +488,7 @@ export default function Page() {
               {group.items.map((item) => (
                 <article
                   key={item.id}
-                  className={`rounded-[22px] border border-black/6 bg-white px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.04)] active:opacity-50 ${item.href ? "cursor-pointer" : "cursor-default"}`}
+                  className={`rounded-[22px] border border-black/6 bg-white px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.04)] transition-opacity active:opacity-50 ${item.href ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
                   onClick={() => {
                     void handleNotificationClick(item);
                   }}
@@ -551,7 +551,7 @@ export default function Page() {
                                   "accept",
                                 );
                               }}
-                              className="rounded-full bg-[#131212] px-4 py-1.5 text-xs font-medium text-white"
+                              className="rounded-full bg-[#131212] px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#2a2a2a] active:opacity-70"
                             >
                               Accept
                             </button>
@@ -565,7 +565,7 @@ export default function Page() {
                                   "decline",
                                 );
                               }}
-                              className="rounded-full border border-[#D4D4D4] bg-white px-4 py-1.5 text-xs font-medium text-[#262626]"
+                              className="rounded-full border border-[#D4D4D4] bg-white px-4 py-1.5 text-xs font-medium text-[#262626] transition-colors hover:bg-[#F3F3F3] active:opacity-70"
                             >
                               Decline
                             </button>

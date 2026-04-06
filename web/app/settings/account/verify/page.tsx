@@ -24,10 +24,12 @@ export default function Page() {
 
   if (isLoading) {
     return (
-      <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
+      <div className="min-h-dvh bg-[#F7F7F7]">
         <Header title="Verify New Email" isLoading />
-        <div className="rounded-[18px] bg-white px-4 py-3 text-sm text-[#3D3D3D]">
-          Loading verification details...
+        <div className="mx-auto max-w-2xl px-4 pt-20 sm:px-6">
+          <div className="rounded-[18px] bg-white px-4 py-3 text-sm text-[#3D3D3D]">
+            Loading verification details...
+          </div>
         </div>
       </div>
     );
@@ -35,16 +37,19 @@ export default function Page() {
 
   if (!user?.pendingEmail) {
     return (
-      <div className="min-h-dvh bg-[#F7F7F7] px-6 pt-20">
+      <div className="min-h-dvh bg-[#F7F7F7]">
         <Header title="Verify New Email" isLoading={false} />
-        <Alert type="info" message="No pending email change found." />
+        <div className="mx-auto max-w-2xl px-4 pt-20 sm:px-6">
+          <Alert type="info" message="No pending email change found." />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7] px-6 pb-6 pt-20">
+    <div className="min-h-dvh bg-[#F7F7F7]">
       <Header title="Verify New Email" isLoading={false} />
+      <div className="mx-auto max-w-2xl px-4 pb-6 pt-20 sm:px-6">
       <div className="overflow-hidden rounded-3xl border border-black/6 bg-white shadow-[0_16px_40px_rgba(0,0,0,0.04)]">
         <Verification
           email={user.pendingEmail as string}
@@ -67,6 +72,7 @@ export default function Page() {
             await refreshAuth();
           }}
         />
+      </div>
       </div>
     </div>
   );

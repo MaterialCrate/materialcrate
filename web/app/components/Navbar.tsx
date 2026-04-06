@@ -21,7 +21,7 @@ type NavItem = {
 };
 
 const items: NavItem[] = [
-  { label: "Home", href: "/feed", Icon: Home },
+  { label: "Home", href: "/", Icon: Home },
   { label: "AI Hub", href: "/hub", Icon: Clipboard },
   { label: "Saved", href: "/saved", Icon: Archive },
   { label: "Profile", href: "/user", Icon: Profile },

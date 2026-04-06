@@ -30,9 +30,10 @@ const guidelineSections = [
 
 export default function Page() {
   return (
-    <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F2EEE7_100%)] px-6 pt-20 pb-8">
+    <div className="min-h-dvh bg-[linear-gradient(180deg,#F7F7F7_0%,#F2EEE7_100%)]">
       <Header title="Community Guidelines" isLoading={false} />
 
+      <div className="mx-auto max-w-2xl px-4 pb-8 pt-20 sm:px-6">
       <div className="mb-5 rounded-[28px] bg-[#1F1F1F] px-5 py-5 text-white">
         <p className="text-[11px] uppercase tracking-[0.16em] text-white/55">
           Community
@@ -76,6 +77,7 @@ export default function Page() {
           Repeated or severe violations can lead to content removal, account
           restrictions, or suspension to protect the community.
         </p>
+      </div>
       </div>
     </div>
   );

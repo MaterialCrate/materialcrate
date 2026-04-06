@@ -552,9 +552,11 @@ export default function Post({
                 </p>
                 {post.author?.isBot ? (
                   <Cpu size={16} color="#2196F3" variant="Bold" />
-                ) : hasPaidPlan ? (
-                  <Verify size={16} color="#E1761F" variant="Bold" />
-                ) : null}
+                ) : (
+                  hasPaidPlan && (
+                    <Verify size={16} color="#E1761F" variant="Bold" />
+                  )
+                )}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-medium text-[#8C8C8C]">
                 <span>{authorUsername}</span>

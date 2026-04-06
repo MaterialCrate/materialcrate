@@ -169,9 +169,9 @@ export default function SavedPage() {
       </div>
 
       {!isLoading && (
-        <main className="space-y-6 px-6">
+        <main className="mx-auto max-w-2xl space-y-6 px-4 sm:px-6">
           {!saved || (!saved.folders.length && !saved.savedPosts.length) ? (
-            <div className="flex flex-col items-center justify-center gap-4 px-12 py-16 text-center">
+            <div className="flex flex-col items-center justify-center gap-4 px-12 py-16 text-center lg:rounded-3xl lg:border lg:border-black/6 lg:bg-white lg:shadow-sm">
               <Image
                 src={emptyWorkspace}
                 alt="Empty saved files"
@@ -186,7 +186,7 @@ export default function SavedPage() {
           ) : (
             <>
               {foldersWithSavedPosts.length > 0 && (
-                <section className="space-y-3">
+                <section className="space-y-3 lg:rounded-3xl lg:border lg:border-black/6 lg:bg-white lg:p-5 lg:shadow-sm">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <FolderOpen size={20} color="#202020" />
@@ -203,7 +203,7 @@ export default function SavedPage() {
                       <button
                         type="button"
                         key={folder.id}
-                        className="flex flex-col items-center gap-2 text-center"
+                        className="flex flex-col items-center gap-2 text-center transition-opacity hover:opacity-70 active:opacity-40"
                         onClick={() =>
                           router.push(
                             `/saved/folder/${encodeURIComponent(folder.id)}`,
@@ -223,7 +223,7 @@ export default function SavedPage() {
               )}
 
               {rootSavedPosts.length > 0 && (
-                <section className="space-y-3">
+                <section className="space-y-3 lg:rounded-3xl lg:border lg:border-black/6 lg:bg-white lg:p-5 lg:shadow-sm">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                       <DocumentText size={20} color="#202020" />

@@ -234,7 +234,7 @@ export default function Page() {
 
       <form
         id="report-form"
-        className="flex flex-col gap-5 px-5 pt-20 pb-10"
+        className="mx-auto flex max-w-2xl flex-col gap-5 px-4 pb-10 pt-20 sm:px-6"
         onSubmit={handleSubmit}
       >
         <div className="w-full rounded-[20px] bg-[#1D1D1D] px-4 py-4 text-white">
