@@ -159,7 +159,7 @@ export default function Header({
               </p>
             </div>
             {profileDetails.length > 0 && (
-              <div className="flex  gap-1.5 pt-1">
+              <div className="flex flex-wrap gap-1.5 pt-1">
                 {profileDetails.map((detail) => (
                   <span
                     key={detail.label}
