@@ -21,7 +21,7 @@ export default function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-10 flex flex-col bg-white shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-out ${
+      className={`fixed top-0 left-0 right-0 z-10 flex flex-col bg-white shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-out lg:hidden ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
@@ -30,6 +30,7 @@ export default function Header({
           type="button"
           aria-label="MaterialCrate"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="cursor-pointer transition-opacity duration-200 hover:opacity-80 active:opacity-60"
         >
           <Image
             src="/mc-wordmark.svg"
@@ -42,6 +43,7 @@ export default function Header({
           type="button"
           aria-label="search"
           onClick={() => router.push("/search")}
+          className="cursor-pointer rounded-full p-2 transition-colors duration-200 hover:bg-black/5 active:bg-black/10"
         >
           <SearchNormal1 size={22} color="#959595" />
         </button>

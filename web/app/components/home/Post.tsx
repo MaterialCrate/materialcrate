@@ -520,11 +520,11 @@ export default function Post({
   return (
     <div ref={postCardRef}>
       <Alert message={alertState.message} type={alertState.type} />
-      <article>
+      <article className="lg:rounded-xl lg:border lg:border-black/6 lg:mb-4 lg:bg-white lg:shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
         <div className="flex items-start justify-between px-5 pt-5">
           <button
             type="button"
-            className="flex min-w-0 items-center gap-3 text-left"
+            className="cursor-pointer flex min-w-0 items-center gap-3 text-left rounded-xl py-1 -ml-1 pl-1 transition-colors duration-200 hover:bg-black/3 active:bg-black/5"
             onClick={() => {
               if (!authorRoute) return;
               router.push(authorRoute);
@@ -585,7 +585,7 @@ export default function Post({
                 height: rect.height,
               });
             }}
-            className="rounded-full bg-[#F7F7F7] p-2 transition hover:bg-[#EFEFEF]"
+            className="cursor-pointer rounded-full bg-[#F7F7F7] p-2 transition-all duration-200 hover:bg-[#EFEFEF] active:scale-90"
           >
             <More size={18} color="#6F6F6F" />
           </button>
@@ -602,7 +602,7 @@ export default function Post({
             type="button"
             aria-label={`Open ${post.title}`}
             onClick={() => onFileClick?.(post)}
-            className="group flex w-full items-start gap-4 rounded-[22px] bg-[#F6F3EE] p-3 text-left transition hover:bg-[#F2ECE4]"
+            className="cursor-pointer group flex w-full items-start gap-4 rounded-[22px] bg-[#F6F3EE] p-3 text-left transition-all duration-200 hover:bg-[#F2ECE4] active:scale-[0.98]"
           >
             <PdfThumbnail
               postId={post.id}
@@ -637,9 +637,9 @@ export default function Post({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition disabled:opacity-60 ${
+              className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200 active:scale-95 disabled:opacity-60 ${
                 viewerHasLiked
-                  ? "bg-[#FDE9E9] text-[#C53B3B]"
+                  ? "bg-[#FDE9E9] text-[#C53B3B] hover:bg-[#FBD8D8]"
                   : "bg-[#F6F6F6] text-[#666666] hover:bg-[#EEEEEE]"
               }`}
               onClick={() => {
@@ -656,7 +656,7 @@ export default function Post({
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:bg-[#EEEEEE]"
+              className="cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-2 text-xs font-semibold text-[#666666] transition-all duration-200 hover:bg-[#EEEEEE] active:scale-95"
               onClick={() => {
                 if (!ensureAuthenticated("comment")) return;
                 onCommentClick?.(post);
@@ -668,9 +668,9 @@ export default function Post({
             <button
               aria-label="Archive"
               type="button"
-              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition ${
+              className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200 active:scale-95 ${
                 isArchived
-                  ? "bg-[#FFF3E7] text-[#E1761F]"
+                  ? "bg-[#FFF3E7] text-[#E1761F] hover:bg-[#FFE9D4]"
                   : "bg-[#F6F6F6] text-[#666666] hover:bg-[#EEEEEE]"
               } ${isArchiveBusy ? "opacity-60" : ""}`}
               disabled={isArchiveBusy}
@@ -703,7 +703,7 @@ export default function Post({
             onClick={() => {
               void copyPostLink();
             }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-2 text-xs font-semibold text-[#666666] transition hover:bg-[#EEEEEE]"
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-2 text-xs font-semibold text-[#666666] transition-all duration-200 hover:bg-[#EEEEEE] active:scale-95"
           >
             <Send2 size={18} color="#808080" />
             <span>Share</span>

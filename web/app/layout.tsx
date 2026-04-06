@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Inter, Libre_Baskerville } from "next/font/google";
 import AuthSplashGate from "./components/AuthSplashGate";
 import ConditionalNavbar from "./components/ConditionalNavbar";
+import DesktopSidebarOffset from "./components/DesktopSidebarOffset";
 import { SystemPopupProvider } from "./components/SystemPopup";
 import BrowserNotificationBridge from "./components/BrowserNotificationBridge";
 import ScrollRestoration from "./components/ScrollRestoration";
@@ -73,8 +74,8 @@ export default function RootLayout({
           <BrowserNotificationBridge />
           <ThemeSync />
           <AuthSplashGate>
-            {children}
             <ConditionalNavbar />
+            <DesktopSidebarOffset>{children}</DesktopSidebarOffset>
           </AuthSplashGate>
         </SystemPopupProvider>
       </body>

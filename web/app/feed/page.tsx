@@ -537,7 +537,7 @@ export default function Home() {
   };
 
   return (
-    <div className="py-18">
+    <div className="py-18 lg:py-0">
       <ArchiveDrawer
         isOpen={isArchiveDrawerOpen}
         post={activeArchivePost}
@@ -693,7 +693,7 @@ export default function Home() {
           setActivePdfPost(null);
         }}
       />
-      <div className="fixed right-6 bottom-28 z-50">
+      <div className="fixed right-6 bottom-28 z-50 lg:bottom-8">
         <button
           aria-label="Upload button"
           type="button"
@@ -715,7 +715,7 @@ export default function Home() {
             setActivePdfPost(null);
             setMoreOptionsOpen(false);
           }}
-          className={`absolute right-0 bottom-16 flex items-center gap-3 rounded-3xl bg-white px-5 py-3 transition-all duration-300 ease-out ${
+          className={`cursor-pointer absolute right-0 bottom-16 flex items-center gap-3 rounded-3xl bg-white px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-[#F7F7F7] active:scale-95 ${
             moreOptionsOpen
               ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
               : "opacity-0 translate-y-3 scale-95 pointer-events-none"
@@ -727,7 +727,7 @@ export default function Home() {
         <button
           aria-label="Upload button"
           type="button"
-          className={`absolute right-16 bottom-0 flex items-center gap-3 rounded-3xl bg-white px-5 py-3 transition-all duration-300 ease-out ${
+          className={`cursor-pointer absolute right-16 bottom-0 flex items-center gap-3 rounded-3xl bg-white px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-[#F7F7F7] active:scale-95 ${
             moreOptionsOpen
               ? "opacity-100 translate-x-0 scale-100 pointer-events-auto"
               : "opacity-0 translate-x-3 scale-95 pointer-events-none"
@@ -760,7 +760,7 @@ export default function Home() {
         <button
           title="more actions"
           type="button"
-          className={`w-12 h-12 relative bg-white drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out ${
+          className={`cursor-pointer w-12 h-12 relative bg-white drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out hover:bg-[#F7F7F7] active:scale-90 ${
             moreOptionsOpen ? "rotate-180 scale-105" : "rotate-0 scale-100"
           }`}
           onClick={() => setMoreOptionsOpen((prev) => !prev)}
@@ -772,7 +772,7 @@ export default function Home() {
         </button>
       </div>
       <Header forceVisible={isUploading} showLoadingBar={isUploading} />
-      <main>
+      <main className="mx-auto w-full max-w-100 2xl:max-w-100 lg:pt-4 lg:pb-8">
         {isLoadingPosts ? (
           <p className="px-6 py-8 text-sm text-[#696969]">Loading posts...</p>
         ) : posts.length === 0 ? (
