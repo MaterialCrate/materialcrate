@@ -5,7 +5,9 @@ import { CloseCircle, Heart, Send, User, Verify } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
 import { hasPaidSubscription } from "@/app/lib/subscription";
+import { renderTextWithMentions } from "@/app/lib/mention-renderer";
 import Alert from "../Alert";
+import MentionInput from "../MentionInput";
 import type { HomePost } from "./Post";
 
 interface CommentDrawerProps {
@@ -462,19 +464,10 @@ export default function CommentDrawer({
     });
   };
 
-  const renderContentWithMentions = (content: string) => {
-    const parts = content.split(mentionRegex);
-    const mentionPartRegex = /^@[A-Za-z0-9._]+$/;
-    return parts.map((part, index) =>
-      mentionPartRegex.test(part) ? (
-        <span key={`${part}-${index}`} className="text-[#1A66FF] font-medium">
-          {part}
-        </span>
-      ) : (
-        <span key={`${part}-${index}`}>{part}</span>
-      ),
-    );
-  };
+  const renderContentWithMentions = useCallback(
+    (content: string) => renderTextWithMentions(content),
+    [],
+  );
 
   const handleSubmitComment = async () => {
     const baseContent = draftComment.trim();
@@ -798,9 +791,10 @@ export default function CommentDrawer({
             </p>
           ) : null}
           <div className="flex items-center justify-between gap-7">
-            <input
+            <MentionInput
               value={draftComment}
-              onChange={(event) => setDraftComment(event.target.value)}
+              onChange={(val) => setDraftComment(val)}
+              onSubmit={() => void handleSubmitComment()}
               placeholder={
                 commentsLocked
                   ? "Comments are disabled"

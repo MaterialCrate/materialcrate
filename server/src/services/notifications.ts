@@ -6,6 +6,7 @@ export const NOTIFICATION_ICON = {
   COMMENT_LIKE: "Like1",
   FOLLOW: "Profile2User",
   FOLLOW_REQUEST: "Profile2User",
+  MENTION: "MessageText1",
   POST_LIKE: "Heart",
   SYSTEM: "Notification",
 } as const;
@@ -15,6 +16,7 @@ export const NOTIFICATION_TYPE = {
   COMMENT_LIKE: "COMMENT_LIKE",
   FOLLOW: "FOLLOW",
   FOLLOW_REQUEST: "FOLLOW_REQUEST",
+  MENTION: "MENTION",
   POST_LIKE: "POST_LIKE",
   SYSTEM: "SYSTEM",
 } as const;
@@ -25,6 +27,7 @@ const PUSH_NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
   [NOTIFICATION_TYPE.COMMENT]: "pushNotificationsComments",
   [NOTIFICATION_TYPE.FOLLOW]: "pushNotificationsFollows",
   [NOTIFICATION_TYPE.FOLLOW_REQUEST]: "pushNotificationsFollows",
+  [NOTIFICATION_TYPE.MENTION]: "pushNotificationsMentions",
 };
 
 type CreateNotificationInput = {

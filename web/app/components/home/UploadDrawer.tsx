@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/app/lib/auth-client";
 import ActionButton from "../ActionButton";
 import Alert from "../Alert";
+import MentionInput from "../MentionInput";
 import type { HomePost } from "./Post";
 
 interface UploadDrawerProps {
@@ -522,12 +523,13 @@ export default function UploadDrawer({
           </div>
           <div className="space-y-1">
             <p className="text-[#5B5B5B] text-sm">Document description</p>
-            <textarea
+            <MentionInput
+              multiline
+              rows={4}
               placeholder="E.g. 'Notes for the first lecture'"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(val) => setDescription(val)}
               maxLength={500}
-              style={{ fontSize: "0.75rem" }}
               className="w-full rounded-lg px-3 pt-3 h-28 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs resize-none focus:outline-none"
             />
           </div>

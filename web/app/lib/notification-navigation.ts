@@ -37,6 +37,7 @@ export const getNotificationHref = ({
     if (
       type === "COMMENT" ||
       type === "COMMENT_LIKE" ||
+      type === "MENTION" ||
       Boolean(normalizedCommentId)
     ) {
       searchParams.set("openComments", "1");

@@ -151,6 +151,42 @@ const resolveNotificationTargets = async (notification: any) => {
     };
   }
 
+  if (notification.type === NOTIFICATION_TYPE.MENTION) {
+    const relatedComment = await (prisma as any).comment.findFirst({
+      where: {
+        authorId: actorId,
+        ...(timeUpperBound ? { createdAt: { lte: timeUpperBound } } : {}),
+        content: { contains: "@", mode: "insensitive" },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, postId: true },
+    });
+
+    if (relatedComment) {
+      return {
+        postId: relatedComment.postId ?? null,
+        commentId: relatedComment.id ?? null,
+      };
+    }
+
+    // Mention from post description — find the post by actorId
+    const relatedPost = await prisma.post.findFirst({
+      where: {
+        authorId: actorId,
+        deleted: false,
+        ...(timeUpperBound ? { createdAt: { lte: timeUpperBound } } : {}),
+        description: { contains: "@", mode: "insensitive" },
+      },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    });
+
+    return {
+      postId: relatedPost?.id ?? null,
+      commentId: null,
+    };
+  }
+
   if (notification.type === NOTIFICATION_TYPE.COMMENT_LIKE) {
     const relatedCommentLike = await (prisma as any).commentLike.findFirst({
       where: {

@@ -1286,6 +1286,52 @@ export const PostResolver = {
         throw new Error("Failed to create post");
       }
 
+      // Parse @mentions in post description and send notifications
+      const postDescription = description?.trim();
+      if (postDescription) {
+        const descMentionMatches = postDescription.match(/@([A-Za-z0-9._]+)/g);
+        if (descMentionMatches && descMentionMatches.length > 0) {
+          const mentionedUsernames = [
+            ...new Set(descMentionMatches.map((m) => m.slice(1).toLowerCase())),
+          ].slice(0, 10);
+
+          const mentionedUsers = await prisma.user.findMany({
+            where: {
+              username: { in: mentionedUsernames, mode: "insensitive" },
+              deleted: false,
+              disabled: false,
+            },
+            select: { id: true },
+          });
+
+          const actor = await prisma.user.findUnique({
+            where: { id: ctx.user.sub },
+            select: {
+              displayName: true,
+              username: true,
+              profilePicture: true,
+            },
+          });
+          const actorLabel =
+            actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+
+          for (const mentionedUser of mentionedUsers) {
+            if (mentionedUser.id === ctx.user.sub) continue;
+
+            await createNotification({
+              userId: mentionedUser.id,
+              actorId: ctx.user.sub,
+              postId: createdPost.id,
+              type: NOTIFICATION_TYPE.MENTION,
+              title: `${actorLabel} mentioned you in a post`,
+              description: postDescription,
+              icon: NOTIFICATION_ICON.MENTION,
+              profilePicture: actor?.profilePicture,
+            });
+          }
+        }
+      }
+
       return mapPostForGraphQL(createdPost, ctx.user.sub);
     },
     updatePost: async (
@@ -1807,6 +1853,56 @@ export const PostResolver = {
           icon: NOTIFICATION_ICON.COMMENT,
           profilePicture: actor?.profilePicture,
         });
+      }
+
+      // Parse @mentions and send notifications
+      const mentionMatches = normalizedContent.match(/@([A-Za-z0-9._]+)/g);
+      if (mentionMatches && mentionMatches.length > 0) {
+        const mentionedUsernames = [
+          ...new Set(mentionMatches.map((m) => m.slice(1).toLowerCase())),
+        ].slice(0, 10);
+
+        const mentionedUsers = await prisma.user.findMany({
+          where: {
+            username: { in: mentionedUsernames, mode: "insensitive" },
+            deleted: false,
+            disabled: false,
+          },
+          select: { id: true, username: true },
+        });
+
+        const actor =
+          (await prisma.user.findUnique({
+            where: { id: viewerId },
+            select: {
+              displayName: true,
+              username: true,
+              profilePicture: true,
+            },
+          })) ?? null;
+        const actorLabel =
+          actor?.displayName?.trim() || actor?.username?.trim() || "Someone";
+
+        for (const mentionedUser of mentionedUsers) {
+          if (
+            mentionedUser.id === viewerId ||
+            mentionedUser.id === post.authorId
+          ) {
+            continue;
+          }
+
+          await createNotification({
+            userId: mentionedUser.id,
+            actorId: viewerId,
+            postId,
+            commentId: comment.id,
+            type: NOTIFICATION_TYPE.MENTION,
+            title: `${actorLabel} mentioned you in a comment`,
+            description: normalizedContent,
+            icon: NOTIFICATION_ICON.MENTION,
+            profilePicture: actor?.profilePicture,
+          });
+        }
       }
 
       const mappedComment = mapCommentForGraphQL(comment, viewerId);

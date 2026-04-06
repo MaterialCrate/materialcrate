@@ -17,6 +17,7 @@ import { useAuth } from "@/app/lib/auth-client";
 import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
 import { hasPaidSubscription } from "@/app/lib/subscription";
 import { trackFeedInteraction } from "@/app/lib/feed-tracking";
+import { renderTextWithMentions } from "@/app/lib/mention-renderer";
 import Alert from "@/app/components/Alert";
 import Image from "next/image";
 import PdfThumbnail from "./PdfThumbnail";
@@ -592,7 +593,7 @@ export default function Post({
 
         {post.description && (
           <p className="px-5 pt-3 text-sm leading-6 text-[#373737]">
-            {post.description}
+            {renderTextWithMentions(post.description)}
           </p>
         )}
 
