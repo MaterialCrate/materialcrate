@@ -227,7 +227,9 @@ function LoginContent() {
             />
           )}
           {loading && step === 1 ? (
-            <p className="mt-4 text-center text-sm text-[#444444]">Signing in...</p>
+            <p className="mt-4 text-center text-sm text-[#444444]">
+              Signing in...
+            </p>
           ) : null}
         </div>
       </form>

@@ -25,11 +25,7 @@ export default function Program({
           required
         />
       </div>
-      <ActionButton
-        type="submit"
-        disabled={!program}
-        className="mt-8 w-full"
-      >
+      <ActionButton type="submit" disabled={!program} className="mt-8 w-full">
         {submitLabel}
       </ActionButton>
     </div>

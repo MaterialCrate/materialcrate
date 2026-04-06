@@ -74,7 +74,11 @@ export default function Email({ email, setEmail }: EmailTypes) {
           </p>
         </div>
 
-        <ActionButton type="submit" disabled={!isValidEmail} className="mt-2 w-full">
+        <ActionButton
+          type="submit"
+          disabled={!isValidEmail}
+          className="mt-2 w-full"
+        >
           NEXT
         </ActionButton>
       </div>

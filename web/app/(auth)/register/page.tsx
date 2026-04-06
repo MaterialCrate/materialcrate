@@ -321,7 +321,10 @@ export default function Page() {
               onValidated={handleUsernameValidated}
             />
           ) : step === 4 ? (
-            <FullName displayName={displayName} setDisplayName={setDisplayName} />
+            <FullName
+              displayName={displayName}
+              setDisplayName={setDisplayName}
+            />
           ) : step === 5 ? (
             <Institution
               institution={institution}
