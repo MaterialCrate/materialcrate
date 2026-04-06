@@ -12,7 +12,7 @@ services:
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm render:build
     preDeployCommand: pnpm render:migrate
     startCommand: pnpm start
-    healthCheckPath: /.well-known/apollo/server-health
+    healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: 20

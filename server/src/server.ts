@@ -52,10 +52,10 @@ let httpServerPromise: Promise<http.Server> | null = null;
 export const createHttpServer = () => {
   if (!httpServerPromise) {
     httpServerPromise = (async () => {
-      await server.start();
-
       const app = express();
       app.disable("x-powered-by");
+
+      // Health checks registered immediately — respond before Apollo finishes starting
       app.get("/health", (_, res) => {
         res.status(200).json({ ok: true });
       });
@@ -85,20 +85,24 @@ export const createHttpServer = () => {
         },
       );
 
-      server.applyMiddleware({
-        app,
-        path: "/graphql",
-        cors: {
-          origin: true,
-          credentials: true,
-        },
-        bodyParserConfig: {
-          limit: GRAPHQL_BODY_LIMIT,
-        },
-      });
-
       const httpServer = http.createServer(app);
       registerPostActivityRealtime(httpServer);
+
+      // Start Apollo and apply middleware asynchronously — doesn't block server startup
+      server.start().then(() => {
+        server.applyMiddleware({
+          app,
+          path: "/graphql",
+          cors: {
+            origin: true,
+            credentials: true,
+          },
+          bodyParserConfig: {
+            limit: GRAPHQL_BODY_LIMIT,
+          },
+        });
+        console.log("GraphQL middleware ready");
+      });
 
       return httpServer;
     })();
