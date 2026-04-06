@@ -143,4 +143,5 @@ type Mutation {
     profilePictureFileName: String
     profilePictureMimeType: String
   ): User
+  removeProfilePicture: Boolean!
 }

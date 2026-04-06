@@ -224,6 +224,7 @@ function LoginContent() {
               password={password}
               setPassword={setPassword}
               submitLabel={loading ? "SIGNING IN..." : "SIGN IN"}
+              fixedAction
             />
           )}
           {loading && step === 1 ? (

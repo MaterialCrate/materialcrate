@@ -780,7 +780,7 @@ export default function Home() {
         ) : (
           <>
             {posts.map((post) => (
-              <div key={post.id} data-scroll-item>
+              <div key={post.id} data-scroll-item className="px-3">
                 <Post
                   post={post}
                   isArchived={Boolean(archiveSavedPostIdsByPostId[post.id])}

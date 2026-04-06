@@ -13,6 +13,7 @@ interface VerificationProps {
   buildResendBody?: () => Record<string, string>;
   successRedirect?: string;
   onVerified?: () => void | Promise<void>;
+  fixedAction?: boolean;
 }
 
 export default function Verification({
@@ -25,6 +26,7 @@ export default function Verification({
   buildResendBody,
   successRedirect = "/login",
   onVerified,
+  fixedAction = false,
 }: VerificationProps) {
   const router = useRouter();
   const [code, setCode] = useState<string[]>(["", "", "", ""]);
@@ -209,6 +211,7 @@ export default function Verification({
         <ActionButton
           type="button"
           onClick={handleVerify}
+          fixedBottom={fixedAction}
           className="w-full"
           disabled={
             code.some((digit) => digit === "") || isVerifying || isResending

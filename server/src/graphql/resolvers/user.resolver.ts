@@ -2258,6 +2258,52 @@ export const UserResolver = {
         throw error;
       }
     },
+
+    removeProfilePicture: async (_: unknown, _args: unknown, ctx: any) => {
+      if (!ctx.user?.sub) {
+        throw new Error("Not authenticated");
+      }
+
+      const existingUser = await (prisma as any).user.findUnique({
+        where: { id: ctx.user.sub },
+        select: { profilePicture: true },
+      });
+
+      if (!existingUser) {
+        throw new Error("User not found");
+      }
+
+      if (!existingUser.profilePicture) {
+        return true;
+      }
+
+      await (prisma as any).user.update({
+        where: { id: ctx.user.sub },
+        data: { profilePicture: null },
+      });
+
+      const bucket = process.env.AWS_S3_BUCKET_NAME;
+      const region = process.env.AWS_REGION;
+      if (bucket && region) {
+        const previousPictureKey = extractS3KeyFromUrl(
+          existingUser.profilePicture,
+          bucket,
+          region,
+        );
+        if (previousPictureKey) {
+          void s3
+            .send(
+              new DeleteObjectCommand({
+                Bucket: bucket,
+                Key: previousPictureKey,
+              }),
+            )
+            .catch(() => null);
+        }
+      }
+
+      return true;
+    },
   },
   User: {
     pendingEmail: async (user: {

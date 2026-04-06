@@ -96,6 +96,8 @@ export default function Page() {
     useState<File | null>(null);
   const [profileBackgroundPreviewUrl, setProfileBackgroundPreviewUrl] =
     useState<string>("");
+  const [isRemovingProfilePicture, setIsRemovingProfilePicture] =
+    useState<boolean>(false);
   const [initialProfile, setInitialProfile] = useState<UserProfile | null>(
     null,
   );
@@ -563,6 +565,47 @@ export default function Page() {
     }));
   };
 
+  const handleRemoveProfilePicture = async () => {
+    setIsRemovingProfilePicture(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const response = await fetch("/api/graphql/remove-profile-picture", {
+        method: "POST",
+      });
+      const body = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Failed to remove profile picture");
+      }
+
+      await refreshAuth();
+
+      setProfilePictureFile(null);
+      setProfilePicturePreviewUrl((previous) => {
+        if (previous) {
+          URL.revokeObjectURL(previous);
+        }
+        return "";
+      });
+      setProfile((current) => ({
+        ...current,
+        profilePictureUrl: "",
+      }));
+      setInitialProfile((previous) =>
+        previous ? { ...previous, profilePictureUrl: "" } : previous,
+      );
+      setSuccessMessage("Profile picture removed.");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : "Failed to remove profile picture",
+      );
+    } finally {
+      setIsRemovingProfilePicture(false);
+    }
+  };
+
   return (
     <div className="relative h-screen bg-[#F7F7F7]">
       {successMessage && <Alert type="success" message={successMessage} />}
@@ -626,6 +669,7 @@ export default function Page() {
               <div className="flex justify-center">
                 <ProfilePictureField
                   imageUrl={profilePictureToRender}
+                  isRemoving={isRemovingProfilePicture}
                   onError={setError}
                   onClearStatus={() => {
                     setError("");
@@ -640,6 +684,7 @@ export default function Page() {
                       return previewUrl;
                     });
                   }}
+                  onRemove={() => void handleRemoveProfilePicture()}
                 />
               </div>
             </div>

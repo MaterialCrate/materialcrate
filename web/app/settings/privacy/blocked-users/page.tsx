@@ -145,7 +145,8 @@ export default function Page() {
                       alt={`${user.username}'s profile picture`}
                       width={32}
                       height={32}
-                      className="rounded-full"
+                      unoptimized
+                      className="rounded-full object-cover"
                     />
                   )}
                 </div>

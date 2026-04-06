@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Edit, User } from "iconsax-reactjs";
 import Cropper, { type Area } from "react-easy-crop";
+import ProfilePictureDrawer from "./ProfilePictureDrawer";
 
 const MAX_PROFILE_PICTURE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROFILE_PICTURE_MIME_TYPES = [
@@ -118,18 +119,23 @@ const getCroppedProfilePictureBlob = async (
 
 type ProfilePictureFieldProps = {
   imageUrl: string;
+  isRemoving: boolean;
   onError: (message: string) => void;
   onClearStatus: () => void;
   onImageReady: (file: File, previewUrl: string) => void;
+  onRemove: () => void;
 };
 
 export default function ProfilePictureField({
   imageUrl,
+  isRemoving,
   onError,
   onClearStatus,
   onImageReady,
+  onRemove,
 }: ProfilePictureFieldProps) {
   const profilePictureInputRef = useRef<HTMLInputElement>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [isCropModalOpen, setIsCropModalOpen] = useState<boolean>(false);
   const [pendingProfilePictureUrl, setPendingProfilePictureUrl] =
     useState<string>("");
@@ -310,11 +316,25 @@ export default function ProfilePictureField({
           aria-label="edit pfp"
           type="button"
           className="w-10 h-10 bg-white shadow-xl rounded-full absolute bottom-1 right-1 flex items-center justify-center"
-          onClick={handleProfilePictureButtonClick}
+          onClick={() => {
+            onClearStatus();
+            setIsDrawerOpen(true);
+          }}
         >
           <Edit size={24} color="#797979" />
         </button>
       </div>
+      <ProfilePictureDrawer
+        isOpen={isDrawerOpen}
+        hasProfilePicture={Boolean(imageUrl)}
+        isRemoving={isRemoving}
+        onClose={() => setIsDrawerOpen(false)}
+        onChangePhoto={() => profilePictureInputRef.current?.click()}
+        onRemovePhoto={() => {
+          setIsDrawerOpen(false);
+          onRemove();
+        }}
+      />
     </>
   );
 }

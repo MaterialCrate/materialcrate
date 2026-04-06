@@ -2,12 +2,14 @@ import React from "react";
 
 type ActionButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   label?: string;
+  fixedBottom?: boolean;
 };
 
 export default function ActionButton({
   label,
   className = "",
   disabled = false,
+  fixedBottom = false,
   type = "button",
   children,
   ...props
@@ -26,6 +28,7 @@ export default function ActionButton({
             : "cursor-pointer bg-[#E1761F] text-white hover:bg-[#c86518] hover:shadow-[0_10px_24px_rgba(225,118,31,0.18)] active:scale-[0.98]"
         }
         ${className}
+        ${fixedBottom && "sticky bottom-4 z-20 mt-auto!"}
       `}
       {...props}
     >

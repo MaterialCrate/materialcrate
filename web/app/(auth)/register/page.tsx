@@ -243,7 +243,7 @@ export default function Page() {
       }
     >
       <Alert type="error" message={error} />
-      <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-[520px] flex-col rounded-[28px] bg-white px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6">
+      <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-130 flex-col rounded-[28px] bg-white px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6">
         <div className="flex min-h-10 items-center">
           {((!isSocialSignup && step !== 1 && step !== 7) ||
             (isSocialSignup && step !== 3)) && (
@@ -264,7 +264,7 @@ export default function Page() {
             alt="MaterialCrate Logo"
             width={50}
             height={50}
-            className="h-auto w-[46px] sm:w-[50px]"
+            className="h-auto w-11.5 sm:w-12.5"
           />
           <h1 className="font-serif text-3xl leading-tight text-center sm:text-4xl">
             {step === 1
@@ -277,7 +277,7 @@ export default function Page() {
                     ? "Enter your display name"
                     : step === 5
                       ? "Enter your institution's name"
-                      : step === 6 && "Enter your program of study"}
+                      : step === 6 && "Enter your program/main option"}
           </h1>
         </div>
 
@@ -292,52 +292,64 @@ export default function Page() {
                 username={username}
                 setUsername={setUsername}
                 onValidated={handleUsernameValidated}
+                fixedAction
               />
             ) : step === 4 ? (
               <FullName
                 displayName={displayName}
                 setDisplayName={setDisplayName}
+                fixedAction
               />
             ) : step === 5 ? (
               <Institution
                 institution={institution}
                 setInstitution={setInstitution}
+                fixedAction
               />
             ) : step === 6 ? (
               <Program
                 program={program}
                 setProgram={setProgram}
                 submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
+                fixedAction
               />
             ) : null
           ) : step === 1 ? (
             <Email email={email} setEmail={setEmail} />
           ) : step === 2 ? (
-            <Password password={password} setPassword={setPassword} />
+            <Password
+              password={password}
+              setPassword={setPassword}
+              fixedAction
+            />
           ) : step === 3 ? (
             <Username
               username={username}
               setUsername={setUsername}
               onValidated={handleUsernameValidated}
+              fixedAction
             />
           ) : step === 4 ? (
             <FullName
               displayName={displayName}
               setDisplayName={setDisplayName}
+              fixedAction
             />
           ) : step === 5 ? (
             <Institution
               institution={institution}
               setInstitution={setInstitution}
+              fixedAction
             />
           ) : step === 6 ? (
             <Program
               program={program}
               setProgram={setProgram}
               submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
+              fixedAction
             />
           ) : (
-            <Verification email={email} />
+            <Verification email={email} fixedAction />
           )}
         </div>
       </div>
