@@ -69,7 +69,7 @@ services:
     autoDeploy: true
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm render:build
     startCommand: pnpm start
-    healthCheckPath: /launch
+    healthCheckPath: /
     envVars:
       - key: NODE_VERSION
         value: 20
