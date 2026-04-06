@@ -128,7 +128,6 @@ export default function Page() {
   const [showPlanRenewsCountdown, setShowPlanRenewsCountdown] = useState(false);
   const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
-  const [isOpeningBillingPortal, setIsOpeningBillingPortal] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [hasCreatedPasswordSinceLoad, setHasCreatedPasswordSinceLoad] =
     useState(false);
@@ -148,7 +147,7 @@ export default function Page() {
 
     if (searchParams.get("billing") === "success") {
       setSuccess(
-        "Checkout completed. Your subscription will refresh as soon as Paddle confirms the payment.",
+        "Checkout completed. Your subscription will refresh as soon as Gumroad confirms the payment.",
       );
       void refreshAuth();
     }
@@ -461,33 +460,12 @@ export default function Page() {
     }
   };
 
-  const handleManageBilling = async () => {
-    setIsOpeningBillingPortal(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await fetch("/api/billing/portal", {
-        method: "POST",
-      });
-      const body = await response.json().catch(() => ({}));
-      const url = typeof body?.url === "string" ? body.url.trim() : "";
-
-      if (!response.ok || !/^https?:\/\//i.test(url)) {
-        throw new Error(body?.error || "Failed to open billing portal");
-      }
-
-      window.location.assign(url);
-    } catch (caughtError: unknown) {
-      setError(
-        caughtError instanceof Error
-          ? caughtError.message
-          : "Failed to open billing portal",
-      );
-      console.error("Failed to open billing portal:", caughtError);
-    } finally {
-      setIsOpeningBillingPortal(false);
-    }
+  const handleManageBilling = () => {
+    window.open(
+      "https://app.gumroad.com/subscriptions",
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   const handleDeleteAccount = async () => {
@@ -543,7 +521,6 @@ export default function Page() {
           isLoading={
             isSubmittingEmail ||
             isSubmittingPassword ||
-            isOpeningBillingPortal ||
             isDeletingAccount
           }
         />
@@ -649,7 +626,7 @@ export default function Page() {
           </p>
           <p className="mt-1 text-xs text-[#6F6F6F]">
             Billing, invoices, payment methods, and cancellations are handled
-            securely through Paddle.
+            securely through Gumroad.
           </p>
           {pendingSubscriptionCopy ? (
             <div className="mt-3 rounded-2xl bg-[#FFF7ED] px-3 py-3">
@@ -665,11 +642,10 @@ export default function Page() {
             {hasPaidSubscription(user?.subscriptionPlan) ? (
               <button
                 type="button"
-                onClick={() => void handleManageBilling()}
-                disabled={isOpeningBillingPortal}
-                className="rounded-full bg-[#1D1D1D] px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
+                onClick={handleManageBilling}
+                className="rounded-full bg-[#1D1D1D] px-4 py-2 text-sm font-medium text-white"
               >
-                {isOpeningBillingPortal ? "Opening..." : "Manage Billing"}
+                Manage Billing
               </button>
             ) : null}
             <button

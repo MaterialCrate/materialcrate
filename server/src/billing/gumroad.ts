@@ -29,9 +29,21 @@ const getPermalinkPlanMap = (): Record<string, PaidPlan> => {
   return map;
 };
 
+// Gumroad sometimes sends the full URL (https://x.gumroad.com/l/slug) — extract just the slug
+const extractPermalinkSlug = (value: string): string => {
+  try {
+    const url = new URL(value);
+    const parts = url.pathname.split("/").filter(Boolean);
+    return parts[parts.length - 1] || value;
+  } catch {
+    return value;
+  }
+};
+
 const resolvePlanFromPermalink = (permalink: string): SubscriptionPlan => {
   const map = getPermalinkPlanMap();
-  return map[permalink.toLowerCase()] || FREE_PLAN;
+  const slug = extractPermalinkSlug(permalink).toLowerCase();
+  return map[slug] || FREE_PLAN;
 };
 
 const toDateOrNull = (value: unknown) => {
@@ -101,10 +113,22 @@ export const handleGumroadWebhook = async (body: URLSearchParams) => {
   const sellerId = body.get("seller_id") ?? undefined;
   verifyGumroadSellerId(sellerId);
 
-  const permalink = (body.get("product_permalink") || "").toLowerCase();
+  const rawPermalink = body.get("product_permalink") || "";
+  const permalink = rawPermalink.toLowerCase();
   const email = body.get("email") || body.get("user_email") || "";
   const subscriptionId = body.get("subscription_id") || null;
   const saleId = body.get("sale_id") || null;
+
+  console.log("[Gumroad webhook]", {
+    permalink: rawPermalink,
+    email,
+    subscriptionId,
+    saleId,
+    hasEndedAt: body.has("ended_at"),
+    hasRestartedAt: body.has("restarted_at"),
+    hasRefundedAt: body.has("refunded_at"),
+    resolvedPlan: resolvePlanFromPermalink(rawPermalink),
+  });
 
   if (!email) {
     return { ok: true, ignored: true, reason: "No email in Gumroad webhook" };
