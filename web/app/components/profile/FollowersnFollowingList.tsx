@@ -258,122 +258,131 @@ export default function FollowersnFollowingList({
   }
 
   return (
-    <section className="fixed inset-0 z-70 flex h-dvh flex-col bg-[#FBFBFB]">
-      <div className="border-b border-black/10 px-4 pt-5 bg-white">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            aria-label="Close follow list"
-            onClick={onClose}
-          >
-            <ArrowLeft2 size={22} color="#1E1E1E" />
-          </button>
-          <div className="flex items-center gap-1">
-            <p className="text-base font-semibold text-[#1E1E1E]">{username}</p>
-            {hasPaidSubscription(subscriptionPlan) && (
-              <Verify size={18} color="#E1761F" variant="Bold" />
-            )}
+    <section className="fixed inset-0 z-70 bg-black/20 lg:flex lg:items-center lg:justify-center lg:p-4">
+      <div className="flex h-dvh flex-col bg-[#FBFBFB] lg:h-[min(80vh,720px)] lg:w-full lg:max-w-140 lg:overflow-hidden lg:rounded-[28px] lg:bg-white lg:shadow-[0_20px_50px_rgba(0,0,0,0.14)]">
+        <div className="border-b border-black/10 bg-white px-4 pt-5">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              aria-label="Close follow list"
+              onClick={onClose}
+              className="cursor-pointer rounded-full p-2 transition-all duration-200 hover:bg-black/5 active:scale-95"
+            >
+              <ArrowLeft2 size={22} color="#1E1E1E" />
+            </button>
+            <div className="flex items-center gap-1">
+              <p className="text-base font-semibold text-[#1E1E1E]">
+                {username}
+              </p>
+              {hasPaidSubscription(subscriptionPlan) && (
+                <Verify size={18} color="#E1761F" variant="Bold" />
+              )}
+            </div>
+          </div>
+          <div className="relative mt-5 grid grid-cols-2">
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none absolute bottom-0 left-0 h-0.75 w-1/2 bg-[#1E1E1E] transition-transform duration-300 ease-out ${
+                activeTab === "followers" ? "translate-x-0" : "translate-x-full"
+              }`}
+            />
+            <button
+              type="button"
+              className={`cursor-pointer pb-3 text-center text-sm font-medium transition-all duration-200 hover:opacity-80 active:scale-[0.98] ${
+                activeTab === "followers" ? "text-[#1E1E1E]" : "text-[#7B7B7B]"
+              }`}
+              onClick={() => setActiveTab("followers")}
+            >
+              Followers
+            </button>
+            <button
+              type="button"
+              className={`cursor-pointer pb-3 text-center text-sm font-medium transition-all duration-200 hover:opacity-80 active:scale-[0.98] ${
+                activeTab === "following" ? "text-[#1E1E1E]" : "text-[#7B7B7B]"
+              }`}
+              onClick={() => setActiveTab("following")}
+            >
+              Following
+            </button>
           </div>
         </div>
-        <div className="relative mt-5 grid grid-cols-2">
-          <span
-            aria-hidden="true"
-            className={`pointer-events-none absolute bottom-0 left-0 h-0.75 w-1/2 bg-[#1E1E1E] transition-transform duration-300 ease-out ${
-              activeTab === "followers" ? "translate-x-0" : "translate-x-full"
-            }`}
-          />
-          <button
-            type="button"
-            className={`pb-3 text-center text-sm font-medium transition-colors ${
-              activeTab === "followers" ? "text-[#1E1E1E]" : "text-[#7B7B7B]"
-            }`}
-            onClick={() => setActiveTab("followers")}
-          >
-            Followers
-          </button>
-          <button
-            type="button"
-            className={`pb-3 text-center text-sm font-medium transition-colors ${
-              activeTab === "following" ? "text-[#1E1E1E]" : "text-[#7B7B7B]"
-            }`}
-            onClick={() => setActiveTab("following")}
-          >
-            Following
-          </button>
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-6 pt-3">
-        {error ? <p className="py-4 text-sm text-[#696969]">{error}</p> : null}
-        {isLoading ? (
-          <p className="py-4 text-sm text-[#696969]">Loading users...</p>
-        ) : activeList.length === 0 ? (
-          <p className="py-4 text-sm text-[#696969]">
-            No {activeTab === "followers" ? "followers" : "following"} yet.
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {activeList.map((entry) => {
-              const normalizedEntryUsername = normalizeUsername(entry.username);
-              const isUpdating = updatingUsernames.includes(
-                normalizedEntryUsername,
-              );
+        <div className="flex-1 overflow-y-auto px-4 pb-6 pt-3">
+          {error ? (
+            <p className="py-4 text-sm text-[#696969]">{error}</p>
+          ) : null}
+          {isLoading ? (
+            <p className="py-4 text-sm text-[#696969]">Loading users...</p>
+          ) : activeList.length === 0 ? (
+            <p className="py-4 text-sm text-[#696969]">
+              No {activeTab === "followers" ? "followers" : "following"} yet.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {activeList.map((entry) => {
+                const normalizedEntryUsername = normalizeUsername(
+                  entry.username,
+                );
+                const isUpdating = updatingUsernames.includes(
+                  normalizedEntryUsername,
+                );
 
-              return (
-                <div
-                  key={entry.id}
-                  className="flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-3">
-                    {entry.profilePicture ? (
-                      <Image
-                        src={entry.profilePicture}
-                        alt={entry.displayName}
-                        width={52}
-                        height={52}
-                        className="h-13 w-13 rounded-xl object-cover"
-                        unoptimized
-                      />
-                    ) : (
-                      <div className="flex h-13 w-13 items-center justify-center rounded-xl bg-[#E9E9E9]">
-                        <span className="text-lg font-semibold text-[#6D6D6D]">
-                          {entry.displayName.charAt(0)}
-                        </span>
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1">
-                        <p className="truncate text-sm font-semibold text-[#000000]">
-                          {entry.displayName}
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      {entry.profilePicture ? (
+                        <Image
+                          src={entry.profilePicture}
+                          alt={entry.displayName}
+                          width={52}
+                          height={52}
+                          className="h-13 w-13 rounded-xl object-cover"
+                          unoptimized
+                        />
+                      ) : (
+                        <div className="flex h-13 w-13 items-center justify-center rounded-xl bg-[#E9E9E9]">
+                          <span className="text-lg font-semibold text-[#6D6D6D]">
+                            {entry.displayName.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1">
+                          <p className="truncate text-sm font-semibold text-[#000000]">
+                            {entry.displayName}
+                          </p>
+                          {hasPaidSubscription(entry.subscriptionPlan) ? (
+                            <Verify size={16} color="#E1761F" variant="Bold" />
+                          ) : null}
+                        </div>
+                        <p className="truncate text-xs font-medium text-[#585858]">
+                          @{entry.username}
                         </p>
-                        {hasPaidSubscription(entry.subscriptionPlan) ? (
-                          <Verify size={16} color="#E1761F" variant="Bold" />
-                        ) : null}
                       </div>
-                      <p className="truncate text-xs font-medium text-[#585858]">
-                        @{entry.username}
-                      </p>
                     </div>
+                    {entry.followActionLabel ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleFollowToggle(entry)}
+                        disabled={isUpdating}
+                        className={`min-w-24 cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${
+                          entry.followActionLabel === "Unfollow"
+                            ? "border-[#979797] text-[#202020] hover:bg-[#F6F6F6]"
+                            : "border-black bg-[#131212] text-white hover:bg-[#2A2A2A]"
+                        }`}
+                      >
+                        {isUpdating ? "..." : entry.followActionLabel}
+                      </button>
+                    ) : null}
                   </div>
-                  {entry.followActionLabel ? (
-                    <button
-                      type="button"
-                      onClick={() => void handleFollowToggle(entry)}
-                      disabled={isUpdating}
-                      className={`min-w-24 rounded-full border px-4 py-2 text-sm font-medium disabled:opacity-60 ${
-                        entry.followActionLabel === "Unfollow"
-                          ? "border-[#979797] text-[#202020]"
-                          : "border-black bg-[#131212] text-white"
-                      }`}
-                    >
-                      {isUpdating ? "..." : entry.followActionLabel}
-                    </button>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );

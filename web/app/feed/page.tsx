@@ -772,7 +772,7 @@ export default function Home() {
         </button>
       </div>
       <Header forceVisible={isUploading} showLoadingBar={isUploading} />
-      <main className="mx-auto w-full max-w-100 2xl:max-w-100 lg:pt-4 lg:pb-8">
+      <main className="mx-auto w-full max-w-140 2xl:max-w-120 lg:pt-4 lg:pb-8">
         {isLoadingPosts ? (
           <p className="px-6 py-8 text-sm text-[#696969]">Loading posts...</p>
         ) : posts.length === 0 ? (

@@ -521,7 +521,7 @@ export default function Post({
     <div ref={postCardRef}>
       <Alert message={alertState.message} type={alertState.type} />
       <article className="lg:rounded-xl lg:border lg:border-black/6 lg:mb-4 lg:bg-white lg:shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex items-start justify-between px-5 pt-5">
+        <div className="flex items-start justify-between px-2 pt-5">
           <button
             type="button"
             className="cursor-pointer flex min-w-0 items-center gap-3 text-left rounded-xl py-1 -ml-1 pl-1 transition-colors duration-200 hover:bg-black/3 active:bg-black/5"
@@ -592,12 +592,12 @@ export default function Post({
         </div>
 
         {post.description && (
-          <p className="px-5 pt-3 text-sm leading-6 text-[#373737]">
+          <p className="px-2 pt-3 text-sm leading-6 text-[#373737]">
             {renderTextWithMentions(post.description)}
           </p>
         )}
 
-        <div className="px-5 pt-4">
+        <div className="px-2 pt-4">
           <button
             type="button"
             aria-label={`Open ${post.title}`}
@@ -633,7 +633,7 @@ export default function Post({
           </button>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-black/6 px-5 py-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-black/6 px-2 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"

@@ -507,21 +507,25 @@ export default function ProfilePage({ username }: ProfilePageProps) {
 
   if (!isPublicProfile && !user) {
     return (
-      <div className="px-6 py-10 space-y-4">
-        <p className="text-sm text-[#696969]">Sign in to view your profile.</p>
-        <button
-          type="button"
-          onClick={() => router.push("/login")}
-          className="rounded-full bg-[#E1761F] px-4 py-2 text-sm font-medium text-white"
-        >
-          Go to login
-        </button>
+      <div className="px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-md space-y-4 rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+          <p className="text-sm text-[#696969]">
+            Sign in to view your profile.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/login")}
+            className="cursor-pointer rounded-full bg-[#E1761F] px-4 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-[#c86518] active:scale-[0.98]"
+          >
+            Go to login
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="pb-24 lg:pb-8">
       <Alert message={error} type="error" />
       <CommentDrawer
         isOpen={isCommentDrawerOpen}
@@ -577,127 +581,129 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         post={activePdfPost}
         onClose={() => setActivePdfPost(null)}
       />
-      <Header
-        displayName={displayName}
-        username={profileUsername}
-        profilePictureUrl={profilePictureUrl}
-        profileBackground={profile?.profileBackground}
-        followers={followerCount}
-        following={followingCount}
-        subscriptionPlan={profile?.subscriptionPlan ?? "free"}
-        isBot={profile?.isBot ?? false}
-        institution={profile?.institution}
-        institutionVisible={showInstitution}
-        program={profile?.program}
-        programVisible={showProgram}
-        isOwner={isOwner}
-        postsLabel={postsHeading}
-        followLabel={followLabel}
-        isFollowLoading={isUpdatingFollow}
-        onFollowClick={handleFollowToggle}
-        onFollowListOpen={(tab) => setSelectedFollowList(tab)}
-        selectedTab={selectedTab}
-        onTabChange={setSelectedTab}
-      />
+      <div className="mx-auto flex w-full max-w-140 flex-col gap-4 lg:px-4">
+        <Header
+          displayName={displayName}
+          username={profileUsername}
+          profilePictureUrl={profilePictureUrl}
+          profileBackground={profile?.profileBackground}
+          followers={followerCount}
+          following={followingCount}
+          subscriptionPlan={profile?.subscriptionPlan ?? "free"}
+          isBot={profile?.isBot ?? false}
+          institution={profile?.institution}
+          institutionVisible={showInstitution}
+          program={profile?.program}
+          programVisible={showProgram}
+          isOwner={isOwner}
+          postsLabel={postsHeading}
+          followLabel={followLabel}
+          isFollowLoading={isUpdatingFollow}
+          onFollowClick={handleFollowToggle}
+          onFollowListOpen={(tab) => setSelectedFollowList(tab)}
+          selectedTab={selectedTab}
+          onTabChange={setSelectedTab}
+        />
 
-      {isLoadingProfile ? (
-        <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>
-      ) : !profile ? (
-        <p className="px-6 py-8 text-sm text-[#696969]">
-          {error || "Profile not found."}
-        </p>
-      ) : !canViewContent ? (
-        <div className="px-6 py-12 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#F0F0F0]">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#999"
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-6 w-6"
-            >
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
+        {isLoadingProfile ? (
+          <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>
+        ) : !profile ? (
+          <p className="px-6 py-8 text-sm text-[#696969]">
+            {error || "Profile not found."}
+          </p>
+        ) : !canViewContent ? (
+          <div className="px-6 py-12 text-center">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#F0F0F0]">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#999"
+                strokeWidth={1.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-6 w-6"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-[#262626]">
+              This account is private
+            </p>
+            <p className="mt-1 text-sm text-[#696969]">
+              {hasPendingRequest
+                ? "Your follow request is pending."
+                : "Follow this account to see their posts and achievements."}
+            </p>
           </div>
-          <p className="text-sm font-medium text-[#262626]">
-            This account is private
-          </p>
-          <p className="mt-1 text-sm text-[#696969]">
-            {hasPendingRequest
-              ? "Your follow request is pending."
-              : "Follow this account to see their posts and achievements."}
-          </p>
-        </div>
-      ) : (
-        <>
-          {selectedTab === "achievements" ? (
-            <section className="px-6">
-              <div className="flex justify-between gap-3">
-                <Acheivement />
-                <Acheivement />
-              </div>
-            </section>
-          ) : (
-            <section>
-              {error && posts.length === 0 && isLoadingPosts ? (
-                <p className="px-6 py-8 text-sm text-[#696969]">
-                  Loading posts...
-                </p>
-              ) : posts.length === 0 ? (
-                <p className="px-6 py-8 text-sm text-[#696969]">
-                  No posts yet.
-                </p>
-              ) : (
-                posts.map((post) => (
-                  <div key={post.id}>
-                    <Post
-                      post={post}
-                      showPinnedIndicator
-                      onCommentClick={(selectedPost) => {
-                        setActiveCommentPostId(selectedPost.id);
-                        setActiveCommentPost(selectedPost);
-                        setIsCommentDrawerOpen(true);
-                        setIsUploadDrawerOpen(false);
-                        setEditingPost(null);
-                        setIsPostOptionsDrawerOpen(false);
-                        setActiveOptionsPost(null);
-                        setActiveOptionsAnchor(null);
-                        setActivePdfPost(null);
-                      }}
-                      onOptionsClick={(selectedPost, anchor) => {
-                        setActiveOptionsPost(selectedPost);
-                        setActiveOptionsAnchor(anchor);
-                        setIsPostOptionsDrawerOpen(true);
-                        setIsUploadDrawerOpen(false);
-                        setEditingPost(null);
-                        setIsCommentDrawerOpen(false);
-                        setActiveCommentPostId(null);
-                        setActiveCommentPost(null);
-                        setActivePdfPost(null);
-                      }}
-                      onFileClick={(selectedPost) => {
-                        setActivePdfPost(selectedPost);
-                        setIsUploadDrawerOpen(false);
-                        setEditingPost(null);
-                        setIsCommentDrawerOpen(false);
-                        setActiveCommentPostId(null);
-                        setActiveCommentPost(null);
-                        setIsPostOptionsDrawerOpen(false);
-                        setActiveOptionsPost(null);
-                        setActiveOptionsAnchor(null);
-                      }}
-                    />
-                  </div>
-                ))
-              )}
-            </section>
-          )}
-        </>
-      )}
+        ) : (
+          <>
+            {selectedTab === "achievements" ? (
+              <section className="px-4 sm:px-6 lg:px-0">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Acheivement />
+                  <Acheivement />
+                </div>
+              </section>
+            ) : (
+              <section className="space-y-4">
+                {error && posts.length === 0 && isLoadingPosts ? (
+                  <p className="px-4 py-8 text-sm text-[#696969] sm:px-6 lg:px-0">
+                    Loading posts...
+                  </p>
+                ) : posts.length === 0 ? (
+                  <p className="px-4 py-8 text-sm text-[#696969] sm:px-6 lg:px-0">
+                    No posts yet.
+                  </p>
+                ) : (
+                  posts.map((post) => (
+                    <div key={post.id} className="w-full px-3">
+                      <Post
+                        post={post}
+                        showPinnedIndicator
+                        onCommentClick={(selectedPost) => {
+                          setActiveCommentPostId(selectedPost.id);
+                          setActiveCommentPost(selectedPost);
+                          setIsCommentDrawerOpen(true);
+                          setIsUploadDrawerOpen(false);
+                          setEditingPost(null);
+                          setIsPostOptionsDrawerOpen(false);
+                          setActiveOptionsPost(null);
+                          setActiveOptionsAnchor(null);
+                          setActivePdfPost(null);
+                        }}
+                        onOptionsClick={(selectedPost, anchor) => {
+                          setActiveOptionsPost(selectedPost);
+                          setActiveOptionsAnchor(anchor);
+                          setIsPostOptionsDrawerOpen(true);
+                          setIsUploadDrawerOpen(false);
+                          setEditingPost(null);
+                          setIsCommentDrawerOpen(false);
+                          setActiveCommentPostId(null);
+                          setActiveCommentPost(null);
+                          setActivePdfPost(null);
+                        }}
+                        onFileClick={(selectedPost) => {
+                          setActivePdfPost(selectedPost);
+                          setIsUploadDrawerOpen(false);
+                          setEditingPost(null);
+                          setIsCommentDrawerOpen(false);
+                          setActiveCommentPostId(null);
+                          setActiveCommentPost(null);
+                          setIsPostOptionsDrawerOpen(false);
+                          setActiveOptionsPost(null);
+                          setActiveOptionsAnchor(null);
+                        }}
+                      />
+                    </div>
+                  ))
+                )}
+              </section>
+            )}
+          </>
+        )}
+      </div>
       <FollowersnFollowingList
         isOpen={selectedFollowList !== null}
         userId={profile?.id}

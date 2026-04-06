@@ -73,17 +73,17 @@ export default function Header({
     : "text-[#333333]";
   const iconColor = hasCustomBackground ? "#FFFFFF" : "#444444";
   const iconButtonClass = hasCustomBackground
-    ? "flex h-10 w-10 items-center justify-center rounded-full border border-white/18 bg-black/28 backdrop-blur-md"
-    : "flex h-10 w-10 items-center justify-center rounded-full border border-black/8 bg-white/82 backdrop-blur";
+    ? "cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-white/18 bg-black/28 backdrop-blur-md transition-all duration-200 hover:bg-black/38 active:scale-95"
+    : "cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-black/8 bg-white/82 backdrop-blur transition-all duration-200 hover:bg-white hover:shadow-[0_6px_18px_rgba(0,0,0,0.08)] active:scale-95";
   const statLabelClass = hasCustomBackground
     ? "text-white/78"
     : "text-[#343434]";
   const followMutedClass = hasCustomBackground
-    ? "border-white/18 bg-white/88 text-[#202020] backdrop-blur"
-    : "border-[#979797] bg-white text-[#202020]";
+    ? "border-white/18 bg-white/88 text-[#202020] backdrop-blur transition-all duration-200 hover:bg-white active:scale-95"
+    : "border-[#979797] bg-white text-[#202020] transition-all duration-200 hover:bg-[#F7F7F7] active:scale-95";
   const followPrimaryClass = hasCustomBackground
-    ? "border-white/18 bg-black/45 text-white backdrop-blur"
-    : "border-black bg-[#131212] text-white";
+    ? "border-white/18 bg-black/45 text-white backdrop-blur transition-all duration-200 hover:bg-black/55 active:scale-95"
+    : "border-black bg-[#131212] text-white transition-all duration-200 hover:bg-[#2A2A2A] active:scale-95";
   const tabActiveClass = hasCustomBackground ? "text-white" : "text-[#1E1E1E]";
   const tabInactiveClass = hasCustomBackground
     ? "text-white/55"
@@ -109,7 +109,7 @@ export default function Header({
 
   return (
     <header
-      className={`relative w-full overflow-hidden ${profileBackgroundPresentation.className} pt-12 px-6 z-50`}
+      className={`relative z-50 w-full overflow-hidden px-4 pt-8 sm:px-6 sm:pt-10 lg:rounded-[28px] lg:shadow-[0_14px_34px_rgba(0,0,0,0.06)] ${profileBackgroundPresentation.className}`}
       style={profileBackgroundPresentation.style}
     >
       {hasCustomBackground ? (
@@ -120,7 +120,7 @@ export default function Header({
       ) : null}
       <div className="relative z-10 flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div className="h-19 w-19 shrink-0 overflow-hidden rounded-xl bg-gray-300">
+          <div className="h-18 w-18 shrink-0 overflow-hidden rounded-2xl bg-gray-300 ring-1 ring-black/5 sm:h-19 sm:w-19">
             {profilePictureUrl ? (
               <Image
                 src={profilePictureUrl}
@@ -196,7 +196,7 @@ export default function Header({
           ) : (
             <button
               type="button"
-              className="px-3 py-1.5 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
+              className="cursor-pointer flex items-center justify-center gap-1.5 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] px-3 py-1.5 transition-all duration-200 hover:brightness-105 active:scale-95"
             >
               <Image src={proStar} alt="Plan badge" width={16} height={16} />
               <p className="text-white text-sm font-medium">{planBadgeLabel}</p>
@@ -204,10 +204,10 @@ export default function Header({
           ))}
       </div>
       <div className="relative z-10 flex items-center justify-between mt-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            className="text-center"
+            className="cursor-pointer rounded-2xl px-2 py-1 text-center transition-all duration-200 hover:bg-black/5 active:scale-95"
             onClick={() => onFollowListOpen?.("followers")}
           >
             <p className={`text-xs ${statLabelClass}`}>Followers</p>
@@ -217,7 +217,7 @@ export default function Header({
           </button>
           <button
             type="button"
-            className="text-center"
+            className="cursor-pointer rounded-2xl px-2 py-1 text-center transition-all duration-200 hover:bg-black/5 active:scale-95"
             onClick={() => onFollowListOpen?.("following")}
           >
             <p className={`text-xs ${statLabelClass}`}>Following</p>
@@ -230,7 +230,7 @@ export default function Header({
           normalizedSubscriptionPlan === "free" ? (
             <button
               type="button"
-              className="px-3 py-1.5 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] flex items-center justify-center gap-1.5"
+              className="cursor-pointer flex items-center justify-center gap-1.5 rounded-full border border-[#F4B400] bg-linear-to-r from-[#F7B500] via-[#ffdb71] to-[#e4d9b7] px-3 py-1.5 transition-all duration-200 hover:brightness-105 active:scale-95"
               onClick={() => router.push("/plans")}
             >
               <Image src={proStar} alt="View plans" width={16} height={16} />
@@ -261,17 +261,17 @@ export default function Header({
             type="button"
             onClick={onFollowClick}
             disabled={isFollowLoading}
-            className={`px-5 py-2 rounded-full border text-sm font-medium ${
+            className={`cursor-pointer rounded-full border px-5 py-2 text-sm font-medium ${
               followLabel === "Following" || followLabel === "Requested"
                 ? followMutedClass
                 : followPrimaryClass
-            } disabled:opacity-60`}
+            } disabled:cursor-not-allowed disabled:opacity-60`}
           >
             <p>{isFollowLoading ? "..." : followLabel}</p>
           </button>
         )}
       </div>
-      <div className="relative z-10 mt-10 -mx-6 grid grid-cols-2 px-6">
+      <div className="relative z-10 mt-8 -mx-4 grid grid-cols-2 px-4 sm:mt-10 sm:-mx-6 sm:px-6">
         <span
           aria-hidden="true"
           className={`pointer-events-none absolute bottom-0 left-6 h-0.75 w-[calc(50%-1.5rem)] ${indicatorClass} transition-transform duration-300 ease-out ${
@@ -280,7 +280,7 @@ export default function Header({
         />
         <button
           type="button"
-          className={`font-medium pb-3 text-center transition-colors duration-300 ${
+          className={`cursor-pointer pb-3 text-center font-medium transition-all duration-300 hover:opacity-80 active:scale-[0.98] ${
             selectedTab === "posts" ? tabActiveClass : tabInactiveClass
           }`}
           onClick={() => onTabChange("posts")}
@@ -289,7 +289,7 @@ export default function Header({
         </button>
         <button
           type="button"
-          className={`font-medium pb-3 text-center transition-colors duration-300 ${
+          className={`cursor-pointer pb-3 text-center font-medium transition-all duration-300 hover:opacity-80 active:scale-[0.98] ${
             selectedTab === "achievements" ? tabActiveClass : tabInactiveClass
           }`}
           onClick={() => onTabChange("achievements")}
