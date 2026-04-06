@@ -58,7 +58,7 @@ const plans: Plan[] = [
     planId: "premium",
     name: "Premium",
     subtitle: "Study smarter with AI",
-    priceLabel: "$9.99",
+    priceLabel: "$6.99",
     cadence: "/month",
     badge: "AI powered",
     buttonLabel: "Unlock Premium",

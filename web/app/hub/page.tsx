@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Add,
   ArrowRight2,
   Clock,
   CloseCircle,
   DocumentText1,
+  InfoCircle,
 } from "iconsax-reactjs";
 import Alert from "../components/Alert";
 import LoadingBar from "../components/LoadingBar";
@@ -80,6 +81,16 @@ type HistoryEntry = {
   updatedAt: string;
 };
 
+type AiUsage = {
+  dailyTokensUsed: number;
+  monthlyTokensUsed: number;
+  dailyTokenLimit: number;
+  monthlyTokenLimit: number;
+  dailyResetsAt: string;
+  monthlyResetsAt: string;
+  plan: string;
+};
+
 const mapChatRowsToMessages = (rows: HubChatRecord[]) =>
   rows
     .flatMap((chat) =>
@@ -137,6 +148,44 @@ const formatHistoryTime = (value: string) => {
     hour: "numeric",
     minute: "2-digit",
   });
+};
+
+const formatTokenCount = (count: number) => {
+  if (count >= 1_000_000) {
+    return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (count >= 1_000) {
+    return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return String(count);
+};
+
+const formatResetTime = (isoString: string) => {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return "soon";
+  }
+
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+
+  if (diffMs <= 0) {
+    return "soon";
+  }
+
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  if (diffHours >= 24) {
+    const diffDays = Math.ceil(diffHours / 24);
+    return `in ${diffDays} day${diffDays === 1 ? "" : "s"}`;
+  }
+
+  if (diffHours > 0) {
+    return `in ${diffHours}h ${diffMinutes}m`;
+  }
+
+  return `in ${diffMinutes}m`;
 };
 
 const BULLET_LINE_REGEX = /^[-*•]\s+/;
@@ -297,6 +346,7 @@ const renderMessageText = (text: string) => {
 
 export default function HubPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const requestedPostId = searchParams.get("postId")?.trim() ?? "";
   const hideHeaderTimerRef = useRef<number | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
@@ -323,6 +373,8 @@ export default function HubPage() {
   const [isSending, setIsSending] = useState(false);
   const [isClearingChat, setIsClearingChat] = useState(false);
   const [error, setError] = useState("");
+  const [aiUsage, setAiUsage] = useState<AiUsage | null>(null);
+  const [isLimitDrawerOpen, setIsLimitDrawerOpen] = useState(false);
 
   const showHeaderTemporarily = useCallback(() => {
     setIsHeaderVisible(true);
@@ -481,6 +533,32 @@ export default function HubPage() {
     };
 
     void loadChatHistory();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadUsage = async () => {
+      try {
+        const response = await fetch("/api/hub/usage", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const body = await response.json().catch(() => ({}));
+
+        if (!isCancelled && response.ok && body?.usage) {
+          setAiUsage(body.usage as AiUsage);
+        }
+      } catch {
+        // Non-blocking
+      }
+    };
+
+    void loadUsage();
 
     return () => {
       isCancelled = true;
@@ -767,6 +845,17 @@ export default function HubPage() {
       return;
     }
 
+    if (aiUsage) {
+      const dailyExceeded = aiUsage.dailyTokensUsed >= aiUsage.dailyTokenLimit;
+      const monthlyExceeded =
+        aiUsage.monthlyTokensUsed >= aiUsage.monthlyTokenLimit;
+
+      if (dailyExceeded || monthlyExceeded) {
+        setIsLimitDrawerOpen(true);
+        return;
+      }
+    }
+
     const nextPrompt = prompt.trim();
     const documentTitle =
       selectedDocument.post.title?.trim() || "Untitled document";
@@ -809,8 +898,22 @@ export default function HubPage() {
 
       const body = await response.json().catch(() => ({}));
 
+      if (response.status === 429 && body?.error === "AI_LIMIT_REACHED") {
+        if (body?.usage) {
+          setAiUsage(body.usage as AiUsage);
+        }
+        setHistory((current) => current.filter((m) => m.id !== userMessage.id));
+        setPrompt(nextPrompt);
+        setIsLimitDrawerOpen(true);
+        return;
+      }
+
       if (!response.ok || !body?.reply) {
         throw new Error(body?.error || "Failed to get Ju Intelli response.");
+      }
+
+      if (body?.usage) {
+        setAiUsage(body.usage as AiUsage);
       }
 
       if (body?.chat) {
@@ -1253,6 +1356,158 @@ export default function HubPage() {
           </div>
         </section>
       </main>
+
+      <div
+        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-white px-6 py-6 transition-all duration-300 ease-out ${
+          isLimitDrawerOpen
+            ? "translate-y-0 opacity-100 pointer-events-auto"
+            : "translate-y-[110%] opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="space-y-5">
+          <div className="flex justify-center items-center relative">
+            <h1 className="text-lg text-[#202020] font-medium">
+              Usage Limit Reached
+            </h1>
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={() => setIsLimitDrawerOpen(false)}
+              className="absolute right-0"
+            >
+              <CloseCircle size={24} color="#959595" />
+            </button>
+          </div>
+
+          {aiUsage ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl bg-[#FFF8F2] border border-[#F5DFC8] px-4 py-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <InfoCircle size={18} color="#A95A13" variant="Bold" />
+                  <p className="text-sm font-medium text-[#A95A13]">
+                    {aiUsage.dailyTokensUsed >= aiUsage.dailyTokenLimit
+                      ? "Daily limit reached"
+                      : "Monthly limit reached"}
+                  </p>
+                </div>
+                <p className="text-xs leading-5 text-[#7A5A3A]">
+                  {aiUsage.dailyTokensUsed >= aiUsage.dailyTokenLimit
+                    ? `You've used all ${formatTokenCount(aiUsage.dailyTokenLimit)} daily tokens. Your limit resets ${formatResetTime(aiUsage.dailyResetsAt)}.`
+                    : `You've used all ${formatTokenCount(aiUsage.monthlyTokenLimit)} monthly tokens. Your limit resets ${formatResetTime(aiUsage.monthlyResetsAt)}.`}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-[#888888] uppercase tracking-wider">
+                  Your usage
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-black/6 bg-[#F8F8F8] px-4 py-3">
+                    <p className="text-xs text-[#888888]">Today</p>
+                    <p className="mt-1 text-base font-semibold text-[#202020]">
+                      {formatTokenCount(aiUsage.dailyTokensUsed)}{" "}
+                      <span className="text-xs font-normal text-[#888888]">
+                        / {formatTokenCount(aiUsage.dailyTokenLimit)}
+                      </span>
+                    </p>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#E8E8E8]">
+                      <div
+                        className="h-full rounded-full bg-[#E1761F] transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, (aiUsage.dailyTokensUsed / aiUsage.dailyTokenLimit) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-[#999999]">
+                      Resets {formatResetTime(aiUsage.dailyResetsAt)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-black/6 bg-[#F8F8F8] px-4 py-3">
+                    <p className="text-xs text-[#888888]">This month</p>
+                    <p className="mt-1 text-base font-semibold text-[#202020]">
+                      {formatTokenCount(aiUsage.monthlyTokensUsed)}{" "}
+                      <span className="text-xs font-normal text-[#888888]">
+                        / {formatTokenCount(aiUsage.monthlyTokenLimit)}
+                      </span>
+                    </p>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-[#E8E8E8]">
+                      <div
+                        className="h-full rounded-full bg-[#E1761F] transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, (aiUsage.monthlyTokensUsed / aiUsage.monthlyTokenLimit) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[11px] text-[#999999]">
+                      Resets {formatResetTime(aiUsage.monthlyResetsAt)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {aiUsage.plan === "free" || aiUsage.plan === "pro" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsLimitDrawerOpen(false);
+                    router.push("/plans");
+                  }}
+                  className="w-full rounded-2xl bg-[#E1761F] py-3 text-sm font-medium text-white transition hover:bg-[#C96818] active:opacity-80"
+                >
+                  {aiUsage.plan === "free"
+                    ? "Upgrade to Pro"
+                    : "Upgrade to Premium"}
+                </button>
+              ) : null}
+
+              <div className="rounded-2xl border border-black/6 bg-[#F8F8F8] px-4 py-3">
+                <p className="text-xs font-medium text-[#888888] uppercase tracking-wider">
+                  Token limits by plan
+                </p>
+                <div className="mt-2 space-y-2">
+                  {[
+                    {
+                      plan: "Free",
+                      daily: "1k",
+                      monthly: "10k",
+                      active: aiUsage.plan === "free",
+                    },
+                    {
+                      plan: "Pro",
+                      daily: "25k",
+                      monthly: "500k",
+                      active: aiUsage.plan === "pro",
+                    },
+                    {
+                      plan: "Premium",
+                      daily: "75k",
+                      monthly: "2M",
+                      active: aiUsage.plan === "premium",
+                    },
+                  ].map((tier) => (
+                    <div
+                      key={tier.plan}
+                      className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs ${
+                        tier.active
+                          ? "bg-[#FFF1DE] text-[#A95A13] font-medium"
+                          : "text-[#666666]"
+                      }`}
+                    >
+                      <span>
+                        {tier.plan}
+                        {tier.active ? " (current)" : ""}
+                      </span>
+                      <span>
+                        {tier.daily}/day · {tier.monthly}/mo
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

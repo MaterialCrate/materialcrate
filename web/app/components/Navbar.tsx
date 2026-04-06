@@ -22,7 +22,7 @@ type NavItem = {
 
 const items: NavItem[] = [
   { label: "Home", href: "/feed", Icon: Home },
-  { label: "Hub", href: "/hub", Icon: Clipboard },
+  { label: "AI Hub", href: "/hub", Icon: Clipboard },
   { label: "Saved", href: "/saved", Icon: Archive },
   { label: "Profile", href: "/user", Icon: Profile },
 ];
@@ -37,7 +37,6 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Mobile bottom nav */}
       <ul className="font-semibold text-xs flex w-full justify-between px-12 lg:hidden">
         {items.map(({ label, href, Icon }) => {
           const isProfileItem = href === "/user";

@@ -52,6 +52,10 @@ model User {
   disabledAt    DateTime?
   disabledUntil DateTime?
   isBot         Boolean  @default(false)
+  aiTokensUsedDaily    Int       @default(0)
+  aiTokensUsedMonthly  Int       @default(0)
+  aiTokensDailyResetAt DateTime  @default(now())
+  aiTokensMonthlyResetAt DateTime @default(now())
   institution   String?
   institutionVisibility String @default("everyone")
   program       String?

@@ -1,0 +1,17 @@
+type AiUsage {
+  dailyTokensUsed: Int!
+  monthlyTokensUsed: Int!
+  dailyTokenLimit: Int!
+  monthlyTokenLimit: Int!
+  dailyResetsAt: String!
+  monthlyResetsAt: String!
+  plan: String!
+}
+
+extend type Query {
+  myAiUsage: AiUsage!
+}
+
+extend type Mutation {
+  recordAiTokenUsage(tokensUsed: Int!): AiUsage!
+}

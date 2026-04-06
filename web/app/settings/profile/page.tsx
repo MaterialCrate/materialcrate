@@ -318,7 +318,7 @@ export default function Page() {
       visibilityKey: "institutionVisibility",
     },
     {
-      label: "Program",
+      label: "Program/Main Option",
       value: profile.program,
       onchange: (e: React.ChangeEvent<HTMLInputElement>) =>
         setProfile({ ...profile, program: e.target.value }),
@@ -598,9 +598,8 @@ export default function Page() {
       );
       setSuccessMessage("Profile picture removed.");
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Failed to remove profile picture",
-      );
+      setError("Failed to remove profile picture");
+      console.error("Failed to remove profile picture", err);
     } finally {
       setIsRemovingProfilePicture(false);
     }

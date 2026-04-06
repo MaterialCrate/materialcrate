@@ -513,9 +513,8 @@ export default function OptionsOptions({
                   onClose();
                 }}
                 className={`flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 disabled:opacity-60 ${
-                  index < secondaryActions.length - 1
-                    ? "border-b border-black/6"
-                    : ""
+                  index < secondaryActions.length - 1 &&
+                  "border-b border-black/6"
                 }`}
               >
                 <span>{action.icon}</span>
@@ -534,6 +533,17 @@ export default function OptionsOptions({
               disabled={!post || isDeleting || isPinning || isTogglingComments}
               onClick={async () => {
                 if (!post || !isOwner) return;
+
+                const confirmed = await popup.confirm({
+                  title: "Delete post?",
+                  message:
+                    "This post will be permanently deleted after 30 days. You can restore it before then.",
+                  confirmLabel: "Delete",
+                  cancelLabel: "Cancel",
+                  isDestructive: true,
+                });
+
+                if (!confirmed) return;
 
                 try {
                   setIsDeleting(true);

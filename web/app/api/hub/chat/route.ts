@@ -91,6 +91,34 @@ const CLEAR_HUB_CHAT_MUTATION = `
   }
 `;
 
+const MY_AI_USAGE_QUERY = `
+  query MyAiUsage {
+    myAiUsage {
+      dailyTokensUsed
+      monthlyTokensUsed
+      dailyTokenLimit
+      monthlyTokenLimit
+      dailyResetsAt
+      monthlyResetsAt
+      plan
+    }
+  }
+`;
+
+const RECORD_AI_TOKEN_USAGE_MUTATION = `
+  mutation RecordAiTokenUsage($tokensUsed: Int!) {
+    recordAiTokenUsage(tokensUsed: $tokensUsed) {
+      dailyTokensUsed
+      monthlyTokensUsed
+      dailyTokenLimit
+      monthlyTokenLimit
+      dailyResetsAt
+      monthlyResetsAt
+      plan
+    }
+  }
+`;
+
 const DIRECT_POST_QUERY = `
   query JuIntelliPost($id: ID!) {
     post(id: $id) {
@@ -162,6 +190,11 @@ type GeminiResponseBody = {
       }>;
     };
   }>;
+  usageMetadata?: {
+    totalTokenCount?: number;
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+  };
   error?: {
     message?: string;
   };
@@ -360,6 +393,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "prompt is required" }, { status: 400 });
   }
 
+  try {
+    const usageBody = await requestGraphQL(token, MY_AI_USAGE_QUERY);
+    const usage = usageBody?.data?.myAiUsage;
+
+    if (usage) {
+      const dailyExceeded = usage.dailyTokensUsed >= usage.dailyTokenLimit;
+      const monthlyExceeded =
+        usage.monthlyTokensUsed >= usage.monthlyTokenLimit;
+
+      if (dailyExceeded || monthlyExceeded) {
+        return NextResponse.json(
+          {
+            error: "AI_LIMIT_REACHED",
+            usage,
+          },
+          { status: 429 },
+        );
+      }
+    }
+  } catch {
+    // If usage check fails, allow the request to proceed
+  }
+
   let archiveBody: any;
   try {
     archiveBody = await requestGraphQL(token, MY_ARCHIVE_QUERY);
@@ -508,6 +564,7 @@ export async function POST(req: Request) {
 
   let reply = "";
   let warning = "";
+  let tokensUsed = 0;
 
   try {
     const geminiResponse = await fetch(
@@ -546,7 +603,9 @@ export async function POST(req: Request) {
       },
     );
 
-    const geminiBody = await geminiResponse.json().catch(() => ({}));
+    const geminiBody = (await geminiResponse
+      .json()
+      .catch(() => ({}))) as GeminiResponseBody;
     const nextReply = extractReplyText(geminiBody);
 
     if (!geminiResponse.ok || !nextReply) {
@@ -556,6 +615,7 @@ export async function POST(req: Request) {
     }
 
     reply = nextReply;
+    tokensUsed = geminiBody?.usageMetadata?.totalTokenCount ?? 0;
   } catch (error) {
     warning =
       error instanceof Error ? error.message : "Failed to generate AI response";
@@ -582,6 +642,20 @@ export async function POST(req: Request) {
       messages: [...priorHistory, userMessage, assistantMessage],
     });
 
+    let usage = undefined;
+    if (tokensUsed > 0) {
+      try {
+        const usageBody = await requestGraphQL(
+          token,
+          RECORD_AI_TOKEN_USAGE_MUTATION,
+          { tokensUsed },
+        );
+        usage = usageBody?.data?.recordAiTokenUsage ?? undefined;
+      } catch {
+        // Non-blocking: don't fail the chat if usage recording fails
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       reply,
@@ -589,6 +663,8 @@ export async function POST(req: Request) {
       documentTitle,
       warning: warning || undefined,
       chat,
+      tokensUsed: tokensUsed || undefined,
+      usage,
     });
   } catch (error) {
     return NextResponse.json(

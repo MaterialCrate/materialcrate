@@ -51,12 +51,9 @@ export default function PostDetailPage() {
         setPost(body?.post ?? null);
       } catch (loadError) {
         if (!controller.signal.aborted) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Failed to load post",
-          );
+          setError("Failed to load post");
           setPost(null);
+          console.error("Failed to load post: ", loadError);
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -106,7 +103,7 @@ export default function PostDetailPage() {
         <h1 className="text-lg font-medium text-[#202020]">Post</h1>
       </header>
 
-      <main className="mx-auto max-w-2xl">
+      <main className="mx-auto max-w-2xl px-3">
         {isLoading ? (
           <p className="px-6 py-8 text-sm text-[#696969]">Loading post...</p>
         ) : error ? (

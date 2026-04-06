@@ -7,12 +7,14 @@ import { WorkspaceResolver } from "./workspace.resolver.js";
 import { NotificationResolver } from "./notification.resolver.js";
 import { ReportResolver } from "./report.resolver.js";
 import { SupportResolver } from "./support.resolver.js";
+import { AiUsageResolver } from "./ai-usage.resolver.js";
 
 export const resolvers = {
   Query: {
     ...UserResolver.Query,
     ...ArchiveResolver.Query,
     ...HubChatResolver.Query,
+    ...AiUsageResolver.Query,
     ...PostResolver.Query,
     ...WorkspaceResolver.Query,
     ...NotificationResolver.Query,
@@ -29,6 +31,7 @@ export const resolvers = {
     ...ReportResolver.Mutation,
     ...SupportResolver.Mutation,
     ...AdminResolver.Mutation,
+    ...AiUsageResolver.Mutation,
   },
   Post: {
     ...PostResolver.Post,
