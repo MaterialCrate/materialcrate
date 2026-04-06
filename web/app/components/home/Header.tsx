@@ -49,7 +49,7 @@ export default function Header({
         </button>
       </div>
       {showLoadingBar && (
-        <div className="h-[3px] w-full overflow-hidden bg-[#FFF3E7]">
+        <div className="h-0.75 w-full overflow-hidden bg-[#FFF3E7]">
           <div className="h-full w-1/3 animate-[loading-bar_1.4s_ease-in-out_infinite] bg-[#E1761F] rounded-full" />
         </div>
       )}

@@ -1,14 +1,14 @@
 import React from "react";
 import { usePathname } from "next/navigation";
-import { FaGoogle, FaFacebook } from "react-icons/fa";
+import { FaFacebook, FaGoogle } from "react-icons/fa";
 import ActionButton from "../ActionButton";
 
-interface emailTypes {
+interface EmailTypes {
   email: string;
   setEmail: React.Dispatch<React.SetStateAction<string>>;
 }
 
-export default function Email({ email, setEmail }: emailTypes) {
+export default function Email({ email, setEmail }: EmailTypes) {
   const pathname = usePathname();
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const mode = pathname === "/register" ? "register" : "login";
@@ -19,56 +19,62 @@ export default function Email({ email, setEmail }: emailTypes) {
   };
 
   return (
-    <div className="h-full relative w-full mt-10">
-      <div className="space-y-5 flex flex-col w-full h-full justify-center">
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
+      <div className="space-y-4 sm:space-y-5">
         <button
           type="button"
           onClick={() => handleSocialAuth("google")}
-          className="border border-black flex items-center justify-between w-full px-4 py-3 rounded-lg"
+          className="cursor-pointer flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-left transition-all duration-200 hover:border-[#E1761F]/35 hover:bg-[#FFF9F4] active:scale-[0.98]"
         >
-          <p className="font-medium">Continue with Google</p>
-          <FaGoogle size={24} />
+          <p className="font-medium text-[#202020]">Continue with Google</p>
+          <FaGoogle size={22} className="text-[#202020]" />
         </button>
         <button
           type="button"
           onClick={() => handleSocialAuth("facebook")}
-          className="border border-black flex items-center justify-between w-full px-4 py-3 rounded-lg mb-15"
+          className="cursor-pointer flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-left transition-all duration-200 hover:border-[#E1761F]/35 hover:bg-[#FFF9F4] active:scale-[0.98]"
         >
-          <p className="font-medium">Continue with Facebook</p>
-          <FaFacebook size={24} />
+          <p className="font-medium text-[#202020]">Continue with Facebook</p>
+          <FaFacebook size={22} className="text-[#202020]" />
         </button>
-        <div className="flex items-center justify-between">
-          <div className="h-px w-15 bg-linear-to-r from-transparent via-gray-500 to-black" />
-          <p className="text-xs">OR CONTINUE WITH EMAIL</p>
-          <div className="h-px w-15 bg-linear-to-l from-transparent via-gray-500 to-black" />
+
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <div className="h-px flex-1 bg-linear-to-r from-transparent via-gray-400 to-black/50" />
+          <p className="text-[11px] font-medium tracking-[0.16em] text-[#6A6A6A]">
+            OR CONTINUE WITH EMAIL
+          </p>
+          <div className="h-px flex-1 bg-linear-to-l from-transparent via-gray-400 to-black/50" />
         </div>
+
         <div>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="border border-black w-full px-4 py-3 rounded-lg mt-4 focus:outline-none"
+            className="mt-3 w-full rounded-2xl border border-black/10 bg-[#FAFAFA] px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
             required
           />
-          <p className="text-sm text-[#444444] font-medium mt-1.5">
+          <p className="mt-2 text-sm font-medium text-[#444444]">
             {pathname === "/register"
               ? "Already have an account? "
-              : "Don't have an account? "}
-            <span
-              className="text-black font-semibold"
+              : "Don\'t have an account? "}
+            <button
+              type="button"
+              className="cursor-pointer font-semibold text-black transition-colors duration-200 hover:text-[#E1761F] active:opacity-70"
               onClick={() => {
                 if (typeof window === "undefined") return;
                 window.location.assign(
-                  `${pathname === "/register" ? "/login" : "/register"}`,
+                  pathname === "/register" ? "/login" : "/register",
                 );
               }}
             >
               {pathname === "/register" ? "Sign in" : "Sign up"}
-            </span>
+            </button>
           </p>
         </div>
-        <ActionButton type="submit" disabled={!isValidEmail}>
+
+        <ActionButton type="submit" disabled={!isValidEmail} className="mt-2 w-full">
           NEXT
         </ActionButton>
       </div>

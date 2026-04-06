@@ -7,23 +7,28 @@ import ActionButton from "../ActionButton";
 interface PasswordProps {
   password: string;
   setPassword: React.Dispatch<React.SetStateAction<string>>;
+  submitLabel?: string;
 }
 
-type rule = {
+type RuleProps = {
   ok: boolean;
   text: string;
 };
 
-const Rule = ({ ok, text }: rule) => (
+const Rule = ({ ok, text }: RuleProps) => (
   <p
-    className={`flex items-center gap-1 ${ok ? "text-green-600" : "text-[#444444]"}`}
+    className={`flex items-center gap-1.5 text-xs ${ok ? "text-green-600" : "text-[#444444]"}`}
   >
     <span>{ok ? "✔" : "•"}</span>
     {text}
   </p>
 );
 
-export default function Password({ password, setPassword }: PasswordProps) {
+export default function Password({
+  password,
+  setPassword,
+  submitLabel = "NEXT",
+}: PasswordProps) {
   const pathname = usePathname();
   const isRegister = pathname === "/register";
   const hasMinLength = password.length >= 8;
@@ -31,23 +36,24 @@ export default function Password({ password, setPassword }: PasswordProps) {
   const hasUppercase = /[A-Z]/.test(password);
 
   const isValidPassword = hasMinLength && hasNumber && hasUppercase;
-
   const shouldDisable = isRegister && !isValidPassword;
 
   return (
-    <div className="h-full relative w-full">
-      <div className="flex flex-col w-full h-full justify-center">
-        <h4 className="font-medium">PASSWORD</h4>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="********"
-          className="border border-black w-full px-4 py-3 rounded-lg focus:outline-none"
-          required
-        />
+    <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
+      <div className="space-y-3">
+        <div>
+          <h4 className="font-medium text-[#202020]">PASSWORD</h4>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="********"
+            className="mt-2 w-full rounded-2xl border border-black/10 bg-[#FAFAFA] px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
+            required
+          />
+        </div>
         {isRegister && (
-          <div className="text-[11px] text-[#444444] font-medium mt-1.5">
+          <div className="space-y-1 text-[11px] font-medium text-[#444444]">
             <Rule
               ok={hasMinLength}
               text="Password must contain at least eight characters"
@@ -66,9 +72,9 @@ export default function Password({ password, setPassword }: PasswordProps) {
       <ActionButton
         type="submit"
         disabled={shouldDisable || password.length < 1}
-        className="fixed bottom-12 left-8 right-8 mx-auto"
+        className="mt-8 w-full"
       >
-        NEXT
+        {submitLabel}
       </ActionButton>
     </div>
   );

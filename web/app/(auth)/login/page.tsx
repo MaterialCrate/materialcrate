@@ -175,7 +175,7 @@ function LoginContent() {
   }, [handleRestorePrompt, searchParams]);
 
   return (
-    <div>
+    <div className="min-h-dvh bg-[#FAFAFA] px-4 py-4 sm:px-6 sm:py-6">
       {searchParams.get("deleted") === "1" ? (
         <Alert
           type="info"
@@ -185,36 +185,51 @@ function LoginContent() {
         />
       ) : null}
       {error && <Alert type="error" message={error} />}
+
       <form
-        className="flex flex-col h-dvh items-center px-8 py-12 gap-16 relative"
+        className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-[520px] flex-col rounded-[28px] bg-white px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6"
         onSubmit={step < 2 ? handleNext : handleSubmit}
       >
-        {step !== 1 && (
-          <HiOutlineArrowLeft
-            className="absolute top-5 left-5"
-            size={30}
-            onClick={() => setStep(step - 1)}
-          />
-        )}
-        <div className="absolute flex flex-col items-center gap-5 px-12">
+        <div className="flex min-h-10 items-center">
+          {step !== 1 && (
+            <button
+              type="button"
+              aria-label="Go back"
+              onClick={() => setStep(step - 1)}
+              className="cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-full text-[#202020] transition-all duration-200 hover:bg-black/5 active:scale-95"
+            >
+              <HiOutlineArrowLeft size={26} />
+            </button>
+          )}
+        </div>
+
+        <div className="mx-auto mt-1 flex w-full max-w-md flex-col items-center gap-4 px-2 text-center sm:gap-5">
           <Image
             src="/logo.svg"
             alt="MaterialCrate Logo"
             width={50}
             height={50}
+            className="h-auto w-[46px] sm:w-[50px]"
           />
-          <h1 className="font-serif text-4xl text-center">
+          <h1 className="font-serif text-3xl leading-tight text-center sm:text-4xl">
             {step === 1 ? "Welcome Back" : "Enter your password"}
           </h1>
         </div>
-        {step === 1 ? (
-          <Email email={email} setEmail={setEmail} />
-        ) : (
-          <Password password={password} setPassword={setPassword} />
-        )}
-        {loading ? (
-          <p className="text-sm text-[#444444]">Signing in...</p>
-        ) : null}
+
+        <div className="mt-6 flex flex-1 flex-col justify-center transition-all duration-200 ease-out">
+          {step === 1 ? (
+            <Email email={email} setEmail={setEmail} />
+          ) : (
+            <Password
+              password={password}
+              setPassword={setPassword}
+              submitLabel={loading ? "SIGNING IN..." : "SIGN IN"}
+            />
+          )}
+          {loading && step === 1 ? (
+            <p className="mt-4 text-center text-sm text-[#444444]">Signing in...</p>
+          ) : null}
+        </div>
       </form>
     </div>
   );

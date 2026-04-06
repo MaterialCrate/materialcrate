@@ -106,8 +106,7 @@ export default function Verification({
       await onVerified?.();
       router.replace(successRedirect);
       return;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError("Verification failed");
       console.error("Verification failed: ", err);
     } finally {
@@ -135,8 +134,7 @@ export default function Verification({
       setCode(["", "", "", ""]);
       inputs.current[0]?.focus();
       setStatus("A new verification code was sent.");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError("Failed to resend verification code");
       console.error("Failed to resend verification code: ", err);
     } finally {
@@ -145,7 +143,7 @@ export default function Verification({
   };
 
   return (
-    <div className="flex min-h-full w-full flex-col justify-between px-5 py-8 sm:px-8 sm:py-10">
+    <div className="flex min-h-full w-full flex-col justify-between px-1 py-4 sm:px-2 sm:py-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
         <div className="text-center">
           <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#A0A0A0]">
@@ -164,7 +162,8 @@ export default function Verification({
             )}
           </div>
         </div>
-        <div className="mt-10 flex justify-center gap-3 sm:gap-4">
+
+        <div className="mt-8 flex justify-center gap-2.5 sm:gap-4">
           {code.map((digit, i) => (
             <input
               title="Verification input"
@@ -181,10 +180,11 @@ export default function Verification({
               onChange={(e) => handleChange(e.target.value, i)}
               onKeyDown={(e) => handleKeyDown(e, i)}
               onPaste={handlePaste}
-              className="h-14 w-14 rounded-2xl border border-black/10 bg-[#FAFAFA] text-center text-2xl font-semibold text-[#202020] outline-none transition focus:border-[#E1761F] focus:bg-white sm:h-16 sm:w-16"
+              className="h-12 w-12 rounded-2xl border border-black/10 bg-[#FAFAFA] text-center text-xl font-semibold text-[#202020] outline-none transition-all duration-200 focus:border-[#E1761F] focus:bg-white focus:ring-2 focus:ring-[#E1761F]/15 sm:h-16 sm:w-16 sm:text-2xl"
             />
           ))}
         </div>
+
         <div className="mt-6 text-center">
           <p className="text-sm text-[#6A6A6A]">
             Didn&apos;t receive it?{" "}
@@ -192,17 +192,19 @@ export default function Verification({
               type="button"
               onClick={handleResend}
               disabled={isResending}
-              className="font-medium text-[#A15D16] underline underline-offset-4 disabled:text-[#A0A0A0]"
+              className="cursor-pointer font-medium text-[#A15D16] underline underline-offset-4 transition-colors duration-200 hover:text-[#E1761F] active:opacity-70 disabled:cursor-not-allowed disabled:text-[#A0A0A0]"
             >
               {isResending ? "Sending..." : "Resend code"}
             </button>
           </p>
         </div>
+
         <Alert
           message={status ? status : error}
           type={status ? "success" : "error"}
         />
       </div>
+
       <div className="mx-auto mt-8 w-full max-w-md">
         <ActionButton
           type="button"

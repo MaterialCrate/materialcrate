@@ -227,7 +227,7 @@ export default function Page() {
 
   return (
     <form
-      className="flex flex-col h-dvh items-center px-8 py-12 gap-16 relative"
+      className="min-h-dvh bg-[#FAFAFA] px-4 py-4 sm:px-6 sm:py-6"
       onSubmit={
         isSocialSignup
           ? step < 6
@@ -243,86 +243,101 @@ export default function Page() {
       }
     >
       <Alert type="error" message={error} />
-      {((!isSocialSignup && step !== 1 && step !== 7) ||
-        (isSocialSignup && step !== 3)) && (
-        <HiOutlineArrowLeft
-          className="absolute top-5 left-5"
-          size={30}
-          onClick={handleBack}
-        />
-      )}
-      <div className="absolute flex flex-col items-center gap-5 px-12">
-        <Image
-          src="/logo.svg"
-          alt="MaterialCrate Logo"
-          width={50}
-          height={50}
-        />
-        <h1 className="font-serif text-4xl text-center">
-          {step === 1
-            ? "Let's get started"
-            : step === 2
-              ? "Create Password"
-              : step === 3
-                ? "Create your username"
-                : step === 4
-                  ? "Enter your display name"
-                  : step === 5
-                    ? "Enter your institution's name"
-                    : step === 6 && "Enter your program of study"}
-        </h1>
+      <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-[520px] flex-col rounded-[28px] bg-white px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6">
+        <div className="flex min-h-10 items-center">
+          {((!isSocialSignup && step !== 1 && step !== 7) ||
+            (isSocialSignup && step !== 3)) && (
+            <button
+              type="button"
+              aria-label="Go back"
+              onClick={handleBack}
+              className="cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-full text-[#202020] transition-all duration-200 hover:bg-black/5 active:scale-95"
+            >
+              <HiOutlineArrowLeft size={26} />
+            </button>
+          )}
+        </div>
+
+        <div className="mx-auto mt-1 flex w-full max-w-md flex-col items-center gap-4 px-2 text-center sm:gap-5">
+          <Image
+            src="/logo.svg"
+            alt="MaterialCrate Logo"
+            width={50}
+            height={50}
+            className="h-auto w-[46px] sm:w-[50px]"
+          />
+          <h1 className="font-serif text-3xl leading-tight text-center sm:text-4xl">
+            {step === 1
+              ? "Let's get started"
+              : step === 2
+                ? "Create Password"
+                : step === 3
+                  ? "Create your username"
+                  : step === 4
+                    ? "Enter your display name"
+                    : step === 5
+                      ? "Enter your institution's name"
+                      : step === 6 && "Enter your program of study"}
+          </h1>
+        </div>
+
+        <div className="mt-6 flex flex-1 flex-col justify-center transition-all duration-200 ease-out">
+          {isSocialSignup ? (
+            isPrefillingSocial ? (
+              <div className="mx-auto flex w-full max-w-md flex-1 items-center justify-center px-2 text-center text-[#444444]">
+                Preparing your social profile...
+              </div>
+            ) : step === 3 ? (
+              <Username
+                username={username}
+                setUsername={setUsername}
+                onValidated={handleUsernameValidated}
+              />
+            ) : step === 4 ? (
+              <FullName
+                displayName={displayName}
+                setDisplayName={setDisplayName}
+              />
+            ) : step === 5 ? (
+              <Institution
+                institution={institution}
+                setInstitution={setInstitution}
+              />
+            ) : step === 6 ? (
+              <Program
+                program={program}
+                setProgram={setProgram}
+                submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
+              />
+            ) : null
+          ) : step === 1 ? (
+            <Email email={email} setEmail={setEmail} />
+          ) : step === 2 ? (
+            <Password password={password} setPassword={setPassword} />
+          ) : step === 3 ? (
+            <Username
+              username={username}
+              setUsername={setUsername}
+              onValidated={handleUsernameValidated}
+            />
+          ) : step === 4 ? (
+            <FullName displayName={displayName} setDisplayName={setDisplayName} />
+          ) : step === 5 ? (
+            <Institution
+              institution={institution}
+              setInstitution={setInstitution}
+            />
+          ) : step === 6 ? (
+            <Program
+              program={program}
+              setProgram={setProgram}
+              submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
+            />
+          ) : (
+            <Verification email={email} />
+          )}
+        </div>
       </div>
-      {isSocialSignup ? (
-        isPrefillingSocial ? (
-          <div className="w-full pt-24 text-center text-[#444444]">
-            Preparing your social profile...
-          </div>
-        ) : step === 3 ? (
-          <Username
-            username={username}
-            setUsername={setUsername}
-            onValidated={handleUsernameValidated}
-          />
-        ) : step === 4 ? (
-          <FullName displayName={displayName} setDisplayName={setDisplayName} />
-        ) : step === 5 ? (
-          <Institution
-            institution={institution}
-            setInstitution={setInstitution}
-          />
-        ) : step === 6 ? (
-          <Program
-            program={program}
-            setProgram={setProgram}
-            submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
-          />
-        ) : null
-      ) : step === 1 ? (
-        <Email email={email} setEmail={setEmail} />
-      ) : step === 2 ? (
-        <Password password={password} setPassword={setPassword} />
-      ) : step === 3 ? (
-        <Username
-          username={username}
-          setUsername={setUsername}
-          onValidated={handleUsernameValidated}
-        />
-      ) : step === 4 ? (
-        <FullName displayName={displayName} setDisplayName={setDisplayName} />
-      ) : step === 5 ? (
-        <Institution
-          institution={institution}
-          setInstitution={setInstitution}
-        />
-      ) : step === 6 ? (
-        <Program
-          program={program}
-          setProgram={setProgram}
-          submitLabel={loading ? "SUBMITTING..." : "SUBMIT"}
-        />
-      ) : (
-        <Verification email={email} />
-      )}
     </form>
   );
 }
