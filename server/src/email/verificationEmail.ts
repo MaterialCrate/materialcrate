@@ -1,5 +1,5 @@
 import { renderEmailLayout } from "./layout.js";
-import { sendEmail } from "./shared.js";
+import { isEmailDeliveryConfigured, sendEmail } from "./shared.js";
 
 export type VerificationEmailVariant = "signup" | "emailChange";
 
@@ -64,7 +64,7 @@ export const sendVerificationEmail = async (
   token: string,
   variant: VerificationEmailVariant = "signup",
 ) => {
-  if (!process.env.MAIL_FROM || !process.env.SES_USER || !process.env.SES_PASS) {
+  if (!isEmailDeliveryConfigured()) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
         `[email] Delivery is not configured. Verification code for ${email}: ${token}`,

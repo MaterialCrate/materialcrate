@@ -48,9 +48,17 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
-      - key: SES_USER
+      - key: MAIL_FROM_NAME
+        value: Material Crate
+      - key: SMTP_HOST
+        value: smtppro.zoho.com
+      - key: SMTP_PORT
+        value: 465
+      - key: SMTP_SECURE
+        value: "true"
+      - key: SMTP_USER
         sync: false
-      - key: SES_PASS
+      - key: SMTP_PASS
         sync: false
       - key: SUPPORT_EMAIL
         value: support@materialcrate.com

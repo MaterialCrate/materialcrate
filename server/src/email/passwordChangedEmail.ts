@@ -1,5 +1,5 @@
 import { renderEmailLayout } from "./layout.js";
-import { sendEmail } from "./shared.js";
+import { isEmailDeliveryConfigured, sendEmail } from "./shared.js";
 
 const getPasswordChangedEmailContent = () => {
   const subject = "Your Material Crate password was changed";
@@ -35,7 +35,7 @@ const getPasswordChangedEmailContent = () => {
 };
 
 export const sendPasswordChangedEmail = async (email: string) => {
-  if (!process.env.MAIL_FROM || !process.env.SES_USER || !process.env.SES_PASS) {
+  if (!isEmailDeliveryConfigured()) {
     if (process.env.NODE_ENV !== "production") {
       console.warn(
         `[email] Delivery is not configured. Password change email skipped for ${email}`,

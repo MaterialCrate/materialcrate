@@ -6,7 +6,6 @@ import {
   Brush2,
   Logout,
   Notification,
-  ProfileCircle,
   SecuritySafe,
   ShieldTick,
   UserSquare,

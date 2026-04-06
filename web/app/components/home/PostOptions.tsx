@@ -15,7 +15,6 @@ import {
   LocationSlash,
   Clock,
   Clipboard,
-  DocumentDownload,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import { useSystemPopup } from "@/app/components/SystemPopup";
