@@ -6,6 +6,7 @@ type Notification {
   postId: ID
   commentId: ID
   followRequestId: ID
+  achievementId: ID
   title: String!
   description: String!
   icon: String!

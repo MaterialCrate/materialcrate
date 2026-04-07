@@ -3,6 +3,7 @@ export type NotificationNavigationPayload = {
   actorUsername?: string | null;
   postId?: string | null;
   commentId?: string | null;
+  achievementId?: string | null;
 };
 
 export const getNotificationDescriptionPreview = (
@@ -26,10 +27,16 @@ export const getNotificationHref = ({
   actorUsername,
   postId,
   commentId,
+  achievementId,
 }: NotificationNavigationPayload) => {
   const normalizedPostId = postId?.trim();
   const normalizedCommentId = commentId?.trim();
   const normalizedActorUsername = actorUsername?.trim();
+  const normalizedAchievementId = achievementId?.trim();
+
+  if (type === "ACHIEVEMENT_UNLOCKED" && normalizedAchievementId) {
+    return `/achievements/${encodeURIComponent(normalizedAchievementId)}`;
+  }
 
   if (normalizedPostId) {
     const searchParams = new URLSearchParams();

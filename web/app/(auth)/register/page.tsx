@@ -178,10 +178,6 @@ export default function Page() {
         throw new Error("Oops, something went wrong :-(");
       }
 
-      if (!body?.verificationEmailSent) {
-        throw new Error("Server error. Try again later.");
-      }
-
       setStep(7);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {

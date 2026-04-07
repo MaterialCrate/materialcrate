@@ -14,6 +14,7 @@ type NotificationItem = {
   actorUsername?: string | null;
   postId?: string | null;
   commentId?: string | null;
+  achievementId?: string | null;
   title: string;
   description: string;
   unread: boolean;

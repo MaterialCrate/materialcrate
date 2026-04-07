@@ -31,6 +31,7 @@ type NotificationItem = {
   postId?: string | null;
   commentId?: string | null;
   followRequestId?: string | null;
+  achievementId?: string | null;
   title: string;
   description: string;
   icon?: string;
@@ -52,6 +53,7 @@ type ApiNotificationItem = {
   postId?: string | null;
   commentId?: string | null;
   followRequestId?: string | null;
+  achievementId?: string | null;
   title: string;
   description: string;
   icon?: string;
@@ -70,8 +72,13 @@ const ICON_STYLES: Record<
     Icon: MessageText1,
   },
   MedalStar: {
-    accent: "#1D1D1D",
-    imageTone: "bg-surface-high text-ink",
+    accent: "#D4971A",
+    imageTone: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
+    Icon: MedalStar,
+  },
+  Award: {
+    accent: "#D4971A",
+    imageTone: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",
     Icon: MedalStar,
   },
   ArchiveMinus: {
@@ -249,6 +256,7 @@ export default function Page() {
         postId: notification.postId ?? null,
         commentId: notification.commentId ?? null,
         followRequestId: notification.followRequestId ?? null,
+        achievementId: notification.achievementId ?? null,
         title: notification.title,
         description: notification.description,
         profilePicture: notification.profilePicture ?? null,

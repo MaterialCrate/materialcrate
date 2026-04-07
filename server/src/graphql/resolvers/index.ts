@@ -8,6 +8,7 @@ import { NotificationResolver } from "./notification.resolver.js";
 import { ReportResolver } from "./report.resolver.js";
 import { SupportResolver } from "./support.resolver.js";
 import { AiUsageResolver } from "./ai-usage.resolver.js";
+import { AchievementResolver } from "./achievement.resolver.js";
 
 export const resolvers = {
   Query: {
@@ -20,6 +21,7 @@ export const resolvers = {
     ...NotificationResolver.Query,
     ...ReportResolver.Query,
     ...AdminResolver.Query,
+    ...AchievementResolver.Query,
   },
   Mutation: {
     ...UserResolver.Mutation,

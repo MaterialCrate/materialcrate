@@ -9,6 +9,7 @@ import {
   NOTIFICATION_TYPE,
 } from "../../services/notifications.js";
 import { emitPostActivity } from "../../realtime/postActivity.js";
+import { checkAchievements } from "../../achievements/service.js";
 
 type CreatePostArgs = {
   fileBase64: string;
@@ -1288,6 +1289,8 @@ export const PostResolver = {
         throw new Error("Failed to create post");
       }
 
+      checkAchievements(ctx.user.sub, "post_created").catch(() => null);
+
       // Parse @mentions in post description and send notifications
       const postDescription = description?.trim();
       if (postDescription) {
@@ -1606,7 +1609,14 @@ export const PostResolver = {
         throw new Error("Not authenticated");
       }
 
-      return recordFeedInteraction(viewerId, input);
+      const result = await recordFeedInteraction(viewerId, input);
+      if (input.interactionType === "LONG_VIEW") {
+        checkAchievements(viewerId, "document_viewed_long").catch(() => null);
+      }
+      if (input.interactionType === "SHARE") {
+        checkAchievements(viewerId, "post_shared").catch(() => null);
+      }
+      return result;
     },
     deletePost: async (
       _: unknown,
@@ -1721,6 +1731,11 @@ export const PostResolver = {
           },
         });
 
+        checkAchievements(viewerId, "like_given").catch(() => null);
+        if (post.authorId) {
+          checkAchievements(post.authorId, "post_liked_received").catch(() => null);
+        }
+
         if (post.authorId && post.authorId !== viewerId) {
           const actor = await prisma.user.findUnique({
             where: { id: viewerId },
@@ -1825,6 +1840,8 @@ export const PostResolver = {
         },
         include: buildCommentInclude(viewerId),
       });
+
+      checkAchievements(viewerId, "comment_given").catch(() => null);
 
       await recordFeedInteraction(viewerId, {
         postId,

@@ -75,6 +75,7 @@ model User {
   mutedUserRelations Mute[] @relation("UserMutedUsers")
   mutedByRelations Mute[] @relation("UserMutedBy")
   notifications Notification[]
+  achievements  UserAchievement[]
   reports       Report[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -85,22 +86,36 @@ model User {
 }
 
 model Notification {
-  id          String   @id @default(cuid())
-  userId      String
-  actorId     String?
-  type        String   @default("SYSTEM")
-  title       String
-  description String
-  icon        String
+  id            String   @id @default(cuid())
+  userId        String
+  actorId       String?
+  type          String   @default("SYSTEM")
+  title         String
+  description   String
+  icon          String
   profilePicture String?
-  unread      Boolean  @default(true)
-  time        DateTime @default(now())
+  achievementId String?
+  unread        Boolean  @default(true)
+  time          DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, time])
   @@index([userId, unread])
   @@index([userId, type, actorId])
+}
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
 }
 
 enum SeoProvider {

@@ -23,6 +23,7 @@ import {
 import { sendAccountDeletedEmail } from "../../email/accountDeletedEmail.js";
 import { sendAccountRecoveredEmail } from "../../email/accountRecoveredEmail.js";
 import { sendWelcomeEmail } from "../../email/welcomeEmail.js";
+import { checkAchievements } from "../../achievements/service.js";
 import { ensureWorkspaceForUserId } from "./workspace.resolver.js";
 import {
   createNotification,
@@ -724,6 +725,8 @@ export const UserResolver = {
         console.error("Failed to send welcome email during signup:", error);
       });
 
+      checkAchievements(user.id, "signup").catch(() => null);
+
       const token = createToken(user.id, user.email);
       return {
         token,
@@ -943,7 +946,11 @@ export const UserResolver = {
         throw new Error("Email and code are required");
       }
 
-      return verifyEmailCode(email, code);
+      const result = await verifyEmailCode(email, code);
+      if (result?.user?.id) {
+        checkAchievements(result.user.id, "email_verified").catch(() => null);
+      }
+      return result;
     },
 
     resendVerificationEmail: async (
@@ -1457,7 +1464,9 @@ export const UserResolver = {
           icon: NOTIFICATION_ICON.FOLLOW,
           profilePicture: actor?.profilePicture,
         });
+        checkAchievements(targetUser.id, "follower_gained").catch(() => null);
       }
+      checkAchievements(ctx.user.sub, "follow_given").catch(() => null);
 
       await Promise.all([
         emitFollowActivityForUser({
@@ -2209,6 +2218,7 @@ export const UserResolver = {
           }
         }
 
+        checkAchievements(ctx.user.sub, "profile_updated").catch(() => null);
         return updatedUser;
       } catch (error) {
         if (uploadedProfilePictureUrl) {

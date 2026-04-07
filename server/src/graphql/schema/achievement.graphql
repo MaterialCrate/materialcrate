@@ -1,0 +1,15 @@
+type Achievement {
+  id: ID!
+  title: String!
+  description: String!
+  icon: String!
+  rarity: String!
+  unlockedAt: String
+  holderPercentage: Float!
+}
+
+extend type Query {
+  achievement(id: String!): Achievement
+  userAchievements(username: String!): [Achievement!]!
+  allAchievements: [Achievement!]!
+}

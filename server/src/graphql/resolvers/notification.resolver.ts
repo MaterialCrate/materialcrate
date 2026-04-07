@@ -248,6 +248,7 @@ const toNotificationGraphQL = async (
       normalizedActorId
         ? (options?.followRequestIdByActorId?.get(normalizedActorId) ?? null)
         : null,
+    achievementId: notification.achievementId ?? null,
     title: notification.title,
     description: notification.description,
     icon: notification.icon,

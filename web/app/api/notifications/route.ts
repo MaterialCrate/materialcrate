@@ -14,6 +14,7 @@ const NOTIFICATIONS_QUERY = `
       postId
       commentId
       followRequestId
+      achievementId
       title
       description
       icon

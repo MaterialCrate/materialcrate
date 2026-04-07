@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma.js";
+import { checkAchievements } from "../../achievements/service.js";
 
 type GraphQLContext = {
   user?: {
@@ -192,6 +193,7 @@ export const HubChatResolver = {
         },
       });
 
+      checkAchievements(viewerId, "ai_used").catch(() => null);
       return mapHubChatForGraphQL(chat);
     },
     clearHubChat: async (

@@ -9,6 +9,7 @@ export const NOTIFICATION_ICON = {
   MENTION: "MessageText1",
   POST_LIKE: "Heart",
   SYSTEM: "Notification",
+  ACHIEVEMENT: "Award",
 } as const;
 
 export const NOTIFICATION_TYPE = {
@@ -19,6 +20,7 @@ export const NOTIFICATION_TYPE = {
   MENTION: "MENTION",
   POST_LIKE: "POST_LIKE",
   SYSTEM: "SYSTEM",
+  ACHIEVEMENT_UNLOCKED: "ACHIEVEMENT_UNLOCKED",
 } as const;
 
 const PUSH_NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
@@ -35,6 +37,7 @@ type CreateNotificationInput = {
   actorId?: string | null;
   postId?: string | null;
   commentId?: string | null;
+  achievementId?: string | null;
   type?: string;
   title: string;
   description: string;
@@ -48,6 +51,7 @@ export const createNotification = async ({
   actorId,
   postId,
   commentId,
+  achievementId,
   type = NOTIFICATION_TYPE.SYSTEM,
   title,
   description,
@@ -71,6 +75,7 @@ export const createNotification = async ({
       description: description.trim(),
       icon: icon.trim(),
       profilePicture: profilePicture?.trim() || null,
+      achievementId: achievementId?.trim() || null,
       unread,
     },
   });

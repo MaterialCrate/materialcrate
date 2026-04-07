@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
 import { subscribeToFollowActivity } from "@/app/lib/post-activity-realtime";
-import Acheivement from "@/app/components/profile/Acheivement";
+import Acheivement, { type AchievementData } from "@/app/components/profile/Acheivement";
 import Header, { type ProfileTab } from "@/app/components/profile/Header";
 import Post, {
   type HomePost,
@@ -86,6 +86,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const [editingPost, setEditingPost] = useState<HomePost | null>(null);
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
   const [selectedTab, setSelectedTab] = useState<ProfileTab>("posts");
+  const [achievements, setAchievements] = useState<AchievementData[]>([]);
+  const [isLoadingAchievements, setIsLoadingAchievements] = useState(false);
   const [selectedFollowList, setSelectedFollowList] = useState<
     "followers" | "following" | null
   >(null);
@@ -221,6 +223,34 @@ export default function ProfilePage({ username }: ProfilePageProps) {
 
     return () => controller.abort();
   }, [profile?.username]);
+
+  useEffect(() => {
+    const profileUsername = profile?.username?.trim();
+    if (!profileUsername || selectedTab !== "achievements") return;
+
+    const controller = new AbortController();
+
+    const loadAchievements = async () => {
+      setIsLoadingAchievements(true);
+      try {
+        const response = await fetch(
+          `/api/users/${encodeURIComponent(profileUsername)}/achievements`,
+          { cache: "no-store", signal: controller.signal },
+        );
+        const body = await response.json().catch(() => ({}));
+        if (!controller.signal.aborted) {
+          setAchievements(Array.isArray(body?.achievements) ? body.achievements : []);
+        }
+      } catch {
+        if (!controller.signal.aborted) setAchievements([]);
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingAchievements(false);
+      }
+    };
+
+    void loadAchievements();
+    return () => controller.abort();
+  }, [profile?.username, selectedTab]);
 
   useEffect(() => {
     if (!profile?.id) {
@@ -641,10 +671,23 @@ export default function ProfilePage({ username }: ProfilePageProps) {
           <>
             {selectedTab === "achievements" ? (
               <section className="px-4 sm:px-6 lg:px-0">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Acheivement />
-                  <Acheivement />
-                </div>
+                {isLoadingAchievements ? (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="h-7 w-7 animate-spin rounded-full border-2 border-edge-strong border-t-transparent" />
+                  </div>
+                ) : achievements.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <span className="mb-3 text-4xl">🏆</span>
+                    <p className="text-sm font-medium text-ink">No achievements yet</p>
+                    <p className="mt-1 text-xs text-ink-3">Achievements unlock as you use Material Crate.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {achievements.map((a) => (
+                      <Acheivement key={a.id} achievement={a} />
+                    ))}
+                  </div>
+                )}
               </section>
             ) : (
               <section className="space-y-4">
