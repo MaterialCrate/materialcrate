@@ -24,7 +24,7 @@ const plans: Plan[] = [
   {
     planId: "free",
     name: "Free",
-    subtitle: "Continue with the essentials",
+    subtitle: "Get started with the essentials",
     priceLabel: "$0",
     cadence: "forever",
     buttonLabel: "Continue with free",
@@ -34,12 +34,13 @@ const plans: Plan[] = [
       "Publish posts",
       "Interact with other users",
       "Access core platform features",
+      "AI study assistant — limited monthly prompts",
     ],
   },
   {
     planId: "pro",
     name: "Pro",
-    subtitle: "Unlock full customization",
+    subtitle: "More AI, full customization",
     priceLabel: "$3.99",
     cadence: "/month",
     badge: "Most popular",
@@ -47,6 +48,7 @@ const plans: Plan[] = [
     buttonLabel: "Go Pro",
     features: [
       "Everything in Free",
+      "More AI prompts per month",
       "Maximum profile customization",
       "Maximum post customization",
       "Pro badge",
@@ -57,19 +59,18 @@ const plans: Plan[] = [
   {
     planId: "premium",
     name: "Premium",
-    subtitle: "Study smarter with AI",
+    subtitle: "The most AI for serious studying",
     priceLabel: "$6.99",
     cadence: "/month",
-    badge: "AI powered",
+    badge: "Max AI",
     buttonLabel: "Unlock Premium",
     features: [
       "Everything in Pro",
-      "AI study tools",
-      "Get help from posts that include PDFs",
+      "Highest AI prompt limit per month",
       "Ask questions about PDF-based study content",
       "AI-assisted understanding of shared study material",
       "Faster revision and learning support",
-      "Priority access to future study AI features",
+      "Priority access to future AI features",
     ],
   },
 ];
@@ -78,17 +79,17 @@ const planUseCases = [
   {
     title: "Free",
     description:
-      "Perfect for getting your profile live, sharing study material, and joining the community.",
+      "Perfect for getting started — access the platform, share study material, and try AI with a limited number of monthly prompts.",
   },
   {
     title: "Pro",
     description:
-      "Best for users who want their profile, posts, and presence on Material Crate to feel uniquely theirs.",
+      "Best for users who want full customization and more AI prompts to work through study material every month.",
   },
   {
     title: "Premium",
     description:
-      "Ideal if you want help understanding PDF-based resources faster with AI built around studying.",
+      "Ideal for learners who want the highest AI prompt limit for deeper, faster support on PDF-based study content.",
   },
 ];
 
@@ -189,20 +190,20 @@ export default function PlansPage() {
               Why upgrade?
             </p>
             <h3 className="mt-3 text-2xl font-semibold text-balance">
-              More personalization now, more study intelligence next.
+              More customization and more AI as you go.
             </h3>
             <p className="mt-3 text-sm leading-6 text-white/75">
-              Pro gives you more room to shape your identity on the platform,
-              while Premium is built for learners who want AI support around
-              shared PDF study material.
+              Every plan includes AI — Free gives you a taste, Pro increases
+              your monthly prompt limit alongside full customization, and
+              Premium gives you the most prompts for serious study workflows.
             </p>
 
             <div className="mt-5 rounded-3xl border border-white/10 bg-white/5 px-4 py-4 text-sm leading-6 text-white/80 backdrop-blur-sm">
               Start on <span className="font-semibold text-white">Free</span>,
-              move to <span className="font-semibold text-white">Pro </span>
-              for customization, or go{" "}
+              upgrade to <span className="font-semibold text-white">Pro</span>{" "}
+              for more AI and customization, or go{" "}
               <span className="font-semibold text-white">Premium</span> for the
-              smartest study workflow.
+              highest prompt limit.
             </div>
           </div>
         </section>
