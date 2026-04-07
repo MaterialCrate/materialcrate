@@ -1,7 +1,7 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { transporter } from "../config/mailer.js";
+import { resend } from "../config/mailer.js";
 
 export const EMAIL_LOGO_CID = "materialcrate-logo";
 export const EMAIL_WORDMARK_CID = "materialcrate-wordmark";
@@ -35,22 +35,23 @@ const getEmailAttachments = () =>
     {
       filename: "logo-email.png",
       path: emailAssetPath("logo-email.png"),
-      cid: EMAIL_LOGO_CID,
+      content_id: EMAIL_LOGO_CID,
     },
     {
       filename: "mc-wordmark.png",
       path: emailAssetPath("mc-wordmark.png"),
-      cid: EMAIL_WORDMARK_CID,
+      content_id: EMAIL_WORDMARK_CID,
     },
-  ].filter((attachment) => existsSync(attachment.path));
-
-const getMailUser = () =>
-  process.env.SMTP_USER?.trim() || process.env.SES_USER?.trim();
-
-const getMailPass = () => process.env.SMTP_PASS || process.env.SES_PASS;
+  ]
+    .filter((a) => existsSync(a.path))
+    .map((a) => ({
+      filename: a.filename,
+      content: readFileSync(a.path).toString("base64"),
+      content_id: a.content_id,
+    }));
 
 export const isEmailDeliveryConfigured = () =>
-  Boolean(process.env.MAIL_FROM && getMailUser() && getMailPass());
+  Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
 
 export const sendEmail = async ({
   to,
@@ -74,7 +75,7 @@ export const sendEmail = async ({
     ? fromAddress
     : `${fromName} <${fromAddress}>`;
 
-  await transporter.sendMail({
+  const { error } = await resend.emails.send({
     from: formattedFrom,
     to,
     subject,
@@ -82,4 +83,8 @@ export const sendEmail = async ({
     html,
     attachments: getEmailAttachments(),
   });
+
+  if (error) {
+    throw new Error(error.message);
+  }
 };
