@@ -22,6 +22,7 @@ import {
 } from "../../auth/emailVerification.js";
 import { sendAccountDeletedEmail } from "../../email/accountDeletedEmail.js";
 import { sendAccountRecoveredEmail } from "../../email/accountRecoveredEmail.js";
+import { sendWelcomeEmail } from "../../email/welcomeEmail.js";
 import { ensureWorkspaceForUserId } from "./workspace.resolver.js";
 import {
   createNotification,
@@ -716,6 +717,10 @@ export const UserResolver = {
           error,
         );
       }
+
+      sendWelcomeEmail(user.email, user.displayName).catch((error) => {
+        console.error("Failed to send welcome email during signup:", error);
+      });
 
       const token = createToken(user.id, user.email);
       return {

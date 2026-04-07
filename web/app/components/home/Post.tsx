@@ -617,7 +617,7 @@ export default function Post({
                 {post.categories.map((category) => (
                   <span
                     key={category}
-                    className="rounded-full bg-doc-card px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-2"
+                    className="rounded-full bg-doc-card py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-2"
                   >
                     {category}
                   </span>
