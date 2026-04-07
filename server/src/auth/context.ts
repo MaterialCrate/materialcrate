@@ -14,6 +14,11 @@ export const context = async ({ req }: any) => {
     } catch {}
   }
 
+  result.ip =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+    req.socket?.remoteAddress ||
+    null;
+
   const adminSecret = req.headers["x-admin-secret"];
   if (
     adminSecret &&

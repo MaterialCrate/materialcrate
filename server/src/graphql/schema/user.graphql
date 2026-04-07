@@ -55,6 +55,8 @@ type AuthPayload {
   verificationEmailError: String
   restoreRequired: Boolean!
   restoreDeadline: String
+  verificationRequired: Boolean!
+  verificationDeadline: String
 }
 
 type FollowResult {

@@ -2,12 +2,14 @@ import "./config/env.js";
 import { connectDB } from "./config/db.js";
 import { createHttpServer } from "./server.js";
 import { startDeletedPostPurgeLoop } from "./services/postDeletion.js";
+import { startUnverifiedUserPurgeLoop } from "./services/unverifiedUserPurge.js";
 
 const PORT = Number(process.env.PORT || 4000);
 const HOST = process.env.HOST || "0.0.0.0";
 
 await connectDB();
 startDeletedPostPurgeLoop();
+startUnverifiedUserPurgeLoop();
 
 const httpServer = await createHttpServer();
 

@@ -62,6 +62,18 @@ export async function POST(req: Request) {
   const graphqlBody = await graphqlResponse.json().catch(() => ({}));
 
   if (!graphqlResponse.ok || graphqlBody?.errors?.length) {
+    const firstError = graphqlBody?.errors?.[0];
+
+    if (firstError?.extensions?.code === "EMAIL_NOT_VERIFIED") {
+      return NextResponse.json(
+        {
+          verificationRequired: true,
+          verificationDeadline: firstError.extensions.verificationDeadline ?? null,
+        },
+        { status: 403 },
+      );
+    }
+
     console.error("[auth/login] GraphQL request failed", {
       email,
       graphqlStatus: graphqlResponse.status,
@@ -70,8 +82,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       {
-        error:
-          graphqlBody?.errors?.[0]?.message || "Login failed",
+        error: firstError?.message || "Login failed",
         details: graphqlBody?.errors ?? null,
         status: graphqlResponse.status,
       },

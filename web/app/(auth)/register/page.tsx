@@ -16,8 +16,12 @@ import Alert from "@/app/components/Alert";
 export default function Page() {
   const searchParams = useSearchParams();
   const isSocialSignup = searchParams.get("social") === "1";
-  const [step, setStep] = useState<number>(1);
-  const [email, setEmail] = useState<string>("");
+  const isVerifyOnly = searchParams.get("verify") === "1";
+  const verificationDeadlineParam = searchParams.get("verificationDeadline");
+  const [step, setStep] = useState<number>(isVerifyOnly ? 7 : 1);
+  const [email, setEmail] = useState<string>(
+    isVerifyOnly ? (searchParams.get("email") ?? "") : "",
+  );
   const [password, setPassword] = useState<string>("");
   const [username, setUsername] = useState<string>("");
   const [displayName, setDisplayName] = useState<string>("");
@@ -238,10 +242,16 @@ export default function Page() {
               : handleNoopSubmit
       }
     >
+      {isVerifyOnly && verificationDeadlineParam && (
+        <Alert
+          type="error"
+          message={`Your account will be permanently deleted on ${new Date(verificationDeadlineParam).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} if you don't verify your email.`}
+        />
+      )}
       <Alert type="error" message={error} />
       <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-130 flex-col rounded-[28px] bg-surface px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6">
         <div className="flex min-h-10 items-center">
-          {((!isSocialSignup && step !== 1 && step !== 7) ||
+          {((!isSocialSignup && !isVerifyOnly && step !== 1 && step !== 7) ||
             (isSocialSignup && step !== 3)) && (
             <button
               type="button"

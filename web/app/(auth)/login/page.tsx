@@ -115,16 +115,26 @@ function LoginContent() {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+
+        if (res.status === 403 && body?.verificationRequired) {
+          const deadline = body?.verificationDeadline
+            ? new Date(body.verificationDeadline).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })
+            : null;
+          const params = new URLSearchParams({ email, verify: "1" });
+          if (deadline) params.set("verificationDeadline", body.verificationDeadline);
+          window.location.href = `/register?${params.toString()}`;
+          return;
+        }
+
         const rawError =
           typeof body?.error === "string" ? body.error : "Login failed";
 
         if (rawError === "Invalid credentials") {
           setError("Incorrect email or password");
-          return;
-        }
-
-        if (rawError === "Email is not verified") {
-          setError("Please verify your email");
           return;
         }
 

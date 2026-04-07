@@ -1,3 +1,4 @@
+import { GraphQLError } from "graphql";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { randomBytes, randomUUID } from "crypto";
@@ -23,6 +24,7 @@ import {
 import { sendAccountDeletedEmail } from "../../email/accountDeletedEmail.js";
 import { sendAccountRecoveredEmail } from "../../email/accountRecoveredEmail.js";
 import { sendWelcomeEmail } from "../../email/welcomeEmail.js";
+import { sendLoginEmail } from "../../email/loginEmail.js";
 import { checkAchievements } from "../../achievements/service.js";
 import { ensureWorkspaceForUserId } from "./workspace.resolver.js";
 import {
@@ -721,10 +723,6 @@ export const UserResolver = {
         );
       }
 
-      sendWelcomeEmail(user.email, user.displayName).catch((error) => {
-        console.error("Failed to send welcome email during signup:", error);
-      });
-
       checkAchievements(user.id, "signup").catch(() => null);
 
       const token = createToken(user.id, user.email);
@@ -738,7 +736,7 @@ export const UserResolver = {
       };
     },
 
-    login: async (_: unknown, args: any) => {
+    login: async (_: unknown, args: any, ctx: any) => {
       const { email, password } = args;
       const normalizedEmail = normalizeEmailAddress(email);
 
@@ -791,10 +789,24 @@ export const UserResolver = {
       }
 
       if (!user.emailVerified) {
-        throw new Error("Email is not verified");
+        const verificationDeadline = new Date(
+          user.createdAt.getTime() + 7 * 24 * 60 * 60 * 1000,
+        );
+        throw new GraphQLError("Email is not verified", {
+          extensions: {
+            code: "EMAIL_NOT_VERIFIED",
+            verificationDeadline: verificationDeadline.toISOString(),
+          },
+        });
       }
 
       await ensureWorkspaceForUserId(user.id, user.id);
+
+      sendLoginEmail(user.email, user.displayName, ctx.ip ?? null).catch(
+        (error) => {
+          console.error("Failed to send login notification email:", error);
+        },
+      );
 
       return buildAuthPayload(user);
     },
@@ -948,6 +960,9 @@ export const UserResolver = {
 
       const user = await verifyEmailCode(email, code);
       checkAchievements(user.id, "email_verified").catch(() => null);
+      sendWelcomeEmail(user.email, user.displayName).catch((error) => {
+        console.error("Failed to send welcome email after verification:", error);
+      });
       return true;
     },
 

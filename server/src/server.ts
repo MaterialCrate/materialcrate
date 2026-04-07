@@ -1,4 +1,7 @@
 import http from "node:http";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import express from "express";
 import jwt from "jsonwebtoken";
 import { ApolloServer } from "apollo-server-express";
@@ -54,6 +57,16 @@ export const createHttpServer = () => {
     httpServerPromise = (async () => {
       const app = express();
       app.disable("x-powered-by");
+
+      // Serve email assets (logo, wordmark) for use in transactional emails
+      const emailAssetsDir = resolve(
+        dirname(fileURLToPath(import.meta.url)),
+        "email",
+        "assets",
+      );
+      if (existsSync(emailAssetsDir)) {
+        app.use("/email-assets", express.static(emailAssetsDir));
+      }
 
       // Health checks registered immediately — respond before Apollo finishes starting
       app.get("/health", (_, res) => {
