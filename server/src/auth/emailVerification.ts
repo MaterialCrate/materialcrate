@@ -257,7 +257,7 @@ export const verifyEmailCode = async (email: string, code: string) => {
     },
   });
 
-  return true;
+  return user;
 };
 
 export const resendPendingEmailChange = async (userId: string) => {

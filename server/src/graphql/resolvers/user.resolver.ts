@@ -946,11 +946,9 @@ export const UserResolver = {
         throw new Error("Email and code are required");
       }
 
-      const result = await verifyEmailCode(email, code);
-      if (result?.user?.id) {
-        checkAchievements(result.user.id, "email_verified").catch(() => null);
-      }
-      return result;
+      const user = await verifyEmailCode(email, code);
+      checkAchievements(user.id, "email_verified").catch(() => null);
+      return true;
     },
 
     resendVerificationEmail: async (
