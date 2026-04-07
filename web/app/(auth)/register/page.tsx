@@ -56,7 +56,7 @@ export default function Page() {
 
         if (!response.ok || !user) {
           throw new Error(
-            "Social session expired. Please continue with Google/Facebook again.",
+            "Social session expired. Please continue with Google again.",
           );
         }
 

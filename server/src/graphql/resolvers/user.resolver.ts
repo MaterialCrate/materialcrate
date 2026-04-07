@@ -48,7 +48,6 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const ACCOUNT_RESTORE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const SOCIAL_PROVIDER_MAP = {
   google: "GOOGLE",
-  facebook: "FACEBOOK",
 } as const;
 
 type SocialProviderKey = keyof typeof SOCIAL_PROVIDER_MAP;
@@ -59,7 +58,6 @@ const normalizeSocialProvider = (provider: unknown): SocialProviderValue => {
     .trim()
     .toLowerCase();
   if (normalized === "google") return SOCIAL_PROVIDER_MAP.google;
-  if (normalized === "facebook") return SOCIAL_PROVIDER_MAP.facebook;
   throw new Error("Unsupported social provider");
 };
 
@@ -217,6 +215,8 @@ const buildAuthPayload = async (
     verificationEmailError: null,
     restoreRequired: Boolean(options?.restoreRequired),
     restoreDeadline: toIsoStringOrNull(options?.restoreDeadline),
+    verificationRequired: false,
+    verificationDeadline: null,
   };
 };
 

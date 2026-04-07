@@ -1,6 +1,6 @@
 import React from "react";
 import { usePathname } from "next/navigation";
-import { FaFacebook, FaGoogle } from "react-icons/fa";
+import { FaGoogle } from "react-icons/fa";
 import ActionButton from "../ActionButton";
 
 interface EmailTypes {
@@ -13,7 +13,7 @@ export default function Email({ email, setEmail }: EmailTypes) {
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const mode = pathname === "/register" ? "register" : "login";
 
-  const handleSocialAuth = (provider: "google" | "facebook") => {
+  const handleSocialAuth = (provider: "google") => {
     if (typeof window === "undefined") return;
     window.location.assign(`/api/auth/social/${provider}?mode=${mode}`);
   };
@@ -29,15 +29,6 @@ export default function Email({ email, setEmail }: EmailTypes) {
           <p className="font-medium text-ink">Continue with Google</p>
           <FaGoogle size={22} className="text-ink" />
         </button>
-        <button
-          type="button"
-          onClick={() => handleSocialAuth("facebook")}
-          className="cursor-pointer flex w-full items-center justify-between rounded-2xl border border-edge-mid bg-surface px-4 py-3.5 text-left transition-all duration-200 hover:border-[#E1761F]/35 hover:bg-[#FFF9F4] active:scale-[0.98]"
-        >
-          <p className="font-medium text-ink">Continue with Facebook</p>
-          <FaFacebook size={22} className="text-ink" />
-        </button>
-
         <div className="flex items-center justify-between gap-3 pt-1">
           <div className="h-px flex-1 bg-linear-to-r from-transparent via-gray-400 to-black/50" />
           <p className="text-[11px] font-medium tracking-[0.16em] text-ink-2">

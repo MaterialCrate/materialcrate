@@ -4,10 +4,8 @@ import { getBaseUrl } from "../../../../lib/site-url";
 
 const GOOGLE_OAUTH_AUTHORIZE_URL =
   "https://accounts.google.com/o/oauth2/v2/auth";
-const FACEBOOK_OAUTH_AUTHORIZE_URL =
-  "https://www.facebook.com/v22.0/dialog/oauth";
 
-const SUPPORTED_PROVIDERS = new Set(["google", "facebook"]);
+const SUPPORTED_PROVIDERS = new Set(["google"]);
 
 const buildCallbackPath = (provider: string) =>
   `/api/auth/social/callback/${provider}`;
@@ -90,19 +88,9 @@ export async function GET(
     oauthUrl.searchParams.set("state", state);
     oauthUrl.searchParams.set("prompt", "select_account");
   } else {
-    const appId = process.env.FACEBOOK_APP_ID;
-    if (!appId) {
-      return NextResponse.redirect(
-        buildErrorRedirect(origin, mode, "Facebook auth is not configured"),
-      );
-    }
-
-    oauthUrl = new URL(FACEBOOK_OAUTH_AUTHORIZE_URL);
-    oauthUrl.searchParams.set("client_id", appId);
-    oauthUrl.searchParams.set("redirect_uri", redirectUri);
-    oauthUrl.searchParams.set("response_type", "code");
-    oauthUrl.searchParams.set("scope", "email,public_profile");
-    oauthUrl.searchParams.set("state", state);
+    return NextResponse.redirect(
+      buildErrorRedirect(origin, mode, "Unsupported social provider"),
+    );
   }
 
   const response = NextResponse.redirect(oauthUrl.toString());

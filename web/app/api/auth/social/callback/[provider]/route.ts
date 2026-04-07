@@ -12,9 +12,6 @@ const GRAPHQL_ENDPOINT =
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
-const FACEBOOK_TOKEN_URL =
-  "https://graph.facebook.com/v22.0/oauth/access_token";
-const FACEBOOK_PROFILE_URL = "https://graph.facebook.com/me";
 
 const SOCIAL_AUTH_MUTATION = `
   mutation SocialAuth(
@@ -178,50 +175,6 @@ const exchangeGoogleCodeForIdentity = async (
   } satisfies SocialIdentity;
 };
 
-const exchangeFacebookCodeForIdentity = async (
-  code: string,
-  redirectUri: string,
-) => {
-  const appId = process.env.FACEBOOK_APP_ID;
-  const appSecret = process.env.FACEBOOK_APP_SECRET;
-  if (!appId || !appSecret) {
-    throw new Error("Facebook auth is not configured");
-  }
-
-  const tokenUrl = new URL(FACEBOOK_TOKEN_URL);
-  tokenUrl.searchParams.set("client_id", appId);
-  tokenUrl.searchParams.set("client_secret", appSecret);
-  tokenUrl.searchParams.set("redirect_uri", redirectUri);
-  tokenUrl.searchParams.set("code", code);
-
-  const tokenResponse = await fetch(tokenUrl.toString());
-  const tokenBody = await tokenResponse.json().catch(() => ({}));
-  if (!tokenResponse.ok || !tokenBody?.access_token) {
-    throw new Error("Failed to exchange Facebook OAuth code");
-  }
-
-  const profileUrl = new URL(FACEBOOK_PROFILE_URL);
-  profileUrl.searchParams.set("fields", "id,email,first_name,last_name,name");
-  profileUrl.searchParams.set("access_token", tokenBody.access_token);
-
-  const profileResponse = await fetch(profileUrl.toString());
-  const profileBody = await profileResponse.json().catch(() => ({}));
-  if (!profileResponse.ok || !profileBody?.id) {
-    throw new Error("Failed to fetch Facebook profile");
-  }
-
-  return {
-    providerUserId: String(profileBody.id),
-    email: ensureEmail(profileBody.email),
-    displayName:
-      (profileBody.name ??
-        [profileBody.first_name, profileBody.last_name]
-          .filter(Boolean)
-          .join(" ")) ||
-      null,
-  } satisfies SocialIdentity;
-};
-
 const exchangeCodeForIdentity = async (
   provider: string,
   code: string,
@@ -229,9 +182,6 @@ const exchangeCodeForIdentity = async (
 ) => {
   if (provider === "google") {
     return exchangeGoogleCodeForIdentity(code, redirectUri);
-  }
-  if (provider === "facebook") {
-    return exchangeFacebookCodeForIdentity(code, redirectUri);
   }
   throw new Error("Unsupported social provider");
 };
