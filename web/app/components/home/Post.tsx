@@ -520,18 +520,18 @@ export default function Post({
   return (
     <div ref={postCardRef}>
       <Alert message={alertState.message} type={alertState.type} />
-      <article className="lg:rounded-xl lg:border lg:border-black/6 lg:mb-4 lg:bg-white lg:shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <article className="lg:rounded-xl lg:border lg:border-edge lg:mb-4 lg:bg-surface lg:shadow-sm">
         <div className="flex items-start justify-between px-2 pt-2">
           <button
             type="button"
-            className="cursor-pointer flex min-w-0 items-center gap-3 text-left rounded-xl py-1 -ml-1 pl-1 transition-colors duration-200 hover:bg-black/3 active:bg-black/5"
+            className="cursor-pointer flex min-w-0 items-center gap-3 text-left rounded-xl py-1 -ml-1 pl-1 transition-colors duration-200 hover:bg-surface-high active:bg-edge"
             onClick={() => {
               if (!authorRoute) return;
               router.push(authorRoute);
             }}
             disabled={!authorRoute}
           >
-            <div className="flex h-11 w-11 aspect-square items-center justify-center overflow-hidden rounded-full bg-[#F3F3F3] ring-1 ring-black/5">
+            <div className="flex h-11 w-11 aspect-square items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
               {authorProfilePicture ? (
                 <Image
                   src={authorProfilePicture}
@@ -542,12 +542,12 @@ export default function Post({
                   unoptimized
                 />
               ) : (
-                <User size={18} color="#808080" variant="Bold" />
+                <User size={18} color="var(--ink-3)" variant="Bold" />
               )}
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1">
-                <p className="truncate text-sm font-semibold text-[#202020]">
+                <p className="truncate text-sm font-semibold text-ink">
                   {authorFullName}
                 </p>
                 {post.author?.isBot ? (
@@ -558,7 +558,7 @@ export default function Post({
                   )
                 )}
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-medium text-[#8C8C8C]">
+              <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs font-medium text-ink-3">
                 <span>{authorUsername}</span>
                 <span>&bull;</span>
                 <span>{createdLabel}</span>
@@ -587,14 +587,14 @@ export default function Post({
                 height: rect.height,
               });
             }}
-            className="cursor-pointer rounded-full bg-[#F7F7F7] p-2 transition-all duration-200 hover:bg-[#EFEFEF] active:scale-90"
+            className="cursor-pointer rounded-full bg-page p-2 transition-all duration-200 hover:bg-surface-high active:scale-90"
           >
-            <More size={18} color="#6F6F6F" />
+            <More size={18} color="var(--ink-2)" />
           </button>
         </div>
 
         {post.description && (
-          <p className="px-2 pt-3 text-sm leading-6 text-[#373737]">
+          <p className="px-2 pt-3 text-sm leading-6 text-ink">
             {renderTextWithMentions(post.description)}
           </p>
         )}
@@ -604,7 +604,7 @@ export default function Post({
             type="button"
             aria-label={`Open ${post.title}`}
             onClick={() => onFileClick?.(post)}
-            className="cursor-pointer group flex w-full items-start gap-4 rounded-[22px] bg-[#F6F3EE] p-3 text-left transition-all duration-200 hover:bg-[#F2ECE4] active:scale-[0.98]"
+            className="cursor-pointer group flex w-full items-start gap-4 rounded-[22px] bg-doc-card p-3 text-left transition-all duration-200 hover:bg-doc-card-hover active:scale-[0.98]"
           >
             <PdfThumbnail
               postId={post.id}
@@ -617,32 +617,32 @@ export default function Post({
                 {post.categories.map((category) => (
                   <span
                     key={category}
-                    className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8A5A2B]"
+                    className="rounded-full bg-doc-card px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-2"
                   >
                     {category}
                   </span>
                 ))}
                 {post.year && (
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6A6A6A]">
+                  <span className="rounded-full bg-surface px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-2">
                     {post.year}
                   </span>
                 )}
               </div>
-              <p className="line-clamp-2 text-sm font-semibold text-[#202020]">
+              <p className="line-clamp-2 text-sm font-semibold text-ink">
                 {post.title}
               </p>
             </div>
           </button>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-black/6 px-2 py-3">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-edge px-2 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200 active:scale-95 disabled:opacity-60 ${
                 viewerHasLiked
                   ? "bg-[#FDE9E9] text-[#C53B3B] hover:bg-[#FBD8D8]"
-                  : "bg-[#F6F6F6] text-[#666666] hover:bg-[#EEEEEE]"
+                  : "bg-surface-high text-ink-2 hover:bg-surface-high"
               }`}
               onClick={() => {
                 void handleLike();
@@ -651,20 +651,20 @@ export default function Post({
             >
               <Heart
                 size={18}
-                color={viewerHasLiked ? "#E00505" : "#808080"}
+                color={viewerHasLiked ? "#E00505" : "var(--ink-3)"}
                 variant={viewerHasLiked ? "Bold" : "Linear"}
               />
               <span>{likeCount}</span>
             </button>
             <button
               type="button"
-              className="cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-2 text-xs font-semibold text-[#666666] transition-all duration-200 hover:bg-[#EEEEEE] active:scale-95"
+              className="cursor-pointer inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-2 text-xs font-semibold text-ink-2 transition-all duration-200 hover:bg-surface-high active:scale-95"
               onClick={() => {
                 if (!ensureAuthenticated("comment")) return;
                 onCommentClick?.(post);
               }}
             >
-              <Messages2 size={18} color="#808080" />
+              <Messages2 size={18} color="var(--ink-3)" />
               <span>{commentCount}</span>
             </button>
             <button
@@ -673,7 +673,7 @@ export default function Post({
               className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold transition-all duration-200 active:scale-95 ${
                 isArchived
                   ? "bg-[#FFF3E7] text-[#E1761F] hover:bg-[#FFE9D4]"
-                  : "bg-[#F6F6F6] text-[#666666] hover:bg-[#EEEEEE]"
+                  : "bg-surface-high text-ink-2 hover:bg-surface-high"
               } ${isArchiveBusy ? "opacity-60" : ""}`}
               disabled={isArchiveBusy}
               onClick={() => {
@@ -693,7 +693,7 @@ export default function Post({
             >
               <Archive
                 size={18}
-                color={isArchived ? "#E1761F" : "#808080"}
+                color={isArchived ? "#E1761F" : "var(--ink-3)"}
                 variant={isArchived ? "Bold" : "Linear"}
               />
               <span>{isArchived ? "Saved" : "Save"}</span>
@@ -705,9 +705,9 @@ export default function Post({
             onClick={() => {
               void copyPostLink();
             }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#F6F6F6] px-3 py-2 text-xs font-semibold text-[#666666] transition-all duration-200 hover:bg-[#EEEEEE] active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-2 text-xs font-semibold text-ink-2 transition-all duration-200 hover:bg-surface-high active:scale-95"
           >
-            <Send2 size={18} color="#808080" />
+            <Send2 size={18} color="var(--ink-3)" />
             <span>Share</span>
           </button>
         </div>

@@ -148,17 +148,17 @@ export default function Verification({
     <div className="flex min-h-full w-full flex-col justify-between px-1 py-4 sm:px-2 sm:py-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
         <div className="text-center">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[#A0A0A0]">
+          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-ink-3">
             Verification
           </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-[#202020] sm:text-4xl">
+          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-4xl">
             {title}
           </h1>
-          <div className="mx-auto mt-3 max-w-92 text-sm leading-6 text-[#5F5F5F]">
+          <div className="mx-auto mt-3 max-w-92 text-sm leading-6 text-ink-2">
             {description ?? (
               <>
                 We&apos;ve sent a verification code to{" "}
-                <span className="font-semibold text-[#202020]">{email}</span>.
+                <span className="font-semibold text-ink">{email}</span>.
                 Enter it below to continue.
               </>
             )}
@@ -182,19 +182,19 @@ export default function Verification({
               onChange={(e) => handleChange(e.target.value, i)}
               onKeyDown={(e) => handleKeyDown(e, i)}
               onPaste={handlePaste}
-              className="h-12 w-12 rounded-2xl border border-black/10 bg-[#FAFAFA] text-center text-xl font-semibold text-[#202020] outline-none transition-all duration-200 focus:border-[#E1761F] focus:bg-white focus:ring-2 focus:ring-[#E1761F]/15 sm:h-16 sm:w-16 sm:text-2xl"
+              className="h-12 w-12 rounded-2xl border border-edge-mid bg-surface-high text-center text-xl font-semibold text-ink outline-none transition-all duration-200 focus:border-[#E1761F] focus:bg-surface focus:ring-2 focus:ring-[#E1761F]/15 sm:h-16 sm:w-16 sm:text-2xl"
             />
           ))}
         </div>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-[#6A6A6A]">
+          <p className="text-sm text-ink-2">
             Didn&apos;t receive it?{" "}
             <button
               type="button"
               onClick={handleResend}
               disabled={isResending}
-              className="cursor-pointer font-medium text-[#A15D16] underline underline-offset-4 transition-colors duration-200 hover:text-[#E1761F] active:opacity-70 disabled:cursor-not-allowed disabled:text-[#A0A0A0]"
+              className="cursor-pointer font-medium text-[#A15D16] underline underline-offset-4 transition-colors duration-200 hover:text-[#E1761F] active:opacity-70 disabled:cursor-not-allowed disabled:text-ink-3"
             >
               {isResending ? "Sending..." : "Resend code"}
             </button>

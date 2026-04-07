@@ -143,7 +143,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7]">
+    <div className="min-h-dvh bg-page">
       {error && <Alert message={error} type="error" />}
       <Header title="Settings" isLoading={isLoggingOut} />
       <div className="mx-auto max-w-2xl px-4 pb-8 pt-20 sm:px-6">
@@ -151,22 +151,22 @@ export default function Settings() {
         {settingPages.map((section) => (
           <div
             key={section.title}
-            className="overflow-hidden rounded-[20px] border border-black/6 bg-white"
+            className="overflow-hidden rounded-[20px] border border-edge bg-surface"
           >
             <div className="flex items-start gap-3 px-4 py-3.5">
               <div className="rounded-[14px] bg-[#F6EFE5] p-2.5">
                 <section.icon size={20} color="#A95A13" variant="Bulk" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-base font-semibold text-[#1F1F1F]">
+                <h2 className="text-base font-semibold text-ink">
                   {section.title}
                 </h2>
-                <p className="mt-0.5 text-xs text-[#666666]">
+                <p className="mt-0.5 text-xs text-ink-2">
                   {section.description}
                 </p>
               </div>
             </div>
-            <div className="border-t border-black/6">
+            <div className="border-t border-edge">
               {section.buttons.map((button, index) => (
                 <button
                   type="button"
@@ -174,15 +174,15 @@ export default function Settings() {
                   onClick={() => router.push(button.href)}
                   className={`flex w-full items-center justify-between gap-4 px-4 py-3 text-left transition-colors hover:bg-[#FBF7F2] ${
                     index < section.buttons.length - 1
-                      ? "border-b border-black/6"
+                      ? "border-b border-edge"
                       : ""
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[#242424]">
+                    <p className="text-sm font-medium text-ink">
                       {button.text}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-[#717171]">
+                    <p className="mt-0.5 text-[11px] text-ink-2">
                       {button.note}
                     </p>
                   </div>

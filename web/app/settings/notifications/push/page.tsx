@@ -176,7 +176,7 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7]">
+    <div className="min-h-dvh bg-page">
       <Alert message={success} type="success" />
       <Alert message={error} type="error" />
       <Header
@@ -199,17 +199,17 @@ export default function Page() {
         {pushOptions.map((option) => (
           <div
             key={option.label}
-            className="flex items-start justify-between gap-4 rounded-[20px] border border-black/6 bg-white px-4 py-3"
+            className="flex items-start justify-between gap-4 rounded-[20px] border border-edge bg-surface px-4 py-3"
           >
             <div className="flex items-start gap-3">
               <div className="rounded-[14px] bg-[#F6EFE5] p-2.5">
                 <Notification size={18} color="#A95A13" variant="Bulk" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#3D3D3D]">
+                <p className="text-sm font-medium text-ink">
                   {option.label}
                 </p>
-                <p className="text-xs text-[#6B6B6B]">{option.description}</p>
+                <p className="text-xs text-ink-2">{option.description}</p>
               </div>
             </div>
             <div>

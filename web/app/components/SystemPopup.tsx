@@ -97,7 +97,7 @@ function PopupCard({
       onKeyDown={handleKeyDown}
     >
       <div
-        className="w-full max-w-96 overflow-hidden rounded-[28px] border border-black/6 bg-[#F7F7F7] shadow-[0_28px_80px_rgba(0,0,0,0.24)]"
+        className="w-full max-w-96 overflow-hidden rounded-[28px] border border-edge bg-page shadow-[0_28px_80px_rgba(0,0,0,0.24)]"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="bg-[#1D1D1D] px-5 pb-5 pt-5 text-white">
@@ -128,7 +128,7 @@ function PopupCard({
               value={draftValue}
               onChange={(event) => setDraftValue(event.target.value)}
               placeholder={popup.config.placeholder}
-              className="h-13 w-full rounded-2xl border border-black/8 bg-white px-4 text-[15px] text-[#202020] outline-none placeholder:text-[#9B9B9B] focus:border-[#E1761F] focus:bg-[#FFFDFC]"
+              className="h-13 w-full rounded-2xl border border-edge-mid bg-surface px-4 text-[15px] text-ink outline-none placeholder:text-ink-3 focus:border-[#E1761F] focus:bg-[#FFFDFC]"
             />
           ) : null}
 
@@ -136,7 +136,7 @@ function PopupCard({
             <button
               type="button"
               onClick={() => onClose(null)}
-              className="flex h-12 flex-1 items-center justify-center rounded-2xl border border-black/8 bg-white text-[15px] font-medium text-[#5F5F5F] transition-colors hover:bg-black/3"
+              className="flex h-12 flex-1 items-center justify-center rounded-2xl border border-edge-mid bg-surface text-[15px] font-medium text-ink-2 transition-colors hover:bg-black/3"
             >
               {popup.config.cancelLabel ?? "Cancel"}
             </button>

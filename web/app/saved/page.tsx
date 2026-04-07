@@ -152,7 +152,7 @@ export default function SavedPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#FFFFFF] pb-32 pt-20">
+    <div className="min-h-dvh bg-surface pb-32 pt-20">
       <PdfViewerModal
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
@@ -162,7 +162,7 @@ export default function SavedPage() {
       {error && <Alert type="error" message={error} />}
 
       <div className="fixed top-0 left-0 right-0 z-40 ">
-        <header className="bg-[#F7F7F7] px-6 pt-6 pb-3">
+        <header className="bg-page px-6 pt-6 pb-3">
           <h1 className="text-center text-LG font-medium">My Saved</h1>
         </header>
         {isLoading && <LoadingBar />}
@@ -171,14 +171,14 @@ export default function SavedPage() {
       {!isLoading && (
         <main className="mx-auto max-w-2xl space-y-6 px-4 sm:px-6">
           {!saved || (!saved.folders.length && !saved.savedPosts.length) ? (
-            <div className="flex flex-col items-center justify-center gap-4 px-12 py-16 text-center lg:rounded-3xl lg:border lg:border-black/6 lg:bg-white lg:shadow-sm">
+            <div className="flex flex-col items-center justify-center gap-4 px-12 py-16 text-center lg:rounded-3xl lg:border lg:border-edge lg:bg-surface lg:shadow-sm">
               <Image
                 src={emptyWorkspace}
                 alt="Empty saved files"
                 width={80}
                 height={80}
               />
-              <p className="text-sm text-[#696969]">
+              <p className="text-sm text-ink-2">
                 You haven&apos;t saved any files yet. Save attachments from the
                 feed and they&apos;ll appear here.
               </p>
@@ -186,15 +186,15 @@ export default function SavedPage() {
           ) : (
             <>
               {foldersWithSavedPosts.length > 0 && (
-                <section className="space-y-3 lg:rounded-3xl lg:border lg:border-black/6 lg:bg-white lg:p-5 lg:shadow-sm">
+                <section className="space-y-3 lg:rounded-3xl lg:border lg:border-edge lg:bg-surface lg:p-5 lg:shadow-sm">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <FolderOpen size={20} color="#202020" />
-                      <h2 className="text-base font-medium text-[#202020]">
+                      <FolderOpen size={20} color="var(--ink)" />
+                      <h2 className="text-base font-medium text-ink">
                         Folders
                       </h2>
                     </div>
-                    <span className="text-sm text-[#767676]">
+                    <span className="text-sm text-ink-2">
                       {totalFolderCount}
                     </span>
                   </div>
@@ -210,9 +210,9 @@ export default function SavedPage() {
                           )
                         }
                       >
-                        <Folder2 size={48} color="#9e9e9e" variant="Bold" />
+                        <Folder2 size={48} color="var(--ink-3)" variant="Bold" />
                         <div className="min-w-0">
-                          <p className="text-xs font-medium text-[#323232]">
+                          <p className="text-xs font-medium text-ink">
                             {folder.name}
                           </p>
                         </div>
@@ -223,15 +223,15 @@ export default function SavedPage() {
               )}
 
               {rootSavedPosts.length > 0 && (
-                <section className="space-y-3 lg:rounded-3xl lg:border lg:border-black/6 lg:bg-white lg:p-5 lg:shadow-sm">
+                <section className="space-y-3 lg:rounded-3xl lg:border lg:border-edge lg:bg-surface lg:p-5 lg:shadow-sm">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <DocumentText size={20} color="#202020" />
-                      <h2 className="text-base font-medium text-[#202020]">
+                      <DocumentText size={20} color="var(--ink)" />
+                      <h2 className="text-base font-medium text-ink">
                         Files
                       </h2>
                     </div>
-                    <span className="text-sm text-[#767676]">
+                    <span className="text-sm text-ink-2">
                       {totalFileCount}
                     </span>
                   </div>

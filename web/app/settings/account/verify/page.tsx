@@ -24,10 +24,10 @@ export default function Page() {
 
   if (isLoading) {
     return (
-      <div className="min-h-dvh bg-[#F7F7F7]">
+      <div className="min-h-dvh bg-page">
         <Header title="Verify New Email" isLoading />
         <div className="mx-auto max-w-2xl px-4 pt-20 sm:px-6">
-          <div className="rounded-[18px] bg-white px-4 py-3 text-sm text-[#3D3D3D]">
+          <div className="rounded-[18px] bg-surface px-4 py-3 text-sm text-ink">
             Loading verification details...
           </div>
         </div>
@@ -37,7 +37,7 @@ export default function Page() {
 
   if (!user?.pendingEmail) {
     return (
-      <div className="min-h-dvh bg-[#F7F7F7]">
+      <div className="min-h-dvh bg-page">
         <Header title="Verify New Email" isLoading={false} />
         <div className="mx-auto max-w-2xl px-4 pt-20 sm:px-6">
           <Alert type="info" message="No pending email change found." />
@@ -47,17 +47,17 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7]">
+    <div className="min-h-dvh bg-page">
       <Header title="Verify New Email" isLoading={false} />
       <div className="mx-auto max-w-2xl px-4 pb-6 pt-20 sm:px-6">
-      <div className="overflow-hidden rounded-3xl border border-black/6 bg-white shadow-[0_16px_40px_rgba(0,0,0,0.04)]">
+      <div className="overflow-hidden rounded-3xl border border-edge bg-surface shadow-[0_16px_40px_rgba(0,0,0,0.04)]">
         <Verification
           email={user.pendingEmail as string}
           title="Confirm your new email"
           description={
             <>
               Enter the 4-digit code we sent to{" "}
-              <span className="font-semibold text-[#202020]">
+              <span className="font-semibold text-ink">
                 {user.pendingEmail as string}
               </span>{" "}
               to finish updating your sign-in email.

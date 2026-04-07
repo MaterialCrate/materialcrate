@@ -208,7 +208,7 @@ export default function OptionsOptions({
     <div
       ref={drawerRef}
       style={anchoredPosition}
-      className={`fixed z-100 rounded-4xl border border-black/6 bg-white p-2 shadow-[0_24px_80px_rgba(0,0,0,0.18)] transition-all duration-300 ease-out ${
+      className={`fixed z-100 rounded-4xl border border-edge bg-surface p-2 shadow-[0_24px_80px_rgba(0,0,0,0.18)] transition-all duration-300 ease-out ${
         anchoredPosition ? "left-auto" : "inset-x-4 bottom-4 mx-auto"
       } ${
         isOpen
@@ -218,7 +218,7 @@ export default function OptionsOptions({
     >
       <div className="space-y-4">
         <div className="space-y-1">
-          <div className="overflow-hidden rounded-[26px] bg-[#F7F7F7]">
+          <div className="overflow-hidden rounded-[26px] bg-page">
             {primaryActions.map((action, index) => (
               <button
                 key={action.label}
@@ -481,12 +481,12 @@ export default function OptionsOptions({
                   }
                 }}
                 className={`flex w-full items-center gap-4 px-4 py-4 text-left hover:bg-black/3 disabled:opacity-60 active:opacity-40 transition-all duration-300 ${
-                  index < primaryActions.length - 1 && "border-b border-black/6"
+                  index < primaryActions.length - 1 && "border-b border-edge"
                 }`}
               >
                 <span>{action.icon}</span>
                 <span className="min-w-0">
-                  <span className="block text-sm text-[#111111]">
+                  <span className="block text-sm text-ink">
                     {action.label}
                   </span>
                 </span>
@@ -494,7 +494,7 @@ export default function OptionsOptions({
             ))}
           </div>
 
-          <div className="overflow-hidden rounded-[26px] bg-[#F7F7F7] active:opacity-40 transition-opacity duration-300">
+          <div className="overflow-hidden rounded-[26px] bg-page active:opacity-40 transition-opacity duration-300">
             {secondaryActions.map((action, index) => (
               <button
                 key={action.label}
@@ -514,12 +514,12 @@ export default function OptionsOptions({
                 }}
                 className={`flex w-full items-center gap-4 px-4 py-4 text-left transition-colors hover:bg-black/3 disabled:opacity-60 ${
                   index < secondaryActions.length - 1 &&
-                  "border-b border-black/6"
+                  "border-b border-edge"
                 }`}
               >
                 <span>{action.icon}</span>
                 <span className="min-w-0">
-                  <span className="block text-sm text-[#111111]">
+                  <span className="block text-sm text-ink">
                     {action.label}
                   </span>
                 </span>

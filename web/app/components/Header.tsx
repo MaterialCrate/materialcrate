@@ -20,11 +20,11 @@ export default function Header({
 
   return (
     <div className="fixed inset-x-0 top-0 z-50">
-      <header className="grid grid-cols-[24px_1fr_24px] items-center gap-3 border-b border-black/6 bg-[#FFFFFF] px-6 pb-3 pt-6">
+      <header className="grid grid-cols-[24px_1fr_24px] items-center gap-3 border-b border-edge bg-surface px-6 pb-3 pt-6">
         <button aria-label="Back" type="button" onClick={() => router.back()} className="transition-opacity hover:opacity-60 active:opacity-40">
-          <ArrowLeft size={24} color="#202020" />
+          <ArrowLeft size={24} color="var(--ink)" />
         </button>
-        <div className="text-lg font-medium text-[#202020]">
+        <div className="text-lg font-medium text-ink">
           <h1>{title}</h1>
         </div>
         <div className="flex min-w-6 justify-end">

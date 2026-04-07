@@ -515,7 +515,7 @@ export default function Page() {
     <>
       <Alert type="success" message={success} />
       <Alert type="error" message={error} />
-      <div className="min-h-dvh bg-[#F7F7F7]">
+      <div className="min-h-dvh bg-page">
       <div className="mx-auto max-w-2xl px-4 pt-20 pb-10 sm:px-6">
         <Header
           title="Account Information"
@@ -537,7 +537,7 @@ export default function Page() {
           </p>
         </div>
         {isLoading ? (
-          <div className="mb-4 w-full rounded-[18px] bg-white px-4 py-3 text-sm text-[#3D3D3D]">
+          <div className="mb-4 w-full rounded-[18px] bg-surface px-4 py-3 text-sm text-ink">
             Loading account information...
           </div>
         ) : null}
@@ -565,10 +565,10 @@ export default function Page() {
         )}
         {accountSections.map((section) => (
           <Fragment key={section.key}>
-            <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A8A8A]">
+            <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">
               {section.title}
             </h2>
-            <div className="mb-4 w-full overflow-hidden rounded-[20px] border border-black/6 bg-white">
+            <div className="mb-4 w-full overflow-hidden rounded-[20px] border border-edge bg-surface">
               {section.items.map((item, index) => (
                 <button
                   type="button"
@@ -602,13 +602,13 @@ export default function Page() {
                         ? isSubmittingPassword
                         : false
                   }
-                  className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[#3D3D3D] transition-colors hover:bg-[#F7F3EE] active:opacity-60 ${
+                  className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-ink transition-colors hover:bg-[#F7F3EE] active:opacity-60 ${
                     index < section.items.length - 1 &&
-                    "border-b border-black/6"
+                    "border-b border-edge"
                   }`}
                 >
                   <div className="text-sm font-medium">{item.label}</div>
-                  <div className="text-right text-xs text-[#666666] truncate">
+                  <div className="text-right text-xs text-ink-2 truncate">
                     {item.value || "-"}
                   </div>
                 </button>
@@ -616,16 +616,16 @@ export default function Page() {
             </div>
           </Fragment>
         ))}
-        <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A8A8A]">
+        <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">
           Billing
         </h2>
-        <div className="mb-4 w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
-          <p className="text-sm font-medium text-[#2D2D2D]">
+        <div className="mb-4 w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
+          <p className="text-sm font-medium text-ink">
             {hasPaidSubscription(user?.subscriptionPlan)
               ? "Manage subscription"
               : "Upgrade your plan"}
           </p>
-          <p className="mt-1 text-xs text-[#6F6F6F]">
+          <p className="mt-1 text-xs text-ink-2">
             Billing, invoices, payment methods, and cancellations are handled
             securely through Gumroad.
           </p>
@@ -652,7 +652,7 @@ export default function Page() {
             <button
               type="button"
               onClick={() => router.push("/plans")}
-              className="rounded-full border border-black/10 px-4 py-2 text-sm font-medium text-[#202020] transition-colors hover:bg-[#F3F3F3] active:opacity-70"
+              className="rounded-full border border-edge-mid px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-surface-high active:opacity-70"
             >
               {hasPaidSubscription(user?.subscriptionPlan)
                 ? "Change plan"
@@ -669,7 +669,7 @@ export default function Page() {
               <ShieldSecurity size={18} color="#C04A4A" variant="Bulk" />
             </div>
             <div>
-              <p className="text-sm font-medium text-[#2D2D2D]">
+              <p className="text-sm font-medium text-ink">
                 Delete Account
               </p>
               <p className="mt-1 text-xs text-[#7A6A6A]">

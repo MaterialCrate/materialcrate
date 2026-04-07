@@ -151,7 +151,7 @@ export default function PdfViewerModal({
           const viewport = page.getViewport({ scale: 1.25 });
           const wrapper = document.createElement("div");
           wrapper.className =
-            "relative overflow-hidden rounded bg-white shadow-sm select-none";
+            "relative overflow-hidden rounded bg-surface shadow-sm select-none";
 
           const canvas = document.createElement("canvas");
           const context = canvas.getContext("2d");
@@ -205,25 +205,25 @@ export default function PdfViewerModal({
       onContextMenu={(event) => event.preventDefault()}
     >
       <div className="flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-[#F4F1EC] shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-black/8 px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-edge-mid px-5 py-4">
           <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-[#202020]">
+            <p className="truncate text-base font-semibold text-ink">
               {post.title}
             </p>
-            <p className="mt-1 text-sm text-[#707070]">
+            <p className="mt-1 text-sm text-ink-2">
               {post.categories.join(", ")}
               {pdfState.pageCount > 0 && ` • ${pdfState.pageCount} pages`}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <button type="button" aria-label="Close button" onClick={onClose}>
-              <CloseCircle size={28} color="#333333" variant="Bold" />
+              <CloseCircle size={28} color="var(--ink)" variant="Bold" />
             </button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto bg-[#E7E1D8] p-4">
           {pdfState.isLoading && (
-            <div className="flex h-full items-center justify-center text-sm text-[#5D5D5D]">
+            <div className="flex h-full items-center justify-center text-sm text-ink-2">
               Rendering PDF...
             </div>
           )}

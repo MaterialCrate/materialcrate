@@ -18,7 +18,7 @@ type RuleProps = {
 
 const Rule = ({ ok, text }: RuleProps) => (
   <p
-    className={`flex items-center gap-1.5 text-xs ${ok ? "text-green-600" : "text-[#444444]"}`}
+    className={`flex items-center gap-1.5 text-xs ${ok ? "text-green-600" : "text-ink"}`}
   >
     <span>{ok ? "✔" : "•"}</span>
     {text}
@@ -45,18 +45,18 @@ export default function Password({
       <div className="flex flex-1 flex-col justify-center">
         <div className="space-y-3">
           <div>
-            <h4 className="font-medium text-[#202020]">PASSWORD</h4>
+            <h4 className="font-medium text-ink">PASSWORD</h4>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="********"
-              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#FAFAFA] px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
+              className="mt-2 w-full rounded-2xl border border-edge-mid bg-surface-high px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-surface focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
               required
             />
           </div>
           {isRegister && (
-            <div className="space-y-1 text-[11px] font-medium text-[#444444]">
+            <div className="space-y-1 text-[11px] font-medium text-ink">
               <Rule
                 ok={hasMinLength}
                 text="Password must contain at least eight characters"

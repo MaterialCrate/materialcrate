@@ -715,7 +715,7 @@ export default function Home() {
             setActivePdfPost(null);
             setMoreOptionsOpen(false);
           }}
-          className={`cursor-pointer absolute right-0 bottom-16 flex items-center gap-3 rounded-3xl bg-white px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-[#F7F7F7] active:scale-95 ${
+          className={`cursor-pointer absolute right-0 bottom-16 flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-page active:scale-95 ${
             moreOptionsOpen
               ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
               : "opacity-0 translate-y-3 scale-95 pointer-events-none"
@@ -727,7 +727,7 @@ export default function Home() {
         <button
           aria-label="Upload button"
           type="button"
-          className={`cursor-pointer absolute right-16 bottom-0 flex items-center gap-3 rounded-3xl bg-white px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-[#F7F7F7] active:scale-95 ${
+          className={`cursor-pointer absolute right-16 bottom-0 flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-page active:scale-95 ${
             moreOptionsOpen
               ? "opacity-100 translate-x-0 scale-100 pointer-events-auto"
               : "opacity-0 translate-x-3 scale-95 pointer-events-none"
@@ -760,7 +760,7 @@ export default function Home() {
         <button
           title="more actions"
           type="button"
-          className={`cursor-pointer w-12 h-12 relative bg-white drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out hover:bg-[#F7F7F7] active:scale-90 ${
+          className={`cursor-pointer w-12 h-12 relative bg-surface drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out hover:bg-page active:scale-90 ${
             moreOptionsOpen ? "rotate-180 scale-105" : "rotate-0 scale-100"
           }`}
           onClick={() => setMoreOptionsOpen((prev) => !prev)}
@@ -774,9 +774,9 @@ export default function Home() {
       <Header forceVisible={isUploading} showLoadingBar={isUploading} />
       <main className="mx-auto w-full max-w-140 2xl:max-w-120 lg:pt-4 lg:pb-8">
         {isLoadingPosts ? (
-          <p className="px-6 py-8 text-sm text-[#696969]">Loading posts...</p>
+          <p className="px-6 py-8 text-sm text-ink-2">Loading posts...</p>
         ) : posts.length === 0 ? (
-          <p className="px-6 py-8 text-sm text-[#696969]">No posts yet.</p>
+          <p className="px-6 py-8 text-sm text-ink-2">No posts yet.</p>
         ) : (
           <>
             {posts.map((post) => (

@@ -248,9 +248,9 @@ export default function Page() {
           </p>
         </div>
 
-        <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
-          <h3 className="text-sm font-semibold text-[#1F1F1F]">Category</h3>
-          <p className="mt-0.5 text-xs text-[#888888]">
+        <div className="w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
+          <h3 className="text-sm font-semibold text-ink">Category</h3>
+          <p className="mt-0.5 text-xs text-ink-3">
             What best describes the issue?
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -262,7 +262,7 @@ export default function Page() {
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   category === cat.value
                     ? "border-[#E1761F] bg-[#FFF4EA] text-[#B46B28]"
-                    : "border-black/8 bg-[#F8F8F8] text-[#5B5B5B] hover:bg-[#F0ECE6]"
+                    : "border-edge-mid bg-surface-high text-ink-2 hover:bg-[#F0ECE6]"
                 }`}
               >
                 {cat.label}
@@ -271,11 +271,11 @@ export default function Page() {
           </div>
         </div>
 
-        <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
-          <h3 className="text-sm font-semibold text-[#1F1F1F]">Details</h3>
+        <div className="w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
+          <h3 className="text-sm font-semibold text-ink">Details</h3>
 
           <div className="mt-3 space-y-1">
-            <p className="text-sm font-medium text-[#5B5B5B]">Title</p>
+            <p className="text-sm font-medium text-ink-2">Title</p>
             <input
               type="text"
               placeholder="Brief summary of the problem"
@@ -283,7 +283,7 @@ export default function Page() {
               onChange={(e) => setTitle(e.target.value)}
               disabled={isSubmitting}
               maxLength={MAX_TITLE_LENGTH}
-              className="w-full rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 text-sm placeholder:text-[#B1B1B1] focus:outline-none"
+              className="w-full rounded-2xl border border-edge bg-surface-high px-3 py-3 text-sm placeholder:text-ink-3 focus:outline-none"
             />
             <p className="text-right text-[11px] text-[#AAAAAA]">
               {title.length}/{MAX_TITLE_LENGTH}
@@ -291,7 +291,7 @@ export default function Page() {
           </div>
 
           <div className="mt-3 space-y-1">
-            <p className="text-sm font-medium text-[#5B5B5B]">Description</p>
+            <p className="text-sm font-medium text-ink-2">Description</p>
             <textarea
               placeholder="What happened? What did you expect? Steps to reproduce the issue…"
               value={description}
@@ -299,7 +299,7 @@ export default function Page() {
               disabled={isSubmitting}
               maxLength={MAX_DESCRIPTION_LENGTH}
               rows={5}
-              className="w-full resize-none rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 text-sm leading-relaxed placeholder:text-[#B1B1B1] focus:outline-none"
+              className="w-full resize-none rounded-2xl border border-edge bg-surface-high px-3 py-3 text-sm leading-relaxed placeholder:text-ink-3 focus:outline-none"
             />
             <p className="text-right text-[11px] text-[#AAAAAA]">
               {description.length}/{MAX_DESCRIPTION_LENGTH}
@@ -307,13 +307,13 @@ export default function Page() {
           </div>
         </div>
 
-        <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
+        <div className="w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-[#1F1F1F]">
+              <h3 className="text-sm font-semibold text-ink">
                 Screenshots
               </h3>
-              <p className="mt-0.5 text-xs text-[#888888]">
+              <p className="mt-0.5 text-xs text-ink-3">
                 Attach up to {MAX_IMAGES} images (optional)
               </p>
             </div>
@@ -321,7 +321,7 @@ export default function Page() {
               type="button"
               onClick={handleOpenImagePicker}
               disabled={images.length >= MAX_IMAGES || isSubmitting}
-              className={`flex items-center gap-1.5 rounded-full border border-black/8 bg-[#F8F8F8] px-3 py-1.5 text-xs font-medium text-[#5B5B5B] transition-colors ${
+              className={`flex items-center gap-1.5 rounded-full border border-edge-mid bg-surface-high px-3 py-1.5 text-xs font-medium text-ink-2 transition-colors ${
                 images.length >= MAX_IMAGES || isSubmitting
                   ? "opacity-40"
                   : "hover:bg-[#F0ECE6]"
@@ -348,7 +348,7 @@ export default function Page() {
               {images.map((img, index) => (
                 <div
                   key={img.previewUrl}
-                  className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-black/6"
+                  className="relative h-24 w-24 shrink-0 overflow-hidden rounded-2xl border border-edge"
                 >
                   <Image
                     src={img.previewUrl}

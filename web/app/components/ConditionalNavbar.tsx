@@ -22,13 +22,13 @@ export default function ConditionalNavbar() {
   return (
     <>
       <nav
-        className={`fixed left-0 right-0 bottom-0 z-30 flex items-center border-t border-t-[#837F7F]/20 bg-white py-4 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-out lg:hidden ${
+        className={`fixed left-0 right-0 bottom-0 z-30 flex items-center border-t border-t-edge-mid bg-surface py-4 pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-out lg:hidden ${
           isVisible ? "translate-y-0" : "translate-y-full"
         }`}
       >
         <Navbar />
       </nav>
-      <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 z-30 w-18 xl:w-55 border-r border-[#837F7F]/20 bg-white flex-col transition-[width] duration-300 ease-out">
+      <nav className="hidden lg:flex fixed left-0 top-0 bottom-0 z-30 w-18 xl:w-55 border-r border-edge-mid bg-surface flex-col transition-[width] duration-300 ease-out">
         <Navbar />
       </nav>
     </>

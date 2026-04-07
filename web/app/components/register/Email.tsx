@@ -24,23 +24,23 @@ export default function Email({ email, setEmail }: EmailTypes) {
         <button
           type="button"
           onClick={() => handleSocialAuth("google")}
-          className="cursor-pointer flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-left transition-all duration-200 hover:border-[#E1761F]/35 hover:bg-[#FFF9F4] active:scale-[0.98]"
+          className="cursor-pointer flex w-full items-center justify-between rounded-2xl border border-edge-mid bg-surface px-4 py-3.5 text-left transition-all duration-200 hover:border-[#E1761F]/35 hover:bg-[#FFF9F4] active:scale-[0.98]"
         >
-          <p className="font-medium text-[#202020]">Continue with Google</p>
-          <FaGoogle size={22} className="text-[#202020]" />
+          <p className="font-medium text-ink">Continue with Google</p>
+          <FaGoogle size={22} className="text-ink" />
         </button>
         <button
           type="button"
           onClick={() => handleSocialAuth("facebook")}
-          className="cursor-pointer flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3.5 text-left transition-all duration-200 hover:border-[#E1761F]/35 hover:bg-[#FFF9F4] active:scale-[0.98]"
+          className="cursor-pointer flex w-full items-center justify-between rounded-2xl border border-edge-mid bg-surface px-4 py-3.5 text-left transition-all duration-200 hover:border-[#E1761F]/35 hover:bg-[#FFF9F4] active:scale-[0.98]"
         >
-          <p className="font-medium text-[#202020]">Continue with Facebook</p>
-          <FaFacebook size={22} className="text-[#202020]" />
+          <p className="font-medium text-ink">Continue with Facebook</p>
+          <FaFacebook size={22} className="text-ink" />
         </button>
 
         <div className="flex items-center justify-between gap-3 pt-1">
           <div className="h-px flex-1 bg-linear-to-r from-transparent via-gray-400 to-black/50" />
-          <p className="text-[11px] font-medium tracking-[0.16em] text-[#6A6A6A]">
+          <p className="text-[11px] font-medium tracking-[0.16em] text-ink-2">
             OR CONTINUE WITH EMAIL
           </p>
           <div className="h-px flex-1 bg-linear-to-l from-transparent via-gray-400 to-black/50" />
@@ -52,10 +52,10 @@ export default function Email({ email, setEmail }: EmailTypes) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email"
-            className="mt-3 w-full rounded-2xl border border-black/10 bg-[#FAFAFA] px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
+            className="mt-3 w-full rounded-2xl border border-edge-mid bg-surface-high px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-surface focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
             required
           />
-          <p className="mt-2 text-sm font-medium text-[#444444]">
+          <p className="mt-2 text-sm font-medium text-ink">
             {pathname === "/register"
               ? "Already have an account? "
               : "Don\'t have an account? "}

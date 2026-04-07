@@ -309,11 +309,11 @@ export default function AdminDashboardPage() {
     isUploading;
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA]">
-      <header className="sticky top-0 z-50 border-b border-[#E8E8E8] bg-white px-6 py-4">
+    <div className="min-h-screen bg-surface-high">
+      <header className="sticky top-0 z-50 border-b border-[#E8E8E8] bg-surface px-6 py-4">
         <div className="mx-auto flex max-w-2xl items-center justify-between">
-          <h1 className="text-lg font-bold text-[#1F1F1F]">Admin Dashboard</h1>
-          <p className="text-xs text-[#888]">MaterialCrate</p>
+          <h1 className="text-lg font-bold text-ink">Admin Dashboard</h1>
+          <p className="text-xs text-ink-3">MaterialCrate</p>
         </div>
       </header>
 
@@ -351,7 +351,7 @@ export default function AdminDashboardPage() {
             className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
               activeTab === "bots"
                 ? "bg-[#1F1F1F] text-white"
-                : "bg-white text-[#555] border border-[#D4D4D4]"
+                : "bg-surface text-ink-2 border border-[#D4D4D4]"
             }`}
           >
             Bots ({bots.length})
@@ -362,7 +362,7 @@ export default function AdminDashboardPage() {
             className={`rounded-full px-5 py-2 text-sm font-medium transition-colors ${
               activeTab === "upload"
                 ? "bg-[#1F1F1F] text-white"
-                : "bg-white text-[#555] border border-[#D4D4D4]"
+                : "bg-surface text-ink-2 border border-[#D4D4D4]"
             }`}
           >
             Upload as Bot
@@ -373,13 +373,13 @@ export default function AdminDashboardPage() {
         {activeTab === "bots" && (
           <div className="space-y-6">
             {/* Create bot form */}
-            <div className="rounded-2xl border border-[#E4E4E4] bg-white p-6 space-y-4">
+            <div className="rounded-2xl border border-[#E4E4E4] bg-surface p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-semibold text-[#1F1F1F]">Create Bot</h2>
+                <h2 className="font-semibold text-ink">Create Bot</h2>
                 <button
                   type="button"
                   onClick={handleRandomize}
-                  className="rounded-full bg-[#F5F5F5] px-4 py-1.5 text-xs font-medium text-[#555] hover:bg-[#EBEBEB] transition-colors"
+                  className="rounded-full bg-surface-high px-4 py-1.5 text-xs font-medium text-ink-2 hover:bg-surface-high transition-colors"
                 >
                   Randomize
                 </button>
@@ -387,7 +387,7 @@ export default function AdminDashboardPage() {
 
               {botProfilePicture && (
                 <div className="flex justify-center">
-                  <div className="h-16 w-16 overflow-hidden rounded-full bg-[#F3F3F3]">
+                  <div className="h-16 w-16 overflow-hidden rounded-full bg-surface-high">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={botProfilePicture}
@@ -401,7 +401,7 @@ export default function AdminDashboardPage() {
               <form onSubmit={handleCreateBot} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-[#666]">
+                    <label className="text-xs font-medium text-ink-2">
                       Username
                     </label>
                     <input
@@ -409,11 +409,11 @@ export default function AdminDashboardPage() {
                       onChange={(e) => setBotUsername(e.target.value)}
                       required
                       placeholder="e.g. QuickPanda42"
-                      className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
+                      className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-[#666]">
+                    <label className="text-xs font-medium text-ink-2">
                       Display Name
                     </label>
                     <input
@@ -421,49 +421,49 @@ export default function AdminDashboardPage() {
                       onChange={(e) => setBotDisplayName(e.target.value)}
                       required
                       placeholder="e.g. Quick Panda"
-                      className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
+                      className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
                     />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-[#666]">
+                    <label className="text-xs font-medium text-ink-2">
                       Institution
                     </label>
                     <input
                       value={botInstitution}
                       onChange={(e) => setBotInstitution(e.target.value)}
                       placeholder="e.g. MIT"
-                      className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
+                      className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-medium text-[#666]">
+                    <label className="text-xs font-medium text-ink-2">
                       Program
                     </label>
                     <input
                       value={botProgram}
                       onChange={(e) => setBotProgram(e.target.value)}
                       placeholder="e.g. Computer Science"
-                      className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
+                      className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
                     />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-[#666]">
+                  <label className="text-xs font-medium text-ink-2">
                     Profile Picture URL
                   </label>
                   <input
                     value={botProfilePicture}
                     onChange={(e) => setBotProfilePicture(e.target.value)}
                     placeholder="Auto-generated from DiceBear if empty"
-                    className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
+                    className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isCreatingBot || !botUsername || !botDisplayName}
-                  className="w-full rounded-xl bg-[#E1761F] py-3 text-sm font-medium text-white transition-colors disabled:bg-[#E5E5E5] disabled:text-[#818181]"
+                  className="w-full rounded-xl bg-[#E1761F] py-3 text-sm font-medium text-white transition-colors disabled:bg-surface-high disabled:text-ink-3"
                 >
                   {isCreatingBot ? "Creating..." : "Create Bot"}
                 </button>
@@ -471,20 +471,20 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Bot list */}
-            <div className="rounded-2xl border border-[#E4E4E4] bg-white p-6 space-y-3">
-              <h2 className="font-semibold text-[#1F1F1F]">Existing Bots</h2>
+            <div className="rounded-2xl border border-[#E4E4E4] bg-surface p-6 space-y-3">
+              <h2 className="font-semibold text-ink">Existing Bots</h2>
               {isLoadingBots ? (
-                <p className="text-sm text-[#888]">Loading…</p>
+                <p className="text-sm text-ink-3">Loading…</p>
               ) : bots.length === 0 ? (
-                <p className="text-sm text-[#888]">No bots created yet</p>
+                <p className="text-sm text-ink-3">No bots created yet</p>
               ) : (
                 <div className="space-y-2">
                   {bots.map((bot) => (
                     <div
                       key={bot.id}
-                      className="flex items-center gap-3 rounded-xl border border-[#F0F0F0] bg-[#FAFAFA] px-4 py-3"
+                      className="flex items-center gap-3 rounded-xl border border-[#F0F0F0] bg-surface-high px-4 py-3"
                     >
-                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-[#F3F3F3]">
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-surface-high">
                         {bot.profilePicture ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -493,26 +493,26 @@ export default function AdminDashboardPage() {
                             className="h-full w-full object-cover"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-sm font-bold text-[#999]">
+                          <div className="flex h-full w-full items-center justify-center text-sm font-bold text-ink-3">
                             {bot.displayName.charAt(0)}
                           </div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <p className="truncate text-sm font-medium text-[#202020]">
+                          <p className="truncate text-sm font-medium text-ink">
                             {bot.displayName}
                           </p>
                           <span className="shrink-0 rounded bg-[#E8F4FD] px-1.5 py-0.5 text-[10px] font-semibold text-[#2196F3]">
                             BOT
                           </span>
                         </div>
-                        <p className="truncate text-xs text-[#888]">
+                        <p className="truncate text-xs text-ink-3">
                           @{bot.username}
                           {bot.institution && ` · ${bot.institution}`}
                         </p>
                       </div>
-                      <p className="shrink-0 text-[10px] text-[#AAA]">
+                      <p className="shrink-0 text-[10px] text-ink-3">
                         {new Date(bot.createdAt).toLocaleDateString()}
                       </p>
                     </div>
@@ -525,12 +525,12 @@ export default function AdminDashboardPage() {
 
         {/* Upload tab */}
         {activeTab === "upload" && (
-          <div className="rounded-2xl border border-[#E4E4E4] bg-white p-6">
-            <h2 className="font-semibold text-[#1F1F1F] mb-4">Upload as Bot</h2>
+          <div className="rounded-2xl border border-[#E4E4E4] bg-surface p-6">
+            <h2 className="font-semibold text-ink mb-4">Upload as Bot</h2>
             <form onSubmit={handleUpload} className="space-y-4">
               {/* Bot selection */}
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#666]">
+                <label className="text-xs font-medium text-ink-2">
                   Select Bot<span className="text-red-500">*</span>
                 </label>
                 <select
@@ -538,7 +538,7 @@ export default function AdminDashboardPage() {
                   value={selectedBotId}
                   onChange={(e) => setSelectedBotId(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
+                  className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
                 >
                   <option value="">Choose a bot...</option>
                   {bots.map((bot) => (
@@ -550,7 +550,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#666]">
+                <label className="text-xs font-medium text-ink-2">
                   PDF Document<span className="text-red-500">*</span>
                 </label>
                 <input
@@ -560,13 +560,13 @@ export default function AdminDashboardPage() {
                   accept=".pdf,application/pdf"
                   onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
                   required
-                  className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-[#F5F5F5] file:px-3 file:py-1 file:text-xs file:font-medium focus:outline-none"
+                  className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-surface-high file:px-3 file:py-1 file:text-xs file:font-medium focus:outline-none"
                 />
               </div>
 
               {/* Title */}
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#666]">
+                <label className="text-xs font-medium text-ink-2">
                   Title<span className="text-red-500">*</span>
                 </label>
                 <input
@@ -576,15 +576,15 @@ export default function AdminDashboardPage() {
                   minLength={3}
                   maxLength={50}
                   placeholder="At least 3 characters"
-                  className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
+                  className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
                 />
               </div>
 
               {/* Categories */}
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#666]">
+                <label className="text-xs font-medium text-ink-2">
                   Categories<span className="text-red-500">*</span>
-                  <span className="text-[#AAA] ml-1">
+                  <span className="text-ink-3 ml-1">
                     ({uploadCategories.length}/3)
                   </span>
                 </label>
@@ -621,12 +621,12 @@ export default function AdminDashboardPage() {
                     onFocus={() => setIsCategoryDropdownOpen(true)}
                     placeholder="Search categories..."
                     disabled={uploadCategories.length >= 3}
-                    className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none disabled:bg-[#F5F5F5]"
+                    className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none disabled:bg-surface-high"
                   />
                   {isCategoryDropdownOpen &&
                     filteredCategoryOptions.length > 0 &&
                     uploadCategories.length < 3 && (
-                      <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#E4E4E4] bg-white shadow-lg">
+                      <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-lg border border-[#E4E4E4] bg-surface shadow-lg">
                         {filteredCategoryOptions.map((cat) => (
                           <button
                             key={cat}
@@ -636,7 +636,7 @@ export default function AdminDashboardPage() {
                               setCategoryQuery("");
                               setIsCategoryDropdownOpen(false);
                             }}
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-[#F5F5F5] text-[#333]"
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-surface-high text-ink"
                           >
                             {cat}
                           </button>
@@ -647,12 +647,12 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#666]">Year</label>
+                <label className="text-xs font-medium text-ink-2">Year</label>
                 <select
                   title="Year selector"
                   value={uploadYear}
                   onChange={(e) => setUploadYear(e.target.value)}
-                  className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
+                  className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none"
                 >
                   <option value="">Select year (optional)</option>
                   {yearOptions.map((yr) => (
@@ -664,7 +664,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-[#666]">
+                <label className="text-xs font-medium text-ink-2">
                   Description
                 </label>
                 <textarea
@@ -672,14 +672,14 @@ export default function AdminDashboardPage() {
                   onChange={(e) => setUploadDescription(e.target.value)}
                   rows={3}
                   placeholder="Optional description"
-                  className="w-full rounded-lg border border-[#D4D4D4] bg-white px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none resize-none"
+                  className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-3 py-2.5 text-sm focus:border-[#E1761F] focus:outline-none resize-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={uploadDisabled}
-                className="w-full rounded-xl bg-[#E1761F] py-3 text-sm font-medium text-white transition-colors disabled:bg-[#E5E5E5] disabled:text-[#818181]"
+                className="w-full rounded-xl bg-[#E1761F] py-3 text-sm font-medium text-white transition-colors disabled:bg-surface-high disabled:text-ink-3"
               >
                 {isUploading ? "Uploading..." : "Upload Document"}
               </button>

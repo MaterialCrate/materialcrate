@@ -329,7 +329,7 @@ const renderMessageText = (text: string) => {
       <p
         key={`paragraph-${blocks.length}`}
         className={`wrap-break-word whitespace-pre-wrap ${
-          isHeading ? "font-semibold text-[#111111]" : ""
+          isHeading ? "font-semibold text-ink" : ""
         }`}
       >
         {renderInlineFormattedText(
@@ -1005,7 +1005,7 @@ export default function HubPage() {
 
   return (
     <div
-      className="h-dvh overflow-hidden bg-[#fafafa] text-[#202020]"
+      className="h-dvh overflow-hidden bg-page text-ink"
       onPointerDownCapture={() => {
         if (!isPickerOpen && !isHistoryOpen) {
           showHeaderTemporarily();
@@ -1028,13 +1028,13 @@ export default function HubPage() {
             onClick={() => setIsPickerOpen(false)}
             className="fixed inset-0 z-40 bg-black/30"
           />
-          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-4xl bg-[#F7F7F7] px-4 pb-6 pt-4 shadow-[0_-18px_40px_rgba(0,0,0,0.14)]">
+          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-4xl bg-page px-4 pb-6 pt-4 shadow-[0_-18px_40px_rgba(0,0,0,0.14)]">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7f6d5a]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-2">
                   Saved posts
                 </p>
-                <h2 className="text-base font-semibold text-[#202020]">
+                <h2 className="text-base font-semibold text-ink">
                   Choose a document for Ju Intelli
                 </h2>
               </div>
@@ -1066,16 +1066,16 @@ export default function HubPage() {
                       onClick={() => handleSelectDocument(document.post.id)}
                       className={`flex w-full items-start gap-3 rounded-[20px] border px-3 py-3 text-left transition hover:opacity-80 active:opacity-60 ${
                         isSelected
-                          ? "border-[#202020] bg-[#f7f7f7]"
-                          : "border-black/6 bg-white"
+                          ? "border-[#202020] bg-page"
+                          : "border-edge bg-surface"
                       }`}
                     >
-                      <div className="rounded-2xl bg-[#f1f1f1] p-2 text-[#202020]">
+                      <div className="rounded-2xl bg-surface-high p-2 text-ink">
                         <DocumentText1 size={18} />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-sm font-semibold text-[#202020]">
+                          <p className="truncate text-sm font-semibold text-ink">
                             {title}
                           </p>
                           {isSelected ? (
@@ -1084,7 +1084,7 @@ export default function HubPage() {
                             </span>
                           ) : null}
                         </div>
-                        <p className="mt-1 text-xs text-[#696969]">
+                        <p className="mt-1 text-xs text-ink-2">
                           {author}
                           {document.folder?.name
                             ? ` • ${document.folder.name}`
@@ -1095,7 +1095,7 @@ export default function HubPage() {
                   );
                 })
               ) : (
-                <div className="rounded-[20px] bg-[#f7f7f7] px-4 py-5 text-sm text-[#696969]">
+                <div className="rounded-[20px] bg-page px-4 py-5 text-sm text-ink-2">
                   No saved files yet. You can still open any file directly in Ju
                   Intelli from the rest of the app.
                 </div>
@@ -1113,13 +1113,13 @@ export default function HubPage() {
             onClick={() => setIsHistoryOpen(false)}
             className="fixed inset-0 z-40 bg-black/30"
           />
-          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-4xl bg-white px-4 pb-6 pt-4 shadow-[0_-18px_40px_rgba(0,0,0,0.14)]">
+          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-4xl bg-surface px-4 pb-6 pt-4 shadow-[0_-18px_40px_rgba(0,0,0,0.14)]">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7f6d5a]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-2">
                   History
                 </p>
-                <h2 className="text-base font-semibold text-[#202020]">
+                <h2 className="text-base font-semibold text-ink">
                   Recent Ju Intelli chats
                 </h2>
               </div>
@@ -1140,22 +1140,22 @@ export default function HubPage() {
                     key={entry.id}
                     type="button"
                     onClick={() => handleUseHistoryEntry(entry)}
-                    className="w-full rounded-[20px] border border-black/6 bg-white px-3 py-3 text-left transition-colors hover:bg-[#FAFAFA] active:opacity-70"
+                    className="w-full rounded-[20px] border border-edge bg-surface px-3 py-3 text-left transition-colors hover:bg-surface-high active:opacity-70"
                   >
-                    <p className="text-xs font-medium text-[#7f6d5a]">
+                    <p className="text-xs font-medium text-ink-2">
                       {entry.documentTitle}
                     </p>
-                    <p className="mt-1 line-clamp-2 text-sm text-[#202020]">
+                    <p className="mt-1 line-clamp-2 text-sm text-ink">
                       {entry.previewText}
                     </p>
-                    <p className="mt-1 text-[11px] text-[#8a8a8a]">
+                    <p className="mt-1 text-[11px] text-ink-3">
                       {formatHistoryTime(entry.updatedAt)}
                     </p>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="rounded-[20px] bg-[#f7f7f7] px-4 py-5 text-sm text-[#696969]">
+              <div className="rounded-[20px] bg-page px-4 py-5 text-sm text-ink-2">
                 No chat history yet. Your prompts will appear here once you
                 start a conversation.
               </div>
@@ -1165,7 +1165,7 @@ export default function HubPage() {
       ) : null}
 
       <header
-        className={`fixed inset-x-0 top-0 z-30 border-b border-black/6 bg-white px-4 backdrop-blur-sm transition-all duration-300 ${
+        className={`fixed inset-x-0 top-0 z-30 border-b border-edge bg-surface px-4 backdrop-blur-sm transition-all duration-300 ${
           isHeaderVisible
             ? "translate-y-0 opacity-100"
             : "-translate-y-full opacity-0 pointer-events-none"
@@ -1173,27 +1173,27 @@ export default function HubPage() {
       >
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 pb-3 pt-6">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#7f6d5a]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-2">
               Hub
             </p>
-            <h1 className="text-lg font-medium text-[#202020]">Ju Intelli</h1>
+            <h1 className="text-lg font-medium text-ink">Ju Intelli</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               aria-label="View history"
               onClick={() => setIsHistoryOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-black/8 bg-white transition-colors hover:bg-[#F5F5F5] active:opacity-70"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-edge-mid bg-surface transition-colors hover:bg-surface-high active:opacity-70"
             >
-              <Clock size={18} color="#202020" />
+              <Clock size={18} color="var(--ink)" />
             </button>
             <button
               type="button"
               aria-label="Choose a saved document"
               onClick={() => setIsPickerOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-black/8 bg-white transition-colors hover:bg-[#F5F5F5] active:opacity-70"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-edge-mid bg-surface transition-colors hover:bg-surface-high active:opacity-70"
             >
-              <Add size={18} color="#202020" />
+              <Add size={18} color="var(--ink)" />
             </button>
           </div>
         </div>
@@ -1211,15 +1211,15 @@ export default function HubPage() {
           </section>
         ) : null}
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:rounded-2xl lg:border lg:border-black/6 lg:bg-white lg:shadow-sm">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:rounded-2xl lg:border lg:border-edge lg:bg-surface lg:shadow-sm">
         <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="shrink-0 border-b border-black/6 px-4 py-3">
+          <div className="shrink-0 border-b border-edge px-4 py-3">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-sm font-medium text-[#202020]">
+                <p className="text-sm font-medium text-ink">
                   {selectedDocument?.post.title?.trim() || "Choose a document"}
                 </p>
-                <p className="mt-1 text-xs text-[#696969]">
+                <p className="mt-1 text-xs text-ink-2">
                   {selectedDocument
                     ? `${selectedDocument.post.author?.displayName?.trim() || selectedDocument.post.author?.username?.trim() || "Unknown author"}${selectedDocument.folder?.name ? ` • ${selectedDocument.folder.name}` : selectedDocument.id === selectedDocument.post.id ? " • Opened from app" : " • Saved posts"}`
                     : "You can use any document opened from the app, and saved posts also appear here for quick access."}
@@ -1231,7 +1231,7 @@ export default function HubPage() {
                   type="button"
                   onClick={() => void handleClearChat()}
                   disabled={isClearingChat}
-                  className="shrink-0 rounded-full border border-black/8 bg-white px-3 py-2 text-xs font-medium text-[#202020] transition-colors hover:bg-[#F5F5F5] active:opacity-70 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="shrink-0 rounded-full border border-edge-mid bg-surface px-3 py-2 text-xs font-medium text-ink transition-colors hover:bg-surface-high active:opacity-70 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isClearingChat ? "Clearing..." : "Clear chat"}
                 </button>
@@ -1259,7 +1259,7 @@ export default function HubPage() {
                         className={`max-w-[85%] rounded-3xl px-4 py-3 text-sm leading-6 ${
                           message.role === "user"
                             ? "bg-[#202020] text-white"
-                            : "bg-[#f4f4f4] text-[#202020]"
+                            : "bg-surface-high text-ink"
                         }`}
                       >
                         {message.role === "assistant" ? (
@@ -1273,7 +1273,7 @@ export default function HubPage() {
                           className={`mt-2 text-[11px] ${
                             message.role === "user"
                               ? "text-white/70"
-                              : "text-[#8a8a8a]"
+                              : "text-ink-3"
                           }`}
                         >
                           {formatHistoryTime(message.createdAt)}
@@ -1283,7 +1283,7 @@ export default function HubPage() {
                   ))}
                   {isSending ? (
                     <div className="flex justify-start">
-                      <div className="rounded-3xl bg-[#f4f4f4] px-4 py-3 text-sm text-[#696969]">
+                      <div className="rounded-3xl bg-surface-high px-4 py-3 text-sm text-ink-2">
                         Ju Intelli is thinking…
                       </div>
                     </div>
@@ -1291,13 +1291,13 @@ export default function HubPage() {
                 </div>
               ) : (
                 <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 text-center">
-                  <div className="rounded-full bg-[#f4f4f4] p-3">
-                    <DocumentText1 size={20} color="#202020" />
+                  <div className="rounded-full bg-surface-high p-3">
+                    <DocumentText1 size={20} color="var(--ink)" />
                   </div>
-                  <h2 className="mt-4 text-lg font-medium text-[#202020]">
+                  <h2 className="mt-4 text-lg font-medium text-ink">
                     Start a new chat
                   </h2>
-                  <p className="mt-2 max-w-md text-sm leading-6 text-[#696969]">
+                  <p className="mt-2 max-w-md text-sm leading-6 text-ink-2">
                     Ask Ju Intelli about this document. Only this message area
                     scrolls, and your chat is saved to your account history.
                   </p>
@@ -1307,7 +1307,7 @@ export default function HubPage() {
                         key={suggestion}
                         type="button"
                         onClick={() => setPrompt(suggestion)}
-                        className="rounded-full border border-black/8 bg-white px-3 py-2 text-xs text-[#202020] transition-colors hover:bg-[#F5F5F5] active:opacity-70"
+                        className="rounded-full border border-edge-mid bg-surface px-3 py-2 text-xs text-ink transition-colors hover:bg-surface-high active:opacity-70"
                       >
                         {suggestion}
                       </button>
@@ -1317,10 +1317,10 @@ export default function HubPage() {
               )
             ) : (
               <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 text-center">
-                <h2 className="text-lg font-medium text-[#202020]">
+                <h2 className="text-lg font-medium text-ink">
                   Choose a document
                 </h2>
-                <p className="mt-2 max-w-md text-sm leading-6 text-[#696969]">
+                <p className="mt-2 max-w-md text-sm leading-6 text-ink-2">
                   Ju Intelli works with saved posts and with files opened
                   directly from elsewhere in the app.
                 </p>
@@ -1337,7 +1337,7 @@ export default function HubPage() {
           </div>
         </section>
 
-        <section className="mt-3 shrink-0 lg:mt-0 lg:border-t lg:border-black/6">
+        <section className="mt-3 shrink-0 lg:mt-0 lg:border-t lg:border-edge">
           <div className="flex items-end gap-2 px-2 py-1">
             <textarea
               ref={promptTextareaRef}
@@ -1345,7 +1345,7 @@ export default function HubPage() {
               onChange={(event) => setPrompt(event.target.value)}
               rows={1}
               placeholder="Message Ju Intelli about this document..."
-              className="min-h-12 max-h-28 flex-1 resize-none rounded-3xl border border-black/6 bg-white shadow-sm px-4 py-3 text-sm placeholder:text-sm text-[#202020] outline-none lg:rounded-2xl lg:border-0 lg:shadow-none lg:bg-transparent"
+              className="min-h-12 max-h-28 flex-1 resize-none rounded-3xl border border-edge bg-surface shadow-sm px-4 py-3 text-sm placeholder:text-sm text-ink outline-none lg:rounded-2xl lg:border-0 lg:shadow-none lg:bg-transparent"
             />
             <button
               type="button"
@@ -1362,7 +1362,7 @@ export default function HubPage() {
       </main>
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-white px-6 py-6 transition-all duration-300 ease-out ${
+        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-surface px-6 py-6 transition-all duration-300 ease-out ${
           isLimitDrawerOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-[110%] opacity-0 pointer-events-none"
@@ -1370,7 +1370,7 @@ export default function HubPage() {
       >
         <div className="space-y-5">
           <div className="flex justify-center items-center relative">
-            <h1 className="text-lg text-[#202020] font-medium">
+            <h1 className="text-lg text-ink font-medium">
               Usage Limit Reached
             </h1>
             <button
@@ -1402,15 +1402,15 @@ export default function HubPage() {
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs font-medium text-[#888888] uppercase tracking-wider">
+                <p className="text-xs font-medium text-ink-3 uppercase tracking-wider">
                   Your usage
                 </p>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-black/6 bg-[#F8F8F8] px-4 py-3">
-                    <p className="text-xs text-[#888888]">Today</p>
-                    <p className="mt-1 text-base font-semibold text-[#202020]">
+                  <div className="rounded-2xl border border-edge bg-surface-high px-4 py-3">
+                    <p className="text-xs text-ink-3">Today</p>
+                    <p className="mt-1 text-base font-semibold text-ink">
                       {formatTokenCount(aiUsage.dailyTokensUsed)}{" "}
-                      <span className="text-xs font-normal text-[#888888]">
+                      <span className="text-xs font-normal text-ink-3">
                         / {formatTokenCount(aiUsage.dailyTokenLimit)}
                       </span>
                     </p>
@@ -1422,15 +1422,15 @@ export default function HubPage() {
                         }}
                       />
                     </div>
-                    <p className="mt-1.5 text-[11px] text-[#999999]">
+                    <p className="mt-1.5 text-[11px] text-ink-3">
                       Resets {formatResetTime(aiUsage.dailyResetsAt)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-black/6 bg-[#F8F8F8] px-4 py-3">
-                    <p className="text-xs text-[#888888]">This month</p>
-                    <p className="mt-1 text-base font-semibold text-[#202020]">
+                  <div className="rounded-2xl border border-edge bg-surface-high px-4 py-3">
+                    <p className="text-xs text-ink-3">This month</p>
+                    <p className="mt-1 text-base font-semibold text-ink">
                       {formatTokenCount(aiUsage.monthlyTokensUsed)}{" "}
-                      <span className="text-xs font-normal text-[#888888]">
+                      <span className="text-xs font-normal text-ink-3">
                         / {formatTokenCount(aiUsage.monthlyTokenLimit)}
                       </span>
                     </p>
@@ -1442,7 +1442,7 @@ export default function HubPage() {
                         }}
                       />
                     </div>
-                    <p className="mt-1.5 text-[11px] text-[#999999]">
+                    <p className="mt-1.5 text-[11px] text-ink-3">
                       Resets {formatResetTime(aiUsage.monthlyResetsAt)}
                     </p>
                   </div>
@@ -1464,8 +1464,8 @@ export default function HubPage() {
                 </button>
               ) : null}
 
-              <div className="rounded-2xl border border-black/6 bg-[#F8F8F8] px-4 py-3">
-                <p className="text-xs font-medium text-[#888888] uppercase tracking-wider">
+              <div className="rounded-2xl border border-edge bg-surface-high px-4 py-3">
+                <p className="text-xs font-medium text-ink-3 uppercase tracking-wider">
                   Token limits by plan
                 </p>
                 <div className="mt-2 space-y-2">
@@ -1494,7 +1494,7 @@ export default function HubPage() {
                       className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs ${
                         tier.active
                           ? "bg-[#FFF1DE] text-[#A95A13] font-medium"
-                          : "text-[#666666]"
+                          : "text-ink-2"
                       }`}
                     >
                       <span>

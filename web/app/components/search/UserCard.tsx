@@ -47,12 +47,12 @@ export default function UserCard({ user, onClick }: UserCardProps) {
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-0.5">
-          <p className="truncate text-sm font-semibold text-[#000000]">
+          <p className="truncate text-sm font-semibold text-ink">
             {user.displayName}
           </p>
           {hasPaidPlan && <Verify size={16} color="#E1761F" variant="Bold" />}
         </div>
-        <p className="truncate text-xs font-medium text-[#585858]">
+        <p className="truncate text-xs font-medium text-ink-2">
           @{user.username}
         </p>
       </div>

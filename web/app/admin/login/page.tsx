@@ -38,13 +38,13 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#FAFAFA] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-surface-high px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-[#1F1F1F]">
+          <h1 className="text-2xl font-bold text-ink">
             Admin Dashboard
           </h1>
-          <p className="mt-1 text-sm text-[#888]">MaterialCrate</p>
+          <p className="mt-1 text-sm text-ink-3">MaterialCrate</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -57,7 +57,7 @@ export default function AdminLoginPage() {
           <div className="space-y-1">
             <label
               htmlFor="admin-email"
-              className="text-sm font-medium text-[#444]"
+              className="text-sm font-medium text-ink"
             >
               Email
             </label>
@@ -68,14 +68,14 @@ export default function AdminLoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full rounded-lg border border-[#D4D4D4] bg-white px-4 py-3 text-sm focus:border-[#E1761F] focus:outline-none"
+              className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-4 py-3 text-sm focus:border-[#E1761F] focus:outline-none"
             />
           </div>
 
           <div className="space-y-1">
             <label
               htmlFor="admin-password"
-              className="text-sm font-medium text-[#444]"
+              className="text-sm font-medium text-ink"
             >
               Password
             </label>
@@ -86,14 +86,14 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              className="w-full rounded-lg border border-[#D4D4D4] bg-white px-4 py-3 text-sm focus:border-[#E1761F] focus:outline-none"
+              className="w-full rounded-lg border border-[#D4D4D4] bg-surface px-4 py-3 text-sm focus:border-[#E1761F] focus:outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading || !email || !password}
-            className="w-full rounded-xl bg-[#E1761F] py-3 text-sm font-medium text-white transition-colors disabled:bg-[#E5E5E5] disabled:text-[#818181]"
+            className="w-full rounded-xl bg-[#E1761F] py-3 text-sm font-medium text-white transition-colors disabled:bg-surface-high disabled:text-ink-3"
           >
             {isLoading ? "Signing in..." : "Sign in"}
           </button>

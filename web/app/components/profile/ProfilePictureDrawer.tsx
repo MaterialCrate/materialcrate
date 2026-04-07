@@ -21,7 +21,7 @@ export default function ProfilePictureDrawer({
 }: ProfilePictureDrawerProps) {
   return (
     <div
-      className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-white px-3 py-6 transition-all duration-300 ease-out ${
+      className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-surface px-3 py-6 transition-all duration-300 ease-out ${
         isOpen
           ? "translate-y-0 opacity-100 pointer-events-auto"
           : "translate-y-[110%] opacity-0 pointer-events-none"
@@ -29,7 +29,7 @@ export default function ProfilePictureDrawer({
     >
       <div className="space-y-5">
         <div className="flex justify-center items-center relative">
-          <h1 className="text-lg text-[#202020] font-medium">
+          <h1 className="text-lg text-ink font-medium">
             Profile Picture
           </h1>
           <button
@@ -50,14 +50,14 @@ export default function ProfilePictureDrawer({
               onClose();
             }}
             disabled={isRemoving}
-            className="flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left transition hover:bg-[#F5F5F5] active:bg-[#EFEFEF]"
+            className="flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left transition hover:bg-surface-high active:bg-surface-high"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFF1DE]">
               <Camera size={20} color="#A95A13" variant="Bold" />
             </div>
             <div>
-              <p className="text-sm font-medium text-[#1F1F1F]">Change photo</p>
-              <p className="text-xs text-[#888888]">
+              <p className="text-sm font-medium text-ink">Change photo</p>
+              <p className="text-xs text-ink-3">
                 Upload a new profile picture
               </p>
             </div>
@@ -67,7 +67,7 @@ export default function ProfilePictureDrawer({
               type="button"
               onClick={onRemovePhoto}
               disabled={isRemoving}
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left transition hover:bg-[#F5F5F5] active:bg-[#EFEFEF] disabled:opacity-50"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left transition hover:bg-surface-high active:bg-surface-high disabled:opacity-50"
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFE5E5]">
                 <Trash size={20} color="#D44" variant="Bold" />
@@ -76,7 +76,7 @@ export default function ProfilePictureDrawer({
                 <p className="text-sm font-medium text-[#D44]">
                   {isRemoving ? "Removing..." : "Remove photo"}
                 </p>
-                <p className="text-xs text-[#888888]">
+                <p className="text-xs text-ink-3">
                   Delete your current profile picture
                 </p>
               </div>

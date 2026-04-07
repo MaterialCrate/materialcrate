@@ -151,7 +151,7 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#f7f7f7] pb-4 pt-34">
+    <div className="min-h-dvh bg-page pb-4 pt-34">
       {error && <Alert type="error" message={error} />}
       <OptionsDrawer
         isOpen={isPostOptionsDrawerOpen}
@@ -194,7 +194,7 @@ export default function SearchPage() {
       <main className="mx-auto max-w-2xl">
         {visibleResults.length === 0 && hasQuery ? (
           <section>
-            <p className="text-sm leading-6 text-[#7f6d5a] px-4 ">
+            <p className="text-sm leading-6 text-ink-2 px-4 ">
               Nothing matched &quot;{query.trim()}&quot;. Try a broader keyword
               or switch tabs.
             </p>

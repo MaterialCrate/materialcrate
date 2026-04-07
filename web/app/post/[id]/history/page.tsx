@@ -153,28 +153,28 @@ export default function PostHistoryPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F7F7F7] pb-10 pt-20">
+    <div className="min-h-screen bg-page pb-10 pt-20">
       <Header title="Post History" />
 
       <main className="mx-auto flex max-w-3xl flex-col gap-4 px-4">
         {isLoading ? (
-          <p className="py-8 text-sm text-[#696969]">Loading history...</p>
+          <p className="py-8 text-sm text-ink-2">Loading history...</p>
         ) : error ? (
           <p className="py-8 text-sm text-[#8A3A25]">{error}</p>
         ) : !post ? (
-          <p className="py-8 text-sm text-[#696969]">Post not found.</p>
+          <p className="py-8 text-sm text-ink-2">Post not found.</p>
         ) : (
           <>
-            <section className="rounded-[28px] border border-black/6 bg-white p-5 shadow-[0_16px_50px_rgba(0,0,0,0.06)]">
+            <section className="rounded-[28px] border border-edge bg-surface p-5 shadow-[0_16px_50px_rgba(0,0,0,0.06)]">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FFF3E7]">
                   <DocumentText size={24} color="#E1761F" variant="Bold" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-base font-medium text-[#202020]">
+                  <p className="truncate text-base font-medium text-ink">
                     {post.title}
                   </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#7A7A7A]">
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-2">
                     <span>{post.categories.join(", ")}</span>
                     {post.year ? <span>{post.year}</span> : null}
                     <span>
@@ -183,11 +183,11 @@ export default function PostHistoryPage() {
                     </span>
                   </div>
                   {post.description ? (
-                    <p className="mt-3 text-sm leading-6 text-[#4E4E4E]">
+                    <p className="mt-3 text-sm leading-6 text-ink">
                       {post.description}
                     </p>
                   ) : (
-                    <p className="mt-3 text-sm text-[#9A9A9A]">
+                    <p className="mt-3 text-sm text-ink-3">
                       No current description.
                     </p>
                   )}
@@ -196,7 +196,7 @@ export default function PostHistoryPage() {
             </section>
 
             {historyItems.length === 0 ? (
-              <section className="rounded-[28px] border border-dashed border-black/10 bg-white px-5 py-8 text-sm text-[#696969]">
+              <section className="rounded-[28px] border border-dashed border-edge-mid bg-surface px-5 py-8 text-sm text-ink-2">
                 No saved versions yet. The history starts after a post is
                 created or edited with the new versioning flow.
               </section>
@@ -212,7 +212,7 @@ export default function PostHistoryPage() {
                   return (
                     <article
                       key={version.id}
-                      className="rounded-[28px] border border-black/6 bg-white p-5 shadow-[0_16px_50px_rgba(0,0,0,0.06)]"
+                      className="rounded-[28px] border border-edge bg-surface p-5 shadow-[0_16px_50px_rgba(0,0,0,0.06)]"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-[#111111] px-3 py-1 text-[11px] font-medium text-white">
@@ -225,13 +225,13 @@ export default function PostHistoryPage() {
                         ) : null}
                       </div>
 
-                      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-[#7A7A7A]">
+                      <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-ink-2">
                         <span className="inline-flex items-center gap-1.5">
-                          <Clock size={14} color="#7A7A7A" />
+                          <Clock size={14} color="var(--ink-2)" />
                           {formatTimestamp(version.createdAt)}
                         </span>
                         <span className="inline-flex items-center gap-1.5">
-                          <User size={14} color="#7A7A7A" />
+                          <User size={14} color="var(--ink-2)" />
                           {editorName}
                         </span>
                       </div>
@@ -240,7 +240,7 @@ export default function PostHistoryPage() {
                         {version.changes.map((change) => (
                           <span
                             key={`${version.id}-${change}`}
-                            className="rounded-full bg-[#F3F3F3] px-3 py-1 text-[11px] font-medium text-[#4E4E4E]"
+                            className="rounded-full bg-surface-high px-3 py-1 text-[11px] font-medium text-ink"
                           >
                             {change}
                           </span>
@@ -249,38 +249,38 @@ export default function PostHistoryPage() {
 
                       <div className="mt-5 space-y-4">
                         <div>
-                          <p className="text-[11px] uppercase tracking-[0.16em] text-[#9A9A9A]">
+                          <p className="text-[11px] uppercase tracking-[0.16em] text-ink-3">
                             Title
                           </p>
-                          <p className="mt-1 text-sm font-medium text-[#202020]">
+                          <p className="mt-1 text-sm font-medium text-ink">
                             {version.title}
                           </p>
                         </div>
 
                         <div className="flex flex-wrap gap-6">
                           <div>
-                            <p className="text-[11px] uppercase tracking-[0.16em] text-[#9A9A9A]">
+                            <p className="text-[11px] uppercase tracking-[0.16em] text-ink-3">
                               Categories
                             </p>
-                            <p className="mt-1 text-sm text-[#202020]">
+                            <p className="mt-1 text-sm text-ink">
                               {version.categories.join(", ")}
                             </p>
                           </div>
                           <div>
-                            <p className="text-[11px] uppercase tracking-[0.16em] text-[#9A9A9A]">
+                            <p className="text-[11px] uppercase tracking-[0.16em] text-ink-3">
                               Year
                             </p>
-                            <p className="mt-1 text-sm text-[#202020]">
+                            <p className="mt-1 text-sm text-ink">
                               {version.year ?? "Not set"}
                             </p>
                           </div>
                         </div>
 
                         <div>
-                          <p className="text-[11px] uppercase tracking-[0.16em] text-[#9A9A9A]">
+                          <p className="text-[11px] uppercase tracking-[0.16em] text-ink-3">
                             Description
                           </p>
-                          <p className="mt-1 text-sm leading-6 text-[#4E4E4E]">
+                          <p className="mt-1 text-sm leading-6 text-ink">
                             {version.description?.trim() || "No description."}
                           </p>
                         </div>

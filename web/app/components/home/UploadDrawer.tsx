@@ -278,15 +278,15 @@ export default function UploadDrawer({
         />
       )}
       <div
-        className={`fixed inset-x-0 top-[15%] bottom-0 bg-white z-100 rounded-t-3xl transition-all duration-300 ease-out overflow-hidden flex flex-col ${
+        className={`fixed inset-x-0 top-[15%] bottom-0 bg-surface z-100 rounded-t-3xl transition-all duration-300 ease-out overflow-hidden flex flex-col ${
           isOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-[110%] opacity-0 pointer-events-none"
         }`}
       >
-        <div className="shrink-0 px-6 py-5 bg-white">
+        <div className="shrink-0 px-6 py-5 bg-surface">
           <div className="relative flex items-center justify-center">
-            <h4 className="text-center font-medium text-lg text-[#202020]">
+            <h4 className="text-center font-medium text-lg text-ink">
               {isEditMode ? "Edit Material" : "Share a New Material"}
             </h4>
             <button
@@ -301,16 +301,16 @@ export default function UploadDrawer({
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
           <div className="space-y-1">
-            <p className="text-[#5B5B5B] text-sm">
+            <p className="text-ink-2 text-sm">
               {isEditMode ? "Document" : "Select document to share"}
               {!isEditMode && <span className="text-red-500">*</span>}
             </p>
             {isEditMode ? (
-              <div className="w-full rounded-xl border border-[#E4E4E4] bg-[#F7F7F7] px-4 py-4">
+              <div className="w-full rounded-xl border border-[#E4E4E4] bg-page px-4 py-4">
                 <div className="flex items-center gap-3">
                   <DocumentText size={30} color="#E1761F" variant="Bold" />
                   <div>
-                    <p className="text-xs font-medium text-[#202020]">
+                    <p className="text-xs font-medium text-ink">
                       {post?.title || "Current document"}
                     </p>
                   </div>
@@ -335,13 +335,13 @@ export default function UploadDrawer({
                     <>
                       <DocumentUpload size={40} color="#B0B0B0" />
                       <div>
-                        <p className="text-xs font-medium text-[#737373]">
+                        <p className="text-xs font-medium text-ink-2">
                           Drag and drop or{" "}
-                          <span className="underline text-[#454545] text-center">
+                          <span className="underline text-ink-2 text-center">
                             click to upload
                           </span>
                         </p>
-                        <p className="text-[10px] text-[#737373] font-medium text-center">
+                        <p className="text-[10px] text-ink-2 font-medium text-center">
                           Max file size: 20MB (PDF)
                         </p>
                       </div>
@@ -355,14 +355,14 @@ export default function UploadDrawer({
                           variant="Bold"
                         />
                         <div className="flex flex-col justify-between">
-                          <p className="text-xs text-[#202020] font-medium truncate max-w-56">
+                          <p className="text-xs text-ink font-medium truncate max-w-56">
                             {selectedFile.name}
                           </p>
-                          <p className="text-[#B0B0B0] text-xs font-medium">
+                          <p className="text-ink-3 text-xs font-medium">
                             {(selectedFile.size / (1024 * 1024)).toFixed(2)}MB
                           </p>
                           {isGeneratingThumbnail && (
-                            <p className="text-[#B0B0B0] text-[10px] font-medium">
+                            <p className="text-ink-3 text-[10px] font-medium">
                               Generating preview… you can still publish now.
                             </p>
                           )}
@@ -390,7 +390,7 @@ export default function UploadDrawer({
             )}
           </div>
           <div className="space-y-1">
-            <p className="text-[#5B5B5B] text-sm">
+            <p className="text-ink-2 text-sm">
               Document title<span className="text-red-500">*</span>
             </p>
             <input
@@ -400,13 +400,13 @@ export default function UploadDrawer({
               required
               maxLength={50}
               style={{ fontSize: "0.75rem" }}
-              className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs focus:outline-none"
+              className="w-full rounded-lg px-3 py-3 bg-surface-high/50 shadow text-xs placeholder:text-ink-3 placeholder:text-xs focus:outline-none"
             />
           </div>
           <div className="space-y-1">
-            <p className="text-[#5B5B5B] text-sm">
+            <p className="text-ink-2 text-sm">
               Categories<span className="text-red-500">*</span>
-              <span className="text-[#B1B1B1] text-xs ml-1">
+              <span className="text-ink-3 text-xs ml-1">
                 ({selectedCategories.length}/3)
               </span>
             </p>
@@ -457,16 +457,16 @@ export default function UploadDrawer({
                   maxLength={80}
                   autoComplete="off"
                   style={{ fontSize: "0.75rem" }}
-                  className="w-full rounded-lg px-3 py-3 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs focus:outline-none"
+                  className="w-full rounded-lg px-3 py-3 bg-surface-high/50 shadow text-xs placeholder:text-ink-3 placeholder:text-xs focus:outline-none"
                 />
                 {isCategoryDropdownOpen &&
                   filteredCategoryOptions.length > 0 && (
-                    <div className="absolute z-20 mt-2 max-h-52 w-full overflow-y-auto rounded-lg border border-[#E4E4E4] bg-white shadow-md">
+                    <div className="absolute z-20 mt-2 max-h-52 w-full overflow-y-auto rounded-lg border border-[#E4E4E4] bg-surface shadow-md">
                       {filteredCategoryOptions.map((categoryOption) => (
                         <button
                           key={categoryOption}
                           type="button"
-                          className="w-full border-b border-[#F3F3F3] px-3 py-2 text-left text-xs text-[#202020] last:border-b-0 hover:bg-[#F7F7F7]"
+                          className="w-full border-b border-[#F3F3F3] px-3 py-2 text-left text-xs text-ink last:border-b-0 hover:bg-page"
                           onMouseDown={(event) => {
                             event.preventDefault();
                             setSelectedCategories((prev) => [
@@ -492,20 +492,20 @@ export default function UploadDrawer({
             )}
           </div>
           <div className="space-y-1">
-            <p className="text-[#5B5B5B] text-sm">Year</p>
+            <p className="text-ink-2 text-sm">Year</p>
             <div className="relative">
               <select
                 title="Year picker"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
                 style={{ fontSize: "0.75rem" }}
-                className={`w-full appearance-none rounded-lg px-3 py-3 pr-10 bg-[#F0F0F0]/50 shadow focus:outline-none ${
-                  year ? "text-black" : "text-[#B1B1B1]"
+                className={`w-full appearance-none rounded-lg px-3 py-3 pr-10 bg-surface-high/50 shadow focus:outline-none ${
+                  year ? "text-black" : "text-ink-3"
                 }`}
               >
                 <option
                   value=""
-                  className="text-[#B1B1B1]"
+                  className="text-ink-3"
                   style={{ fontSize: "0.75rem" }}
                 >
                   Select year
@@ -522,7 +522,7 @@ export default function UploadDrawer({
             </div>
           </div>
           <div className="space-y-1">
-            <p className="text-[#5B5B5B] text-sm">Document description</p>
+            <p className="text-ink-2 text-sm">Document description</p>
             <MentionInput
               multiline
               rows={4}
@@ -530,7 +530,7 @@ export default function UploadDrawer({
               value={description}
               onChange={(val) => setDescription(val)}
               maxLength={500}
-              className="w-full rounded-lg px-3 pt-3 h-28 bg-[#F0F0F0]/50 shadow text-xs placeholder:text-[#B1B1B1] placeholder:text-xs resize-none focus:outline-none"
+              className="w-full rounded-lg px-3 pt-3 h-28 bg-surface-high/50 shadow text-xs placeholder:text-ink-3 placeholder:text-xs resize-none focus:outline-none"
             />
           </div>
           <ActionButton

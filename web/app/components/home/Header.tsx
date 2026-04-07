@@ -21,7 +21,7 @@ export default function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-10 flex flex-col bg-white shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-out lg:hidden ${
+      className={`fixed top-0 left-0 right-0 z-10 flex flex-col bg-surface shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-out lg:hidden ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       }`}
     >

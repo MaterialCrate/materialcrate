@@ -196,7 +196,7 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7]">
+    <div className="min-h-dvh bg-page">
       <Alert message={success} type="success" />
       <Alert message={error} type="error" />
       <Header
@@ -225,8 +225,8 @@ export default function Page() {
           return (
             <div
               key={option.label}
-              className={`flex items-start justify-between gap-4 rounded-[20px] border border-black/6 px-4 py-3 ${
-                isPublicPostsLocked ? "bg-[#F3F3F3]" : "bg-white"
+              className={`flex items-start justify-between gap-4 rounded-[20px] border border-edge px-4 py-3 ${
+                isPublicPostsLocked ? "bg-surface-high" : "bg-surface"
               }`}
             >
               <div className="flex items-start gap-3">
@@ -240,14 +240,14 @@ export default function Page() {
                 <div>
                   <p
                     className={`text-sm font-medium ${
-                      isPublicPostsLocked ? "text-[#888888]" : "text-[#3D3D3D]"
+                      isPublicPostsLocked ? "text-ink-3" : "text-ink"
                     }`}
                   >
                     {option.label}
                   </p>
                   <p
                     className={`mt-0.5 text-xs ${
-                      isPublicPostsLocked ? "text-[#9B9B9B]" : "text-[#6B6B6B]"
+                      isPublicPostsLocked ? "text-ink-3" : "text-ink-2"
                     }`}
                   >
                     {option.description}

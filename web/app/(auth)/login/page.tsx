@@ -175,7 +175,7 @@ function LoginContent() {
   }, [handleRestorePrompt, searchParams]);
 
   return (
-    <div className="min-h-dvh bg-[#FAFAFA] px-4 py-4 sm:px-6 sm:py-6">
+    <div className="min-h-dvh bg-surface-high px-4 py-4 sm:px-6 sm:py-6">
       {searchParams.get("deleted") === "1" ? (
         <Alert
           type="info"
@@ -187,7 +187,7 @@ function LoginContent() {
       {error && <Alert type="error" message={error} />}
 
       <form
-        className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-[520px] flex-col rounded-[28px] bg-white px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6"
+        className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-[520px] flex-col rounded-[28px] bg-surface px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6"
         onSubmit={step < 2 ? handleNext : handleSubmit}
       >
         <div className="flex min-h-10 items-center">
@@ -196,7 +196,7 @@ function LoginContent() {
               type="button"
               aria-label="Go back"
               onClick={() => setStep(step - 1)}
-              className="cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-full text-[#202020] transition-all duration-200 hover:bg-black/5 active:scale-95"
+              className="cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-full text-ink transition-all duration-200 hover:bg-black/5 active:scale-95"
             >
               <HiOutlineArrowLeft size={26} />
             </button>
@@ -228,7 +228,7 @@ function LoginContent() {
             />
           )}
           {loading && step === 1 ? (
-            <p className="mt-4 text-center text-sm text-[#444444]">
+            <p className="mt-4 text-center text-sm text-ink">
               Signing in...
             </p>
           ) : null}

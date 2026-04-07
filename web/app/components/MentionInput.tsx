@@ -247,14 +247,14 @@ export default function MentionInput({
       {isOpen && suggestions.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute bottom-full left-0 right-0 mb-1 z-50 max-h-48 overflow-y-auto rounded-xl border border-[#E4E4E4] bg-white shadow-lg"
+          className="absolute bottom-full left-0 right-0 mb-1 z-50 max-h-48 overflow-y-auto rounded-xl border border-[#E4E4E4] bg-surface shadow-lg"
         >
           {suggestions.map((user, index) => (
             <button
               key={user.id}
               type="button"
               className={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${
-                index === activeIndex ? "bg-[#F5F5F5]" : ""
+                index === activeIndex ? "bg-surface-high" : ""
               }`}
               onMouseDown={(e) => {
                 e.preventDefault();
@@ -262,7 +262,7 @@ export default function MentionInput({
               }}
               onMouseEnter={() => setActiveIndex(index)}
             >
-              <div className="w-7 h-7 rounded-full bg-[#D3D3D3] flex items-center justify-center overflow-hidden shrink-0">
+              <div className="w-7 h-7 rounded-full bg-surface-high flex items-center justify-center overflow-hidden shrink-0">
                 {user.profilePicture ? (
                   <Image
                     src={user.profilePicture}
@@ -277,10 +277,10 @@ export default function MentionInput({
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-[#202020] truncate">
+                <p className="text-xs font-medium text-ink truncate">
                   {user.displayName || user.username}
                 </p>
-                <p className="text-[10px] text-[#808080] truncate">
+                <p className="text-[10px] text-ink-3 truncate">
                   @{user.username}
                 </p>
               </div>

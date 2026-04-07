@@ -71,7 +71,7 @@ const ICON_STYLES: Record<
   },
   MedalStar: {
     accent: "#1D1D1D",
-    imageTone: "bg-[#EFEFEF] text-[#202020]",
+    imageTone: "bg-surface-high text-ink",
     Icon: MedalStar,
   },
   ArchiveMinus: {
@@ -106,7 +106,7 @@ const ICON_STYLES: Record<
   },
   Notification: {
     accent: "#1D1D1D",
-    imageTone: "bg-[#EFEFEF] text-[#202020]",
+    imageTone: "bg-surface-high text-ink",
     Icon: Notification,
   },
 };
@@ -462,7 +462,7 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7]">
+    <div className="min-h-dvh bg-page">
       <Header title="Notifications" isLoading={isLoading} />
       {error && <Alert message={error} type="error" />}
 
@@ -470,7 +470,7 @@ export default function Page() {
         {notificationGroups.map((group) => (
           <section key={group.label}>
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-[11px] font-medium uppercase tracking-[0.14em] text-[#8A8A8A]">
+              <h2 className="text-[11px] font-medium uppercase tracking-[0.14em] text-ink-3">
                 {group.label}
               </h2>
               <button
@@ -478,7 +478,7 @@ export default function Page() {
                 onClick={() => {
                   void markAllAsRead();
                 }}
-                className="text-xs font-medium text-[#8A8A8A] transition-colors hover:text-[#555555] active:opacity-60"
+                className="text-xs font-medium text-ink-3 transition-colors hover:text-ink-2 active:opacity-60"
               >
                 Mark all as read
               </button>
@@ -488,7 +488,7 @@ export default function Page() {
               {group.items.map((item) => (
                 <article
                   key={item.id}
-                  className={`rounded-[22px] border border-black/6 bg-white px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.04)] transition-opacity active:opacity-50 ${item.href ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
+                  className={`rounded-[22px] border border-edge bg-surface px-4 py-4 shadow-[0_10px_30px_rgba(17,17,17,0.04)] transition-opacity active:opacity-50 ${item.href ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
                   onClick={() => {
                     void handleNotificationClick(item);
                   }}
@@ -522,11 +522,11 @@ export default function Page() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="text-sm font-semibold text-[#262626]">
+                          <h3 className="text-sm font-semibold text-ink">
                             {item.title}
                           </h3>
                         </div>
-                        <p className="flex items-center gap-2 shrink-0 text-[11px] font-medium text-[#8A8A8A]">
+                        <p className="flex items-center gap-2 shrink-0 text-[11px] font-medium text-ink-3">
                           {item.unread && (
                             <span className="h-2.5 w-2.5 rounded-full bg-[#E1761F]" />
                           )}
@@ -534,7 +534,7 @@ export default function Page() {
                         </p>
                       </div>
 
-                      <p className="text-sm leading-6 text-[#666666]">
+                      <p className="text-sm leading-6 text-ink-2">
                         {getNotificationDescriptionPreview(item.description)}
                       </p>
 
@@ -565,7 +565,7 @@ export default function Page() {
                                   "decline",
                                 );
                               }}
-                              className="rounded-full border border-[#D4D4D4] bg-white px-4 py-1.5 text-xs font-medium text-[#262626] transition-colors hover:bg-[#F3F3F3] active:opacity-70"
+                              className="rounded-full border border-[#D4D4D4] bg-surface px-4 py-1.5 text-xs font-medium text-ink transition-colors hover:bg-surface-high active:opacity-70"
                             >
                               Decline
                             </button>

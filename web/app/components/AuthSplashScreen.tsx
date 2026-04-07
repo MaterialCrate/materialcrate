@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function AuthSplashScreen() {
   return (
-    <div className="fixed inset-0 z-100 flex min-h-dvh items-center justify-center bg-[#f7f1e8] text-[#202020]">
+    <div className="fixed inset-0 z-100 flex min-h-dvh items-center justify-center bg-[#f7f1e8] text-ink">
       <div className="flex flex-col items-center">
         <Image
           src="/logo.png"

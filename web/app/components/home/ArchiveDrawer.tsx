@@ -192,7 +192,7 @@ export default function ArchiveDrawer({
     <>
       <Alert type={feedbackType} message={feedbackMessage} />
       <div
-        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-white px-6 py-6 transition-all duration-300 ease-out ${
+        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-surface px-6 py-6 transition-all duration-300 ease-out ${
           isOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-[110%] opacity-0 pointer-events-none"
@@ -213,18 +213,18 @@ export default function ArchiveDrawer({
           </div>
 
           <div>
-            <h1 className="text-lg font-medium text-[#202020]">Save file</h1>
-            <p className="mt-1 text-sm text-[#696969]">
+            <h1 className="text-lg font-medium text-ink">Save file</h1>
+            <p className="mt-1 text-sm text-ink-2">
               Save this attachment inside a folder or close to save it at the
               top level.
             </p>
           </div>
 
-          <div className="rounded-2xl bg-[#F5F5F5] px-4 py-3">
-            <p className="truncate text-sm font-medium text-[#202020]">
+          <div className="rounded-2xl bg-surface-high px-4 py-3">
+            <p className="truncate text-sm font-medium text-ink">
               {post?.title ?? "No file selected"}
             </p>
-            <p className="mt-1 text-xs text-[#767676]">
+            <p className="mt-1 text-xs text-ink-2">
               {post?.categories?.join(", ") ?? ""}
             </p>
           </div>
@@ -236,7 +236,7 @@ export default function ArchiveDrawer({
                 value={folderName}
                 onChange={(event) => setFolderName(event.target.value)}
                 placeholder="Create a new folder"
-                className="h-11 flex-1 rounded-full border border-black/10 px-4 text-sm outline-none"
+                className="h-11 flex-1 rounded-full border border-edge-mid px-4 text-sm outline-none"
                 maxLength={30}
               />
               <button
@@ -253,9 +253,9 @@ export default function ArchiveDrawer({
             </div>
 
             {isLoading ? (
-              <p className="text-sm text-[#696969]">Loading folders...</p>
+              <p className="text-sm text-ink-2">Loading folders...</p>
             ) : sortedFolders.length === 0 ? (
-              <p className="text-sm text-[#696969]">
+              <p className="text-sm text-ink-2">
                 No folders yet. Create one or close to save the file at the top
                 level.
               </p>
@@ -265,7 +265,7 @@ export default function ArchiveDrawer({
                   <button
                     key={folder.id}
                     type="button"
-                    className="flex w-full items-center justify-between rounded-2xl border border-black/8 px-4 py-3 text-left"
+                    className="flex w-full items-center justify-between rounded-2xl border border-edge-mid px-4 py-3 text-left"
                     disabled={isSaving}
                     onClick={async () => {
                       const saved = await savePost(folder.id);
@@ -275,12 +275,12 @@ export default function ArchiveDrawer({
                     }}
                   >
                     <div className="flex items-center gap-3">
-                      <Folder2 size={32} color="#202020" variant="Bold" />
+                      <Folder2 size={32} color="var(--ink)" variant="Bold" />
                       <div>
-                        <p className="text-sm font-medium text-[#202020]">
+                        <p className="text-sm font-medium text-ink">
                           {folder.name}
                         </p>
-                        <p className="text-xs text-[#767676]">
+                        <p className="text-xs text-ink-2">
                           Save attachment here
                         </p>
                       </div>

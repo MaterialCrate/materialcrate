@@ -37,7 +37,7 @@ export default function Toggle({
       }`}
     >
       <div
-        className={`h-4 w-4 rounded-full bg-white transform transition ${
+        className={`h-4 w-4 rounded-full bg-surface transform transition ${
           enabled ? "translate-x-6" : "translate-x-0"
         } ${disabled ? "opacity-70" : "opacity-100"}`}
       />

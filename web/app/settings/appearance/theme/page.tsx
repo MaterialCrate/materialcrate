@@ -117,10 +117,10 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7]">
+    <div className="min-h-dvh bg-page">
       <Header title="Theme" isLoading={isLoading || saving} />
       <div className="mx-auto max-w-2xl px-4 pb-10 pt-20 sm:px-6">
-      <p className="mb-4 text-sm text-[#5B5B5B]">
+      <p className="mb-4 text-sm text-ink-2">
         Choose how Material Crate looks across the app.
       </p>
       <div className="space-y-3">
@@ -134,10 +134,10 @@ export default function Page() {
               className={`w-full rounded-3xl border px-4 py-4 text-left transition-colors ${
                 isActive
                   ? "border-[#E1761F] bg-[#FFF4EA]"
-                  : "border-black/8 bg-white"
+                  : "border-edge-mid bg-surface"
               }`}
             >
-              <div className="mb-4 overflow-hidden rounded-[18px] border border-black/8">
+              <div className="mb-4 overflow-hidden rounded-[18px] border border-edge-mid">
                 <div className={`h-22 bg-linear-to-br ${option.preview} p-3`}>
                   <div className="flex h-full flex-col justify-between rounded-[14px] border border-white/35 bg-white/25 p-3 backdrop-blur-[2px]">
                     <div className="flex items-center gap-2">
@@ -154,18 +154,18 @@ export default function Page() {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-[#2E2E2E]">
+                  <p className="text-sm font-medium text-ink">
                     {option.label}
                   </p>
-                  <p className="text-xs text-[#666666]">{option.description}</p>
+                  <p className="text-xs text-ink-2">{option.description}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   {option.key === "system" ? (
-                    <MonitorMobbile size={18} color="#7A7A7A" />
+                    <MonitorMobbile size={18} color="var(--ink-2)" />
                   ) : option.key === "light" || option.key === "sepia" ? (
-                    <Sun1 size={18} color="#7A7A7A" />
+                    <Sun1 size={18} color="var(--ink-2)" />
                   ) : (
-                    <Moon size={18} color="#7A7A7A" />
+                    <Moon size={18} color="var(--ink-2)" />
                   )}
                   <span
                     className={`h-4 w-4 rounded-full border ${

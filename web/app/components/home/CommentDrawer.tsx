@@ -553,14 +553,14 @@ export default function CommentDrawer({
     <>
       {commentsError && <Alert type="error" message={commentsError} />}
       <div
-        className={`fixed inset-x-0 top-[15%] bottom-0 bg-white z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out ${
+        className={`fixed inset-x-0 top-[15%] bottom-0 bg-surface z-100 rounded-t-3xl px-6 py-6 space-y-3 transition-all duration-300 ease-out ${
           isOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-[110%] opacity-0 pointer-events-none"
         }`}
       >
         <div className="flex justify-center items-center relative">
-          <h1 className="text-lg text-[#202020] font-medium">Comments</h1>
+          <h1 className="text-lg text-ink font-medium">Comments</h1>
           <button
             type="button"
             aria-label="Close comments"
@@ -572,11 +572,11 @@ export default function CommentDrawer({
         </div>
         <div className="relative space-y-4 pb-18">
           {!postId ? (
-            <p className="text-xs text-[#6D6D6D]">
+            <p className="text-xs text-ink-2">
               Select a post to view comments.
             </p>
           ) : isLoadingComments ? (
-            <p className="text-xs text-[#6D6D6D]">Loading comments...</p>
+            <p className="text-xs text-ink-2">Loading comments...</p>
           ) : comments.length === 0 ? null : (
             comments.map((comment) => {
               const commentId = comment.id;
@@ -593,7 +593,7 @@ export default function CommentDrawer({
               return (
                 <div key={commentId}>
                   <div className="flex items-start gap-3">
-                    <div className="w-10 bg-[#D3D3D3] aspect-square rounded-full flex items-center justify-center overflow-hidden">
+                    <div className="w-10 bg-surface-high aspect-square rounded-full flex items-center justify-center overflow-hidden">
                       {getAuthorProfilePicture(comment.author) ? (
                         <Image
                           src={getAuthorProfilePicture(comment.author)}
@@ -609,17 +609,17 @@ export default function CommentDrawer({
                     </div>
                     <div className="space-y-1 w-full">
                       <div className="flex items-center gap-0.5">
-                        <p className="text-xs text-[#444444] font-semibold">
+                        <p className="text-xs text-ink font-semibold">
                           {getAuthorName(comment.author)}
                         </p>
                         {hasPaidAuthorSubscription(comment.author) ? (
                           <Verify size={14} color="#E1761F" variant="Bold" />
                         ) : null}
                       </div>
-                      <p className="text-xs text-[#202020]">
+                      <p className="text-xs text-ink">
                         {renderContentWithMentions(comment.content)}
                       </p>
-                      <div className="flex items-center font-medium justify-between text-xs text-[#5B5B5B] ">
+                      <div className="flex items-center font-medium justify-between text-xs text-ink-2 ">
                         <div className="flex items-center gap-5">
                           <p>{formatTimeAgo(comment.createdAt)}</p>
                           <button
@@ -661,7 +661,7 @@ export default function CommentDrawer({
                       <button
                         type="button"
                         onClick={() => void handleToggleReplies(comment)}
-                        className="text-xs text-[#7C7C7C] font-medium"
+                        className="text-xs text-ink-2 font-medium"
                       >
                         {isRepliesOpen
                           ? "Close replies"
@@ -674,7 +674,7 @@ export default function CommentDrawer({
                     <div className="ml-11 mt-3 space-y-3">
                       {replies.map((reply) => (
                         <div key={reply.id} className="flex items-start gap-3 ">
-                          <div className="w-10 aspect-square bg-[#D3D3D3] rounded-full flex items-center justify-center overflow-hidden">
+                          <div className="w-10 aspect-square bg-surface-high rounded-full flex items-center justify-center overflow-hidden">
                             {getAuthorProfilePicture(reply.author) ? (
                               <Image
                                 src={getAuthorProfilePicture(reply.author)}
@@ -690,7 +690,7 @@ export default function CommentDrawer({
                           </div>
                           <div className="space-y-1 w-full">
                             <div className="flex items-center gap-0.5">
-                              <p className="text-xs text-[#444444] font-semibold">
+                              <p className="text-xs text-ink font-semibold">
                                 {getAuthorName(reply.author)}
                               </p>
                               {hasPaidAuthorSubscription(reply.author) ? (
@@ -701,10 +701,10 @@ export default function CommentDrawer({
                                 />
                               ) : null}
                             </div>
-                            <p className="text-xs text-[#202020]">
+                            <p className="text-xs text-ink">
                               {renderContentWithMentions(reply.content)}
                             </p>
-                            <div className="flex items-center justify-between text-xs text-[#5B5B5B] font-medium ">
+                            <div className="flex items-center justify-between text-xs text-ink-2 font-medium ">
                               <div className="flex items-center gap-5">
                                 <p>{formatTimeAgo(reply.createdAt)}</p>
                                 <button
@@ -747,7 +747,7 @@ export default function CommentDrawer({
                         </div>
                       ))}
                       {isLoadingReplies ? (
-                        <p className="text-xs text-[#7C7C7C]">
+                        <p className="text-xs text-ink-2">
                           Loading replies...
                         </p>
                       ) : null}
@@ -755,7 +755,7 @@ export default function CommentDrawer({
                         <button
                           type="button"
                           onClick={() => void handleShowMoreReplies(comment)}
-                          className="text-xs text-[#7C7C7C] font-medium"
+                          className="text-xs text-ink-2 font-medium"
                         >
                           Show 10 more replies ({hiddenRepliesCount} left)
                         </button>
@@ -769,7 +769,7 @@ export default function CommentDrawer({
         </div>
         <div className="absolute bottom-8 left-6 right-6 space-y-2">
           {replyTarget ? (
-            <div className="flex items-center justify-between text-[11px] text-[#6A6A6A] px-1">
+            <div className="flex items-center justify-between text-[11px] text-ink-2 px-1">
               <p>
                 Replying to{" "}
                 <span className="text-[#1A66FF] font-semibold">
@@ -779,14 +779,14 @@ export default function CommentDrawer({
               <button
                 type="button"
                 onClick={() => setReplyTarget(null)}
-                className="text-[#6A6A6A]"
+                className="text-ink-2"
               >
                 Cancel
               </button>
             </div>
           ) : null}
           {commentsLocked ? (
-            <p className="px-1 text-[11px] text-[#6A6A6A]">
+            <p className="px-1 text-[11px] text-ink-2">
               Comments are disabled for this post.
             </p>
           ) : null}
@@ -801,7 +801,7 @@ export default function CommentDrawer({
                   : "Share your thoughts... "
               }
               disabled={commentsLocked}
-              className="placeholder:text-[#828282] placeholder:text-xs text-xs py-3 px-3 w-full bg-[#EBEBEB] rounded-3xl drop-shadow-xs focus:outline-0 disabled:opacity-60"
+              className="placeholder:text-ink-3 placeholder:text-xs text-xs py-3 px-3 w-full bg-surface-high rounded-3xl drop-shadow-xs focus:outline-0 disabled:opacity-60"
             />
             <button
               type="button"

@@ -74,7 +74,7 @@ export default function PostDetailPage() {
   }, [post, shouldOpenComments]);
 
   return (
-    <div className="min-h-screen bg-[#F7F7F7] py-18">
+    <div className="min-h-screen bg-page py-18">
       <CommentDrawer
         isOpen={isCommentDrawerOpen}
         onClose={() => {
@@ -92,21 +92,21 @@ export default function PostDetailPage() {
         onClose={() => setActivePdfPost(null)}
       />
 
-      <header className="fixed inset-x-0 top-0 z-40 flex items-center gap-3 border-b border-black/6 bg-[#F7F7F7] px-6 pt-6 pb-3">
+      <header className="fixed inset-x-0 top-0 z-40 flex items-center gap-3 border-b border-edge bg-page px-6 pt-6 pb-3">
         <button
           type="button"
           onClick={() => router.back()}
           aria-label="Go back"
           className="transition-opacity hover:opacity-60 active:opacity-40"
         >
-          <ArrowLeft size={24} color="#202020" />
+          <ArrowLeft size={24} color="var(--ink)" />
         </button>
-        <h1 className="text-lg font-medium text-[#202020]">Post</h1>
+        <h1 className="text-lg font-medium text-ink">Post</h1>
       </header>
 
       <main className="mx-auto max-w-2xl px-3">
         {isLoading ? (
-          <p className="px-6 py-8 text-sm text-[#696969]">Loading post...</p>
+          <p className="px-6 py-8 text-sm text-ink-2">Loading post...</p>
         ) : error ? (
           <p className="px-6 py-8 text-sm text-[#8A3A25]">{error}</p>
         ) : post ? (
@@ -116,7 +116,7 @@ export default function PostDetailPage() {
             onFileClick={(selectedPost) => setActivePdfPost(selectedPost)}
           />
         ) : (
-          <p className="px-6 py-8 text-sm text-[#696969]">Post not found.</p>
+          <p className="px-6 py-8 text-sm text-ink-2">Post not found.</p>
         )}
       </main>
     </div>

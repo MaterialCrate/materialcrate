@@ -43,12 +43,12 @@ export default function Page() {
         {sections.map((section) => (
           <div
             key={section.heading}
-            className="rounded-3xl border border-black/6 bg-white p-4"
+            className="rounded-3xl border border-edge bg-surface p-4"
           >
-            <p className="text-sm font-medium text-[#2E2E2E]">
+            <p className="text-sm font-medium text-ink">
               {section.heading}
             </p>
-            <p className="mt-1 text-sm text-[#666666]">{section.body}</p>
+            <p className="mt-1 text-sm text-ink-2">{section.body}</p>
           </div>
         ))}
       </div>

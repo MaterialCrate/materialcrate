@@ -27,7 +27,7 @@ export default function Alert({ message, type }: AlertProps) {
           <div
             className={`h-3 w-3 shrink-0 rounded-full ${indicatorClass[type]}`}
           />
-          <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-5 text-[#202020] animate-[mc-alert-text_3000ms_ease-in-out_forwards]">
+          <p className="overflow-hidden text-ellipsis whitespace-nowrap text-sm leading-5 text-ink animate-[mc-alert-text_3000ms_ease-in-out_forwards]">
             {message}
           </p>
         </div>

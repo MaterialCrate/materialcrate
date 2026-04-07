@@ -501,15 +501,15 @@ export default function ProfilePage({ username }: ProfilePageProps) {
 
   if (!isPublicProfile && isLoadingAuth) {
     return (
-      <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>
+      <p className="px-6 py-8 text-sm text-ink-2">Loading profile...</p>
     );
   }
 
   if (!isPublicProfile && !user) {
     return (
       <div className="px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-md space-y-4 rounded-3xl bg-white p-5 shadow-[0_10px_30px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
-          <p className="text-sm text-[#696969]">
+        <div className="mx-auto max-w-md space-y-4 rounded-3xl bg-surface p-5 shadow-[0_10px_30px_rgba(0,0,0,0.04)] ring-1 ring-black/5">
+          <p className="text-sm text-ink-2">
             Sign in to view your profile.
           </p>
           <button
@@ -606,14 +606,14 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         />
 
         {isLoadingProfile ? (
-          <p className="px-6 py-8 text-sm text-[#696969]">Loading profile...</p>
+          <p className="px-6 py-8 text-sm text-ink-2">Loading profile...</p>
         ) : !profile ? (
-          <p className="px-6 py-8 text-sm text-[#696969]">
+          <p className="px-6 py-8 text-sm text-ink-2">
             {error || "Profile not found."}
           </p>
         ) : !canViewContent ? (
           <div className="px-6 py-12 text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-[#F0F0F0]">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-surface-high">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -628,10 +628,10 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-[#262626]">
+            <p className="text-sm font-medium text-ink">
               This account is private
             </p>
-            <p className="mt-1 text-sm text-[#696969]">
+            <p className="mt-1 text-sm text-ink-2">
               {hasPendingRequest
                 ? "Your follow request is pending."
                 : "Follow this account to see their posts and achievements."}
@@ -649,11 +649,11 @@ export default function ProfilePage({ username }: ProfilePageProps) {
             ) : (
               <section className="space-y-4">
                 {error && posts.length === 0 && isLoadingPosts ? (
-                  <p className="px-4 py-8 text-sm text-[#696969] sm:px-6 lg:px-0">
+                  <p className="px-4 py-8 text-sm text-ink-2 sm:px-6 lg:px-0">
                     Loading posts...
                   </p>
                 ) : posts.length === 0 ? (
-                  <p className="px-4 py-8 text-sm text-[#696969] sm:px-6 lg:px-0">
+                  <p className="px-4 py-8 text-sm text-ink-2 sm:px-6 lg:px-0">
                     No posts yet.
                   </p>
                 ) : (

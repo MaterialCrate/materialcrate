@@ -37,7 +37,7 @@ export default function Page() {
         <p className="text-[11px] uppercase tracking-[0.16em] text-[#B46B28]">
           Support
         </p>
-        <h2 className="mt-2 text-xl font-semibold text-[#1F1F1F]">
+        <h2 className="mt-2 text-xl font-semibold text-ink">
           Get unstuck quickly.
         </h2>
         <p className="mt-2 text-sm text-[#6A625A]">
@@ -53,17 +53,17 @@ export default function Page() {
               <Link
                 key={item.title}
                 href={item.href}
-                className="flex w-full items-center justify-between gap-4 rounded-3xl border border-black/6 bg-white p-4 text-left shadow-[0_10px_28px_rgba(0,0,0,0.04)] transition-colors hover:bg-[#FBF7F2]"
+                className="flex w-full items-center justify-between gap-4 rounded-3xl border border-edge bg-surface p-4 text-left shadow-[0_10px_28px_rgba(0,0,0,0.04)] transition-colors hover:bg-[#FBF7F2]"
               >
                 <div className="flex items-start gap-3">
                   <div className="rounded-2xl bg-[#F6EFE5] p-3">
                     <item.icon size={20} color="#A95A13" variant="Bulk" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-[#2F2F2F]">
+                    <p className="text-sm font-medium text-ink">
                       {item.title}
                     </p>
-                    <p className="mt-1 text-xs text-[#666666]">{item.detail}</p>
+                    <p className="mt-1 text-xs text-ink-2">{item.detail}</p>
                   </div>
                 </div>
                 <ArrowRight2 size={18} color="#444444" />
@@ -75,17 +75,17 @@ export default function Page() {
             <button
               key={item.title}
               type="button"
-              className="flex w-full items-center justify-between gap-4 rounded-3xl border border-black/6 bg-white p-4 text-left shadow-[0_10px_28px_rgba(0,0,0,0.04)] transition-colors hover:bg-[#FBF7F2]"
+              className="flex w-full items-center justify-between gap-4 rounded-3xl border border-edge bg-surface p-4 text-left shadow-[0_10px_28px_rgba(0,0,0,0.04)] transition-colors hover:bg-[#FBF7F2]"
             >
               <div className="flex items-start gap-3">
                 <div className="rounded-2xl bg-[#F6EFE5] p-3">
                   <item.icon size={20} color="#A95A13" variant="Bulk" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#2F2F2F]">
+                  <p className="text-sm font-medium text-ink">
                     {item.title}
                   </p>
-                  <p className="mt-1 text-xs text-[#666666]">{item.detail}</p>
+                  <p className="mt-1 text-xs text-ink-2">{item.detail}</p>
                 </div>
               </div>
               <ArrowRight2 size={18} color="#444444" />

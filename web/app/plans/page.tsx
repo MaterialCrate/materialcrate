@@ -94,7 +94,7 @@ const planUseCases = [
 
 export default function PlansPage() {
   return (
-    <main className="min-h-dvh bg-[#F8F4EE] text-[#171717]">
+    <main className="min-h-dvh bg-[#F8F4EE] text-ink">
       <Header title="Plans" />
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -111,7 +111,7 @@ export default function PlansPage() {
               className={`relative overflow-hidden rounded-4xl border p-5 shadow-[0_16px_40px_rgba(0,0,0,0.05)] transition-transform duration-200 hover:-translate-y-1 sm:p-6 ${
                 plan.highlight
                   ? "border-[#E1761F]/35 bg-linear-to-br from-[#FFF7EF] via-white to-[#FFF2E5]"
-                  : "border-black/6 bg-white"
+                  : "border-edge bg-surface"
               }`}
             >
               {plan.badge && (
@@ -122,16 +122,16 @@ export default function PlansPage() {
 
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-2xl font-semibold text-[#1E1E1E]">
+                  <h2 className="text-2xl font-semibold text-ink">
                     {plan.name}
                   </h2>
-                  <p className="mt-1 text-sm text-[#6A6A6A]">{plan.subtitle}</p>
+                  <p className="mt-1 text-sm text-ink-2">{plan.subtitle}</p>
                 </div>
                 <div className="rounded-2xl bg-[#FBF7F2] px-3 py-2 text-right">
-                  <div className="text-xl font-semibold text-[#111111]">
+                  <div className="text-xl font-semibold text-ink">
                     {plan.priceLabel}
                   </div>
-                  <div className="text-xs text-[#727272]">{plan.cadence}</div>
+                  <div className="text-xs text-ink-2">{plan.cadence}</div>
                 </div>
               </div>
 
@@ -141,7 +141,7 @@ export default function PlansPage() {
                 className={`inline-flex w-full items-center justify-center rounded-full px-4 py-3 text-sm font-semibold transition ${
                   plan.highlight
                     ? "bg-[#E1761F] text-white hover:bg-[#C96619]"
-                    : "border border-black/10 bg-white text-[#1E1E1E] hover:bg-[#FBF7F2]"
+                    : "border border-edge-mid bg-surface text-ink hover:bg-[#FBF7F2]"
                 }`}
               />
 
@@ -149,7 +149,7 @@ export default function PlansPage() {
                 {plan.features.map((feature) => (
                   <li
                     key={feature}
-                    className="flex items-start gap-3 text-sm leading-6 text-[#3E3E3E]"
+                    className="flex items-start gap-3 text-sm leading-6 text-ink"
                   >
                     <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#FFF1E2] text-[12px] font-bold text-[#E1761F]">
                       ✓
@@ -163,7 +163,7 @@ export default function PlansPage() {
         </section>
 
         <section className="mt-6 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="rounded-4xl border border-black/6 bg-white p-5 shadow-[0_14px_36px_rgba(0,0,0,0.04)] sm:p-6">
+          <div className="rounded-4xl border border-edge bg-surface p-5 shadow-[0_14px_36px_rgba(0,0,0,0.04)] sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#E1761F]">
               Which plan is for you?
             </p>
@@ -173,10 +173,10 @@ export default function PlansPage() {
                   key={item.title}
                   className="rounded-3xl bg-[#FBF7F2] px-4 py-4"
                 >
-                  <h3 className="text-base font-semibold text-[#1F1F1F]">
+                  <h3 className="text-base font-semibold text-ink">
                     {item.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-[#666666]">
+                  <p className="mt-2 text-sm leading-6 text-ink-2">
                     {item.description}
                   </p>
                 </div>

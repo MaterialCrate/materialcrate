@@ -606,7 +606,7 @@ export default function Page() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#F7F7F7]">
+    <div className="relative min-h-screen bg-page">
       {successMessage && <Alert type="success" message={successMessage} />}
       {error && <Alert type="error" message={error} />}
       <Header
@@ -617,7 +617,7 @@ export default function Page() {
             type="submit"
             form="profile-form"
             disabled={isSaveDisabled}
-            className="text-sm font-semibold text-[#E1761F] disabled:text-[#818181]"
+            className="text-sm font-semibold text-[#E1761F] disabled:text-ink-3"
           >
             Save
           </button>
@@ -640,7 +640,7 @@ export default function Page() {
               Keep your photo, username, and academic details current.
             </p>
           </div>
-          <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
+          <div className="w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
             <div
               className={`relative overflow-hidden rounded-[22px] ${profileBackgroundPresentation.className} px-4 py-6`}
               style={profileBackgroundPresentation.style}
@@ -689,10 +689,10 @@ export default function Page() {
             </div>
             <div className="mt-3 flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium text-[#1F1F1F]">
+                <p className="text-sm font-medium text-ink">
                   Profile background
                 </p>
-                <p className="mt-0.5 text-xs text-[#666666]">
+                <p className="mt-0.5 text-xs text-ink-2">
                   {isPaidUser
                     ? "Tap the pen to upload an image or GIF under 5MB."
                     : "Default background is active. Upgrade to Pro or Premium to upload images or GIFs."}
@@ -702,7 +702,7 @@ export default function Page() {
                 className={`rounded-full px-3 py-1 text-[11px] font-medium ${
                   isPaidUser
                     ? "bg-[#FFF1DE] text-[#A95A13]"
-                    : "bg-[#EFEFEF] text-[#6A6A6A]"
+                    : "bg-surface-high text-ink-2"
                 }`}
               >
                 {isPaidUser ? planLabel : "Free"}
@@ -722,12 +722,12 @@ export default function Page() {
               </div>
             ) : null}
           </div>
-          <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
-            <h2 className="text-base font-semibold text-[#1F1F1F]">
+          <div className="w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
+            <h2 className="text-base font-semibold text-ink">
               Personal Information
             </h2>
             <div className="mt-4 space-y-1">
-              <p className="text-[#5B5B5B] text-sm font-medium">Username</p>
+              <p className="text-ink-2 text-sm font-medium">Username</p>
               <div className="relative">
                 <input
                   placeholder={profile.username}
@@ -740,7 +740,7 @@ export default function Page() {
                   required
                   minLength={MIN_USERNAME_LENGTH}
                   maxLength={15}
-                  className="w-full rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 pr-12 text-sm placeholder:text-[#B1B1B1] focus:outline-none"
+                  className="w-full rounded-2xl border border-edge bg-surface-high px-3 py-3 pr-12 text-sm placeholder:text-ink-3 focus:outline-none"
                 />
                 {isChecking &&
                 profile.username.length >= MIN_USERNAME_LENGTH &&
@@ -775,7 +775,7 @@ export default function Page() {
 
               return (
                 <div className="space-y-1 mt-4" key={input.key}>
-                  <p className="text-[#5B5B5B] text-sm font-medium">
+                  <p className="text-ink-2 text-sm font-medium">
                     {input.label}
                   </p>
                   <div className="relative">
@@ -787,7 +787,7 @@ export default function Page() {
                       required
                       minLength={input.minLength}
                       maxLength={input.maxLength}
-                      className={`w-full rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 text-sm placeholder:text-[#B1B1B1] focus:outline-none ${visibilityKey ? "pr-12" : ""}`}
+                      className={`w-full rounded-2xl border border-edge bg-surface-high px-3 py-3 text-sm placeholder:text-ink-3 focus:outline-none ${visibilityKey ? "pr-12" : ""}`}
                     />
                     {visibilityKey ? (
                       <button

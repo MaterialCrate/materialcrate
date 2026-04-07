@@ -51,15 +51,15 @@ export default function Page() {
         {guidelineSections.map((section, index) => (
           <div
             key={section.title}
-            className="rounded-3xl border border-black/6 bg-white p-4 shadow-[0_10px_28px_rgba(0,0,0,0.04)]"
+            className="rounded-3xl border border-edge bg-surface p-4 shadow-[0_10px_28px_rgba(0,0,0,0.04)]"
           >
             <p className="text-[11px] uppercase tracking-[0.16em] text-[#A06A35]">
               Guideline {index + 1}
             </p>
-            <p className="mt-1 text-sm font-semibold text-[#2E2E2E]">
+            <p className="mt-1 text-sm font-semibold text-ink">
               {section.title}
             </p>
-            <p className="mt-1.5 text-sm leading-relaxed text-[#666666]">
+            <p className="mt-1.5 text-sm leading-relaxed text-ink-2">
               {section.body}
             </p>
           </div>

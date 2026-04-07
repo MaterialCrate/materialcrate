@@ -158,7 +158,7 @@ export default function Username({
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
       <div className="flex flex-1 flex-col justify-center">
         <div>
-          <h4 className="font-medium text-[#202020]">USERNAME</h4>
+          <h4 className="font-medium text-ink">USERNAME</h4>
           <div className="relative mt-2">
             <input
               type="text"
@@ -168,7 +168,7 @@ export default function Username({
                 lastLiveCheckedUsernameRef.current = "";
               }}
               placeholder="e.g. bookworm"
-              className="w-full rounded-2xl border border-black/10 bg-[#FAFAFA] px-4 py-3.5 pr-12 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
+              className="w-full rounded-2xl border border-edge-mid bg-surface-high px-4 py-3.5 pr-12 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-surface focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
               required
             />
             {isChecking && username.length >= MIN_USERNAME_LENGTH ? (

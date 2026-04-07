@@ -36,7 +36,7 @@ export default function Page() {
         <p className="text-[11px] uppercase tracking-[0.16em] text-[#B46B28]">
           Privacy
         </p>
-        <h2 className="mt-2 text-xl font-semibold text-[#1F1F1F]">
+        <h2 className="mt-2 text-xl font-semibold text-ink">
           How MaterialCrate handles your information.
         </h2>
         <p className="mt-2 text-sm text-[#6A625A]">
@@ -49,12 +49,12 @@ export default function Page() {
         {sections.map((section) => (
           <div
             key={section.heading}
-            className="rounded-3xl border border-black/6 bg-white p-4"
+            className="rounded-3xl border border-edge bg-surface p-4"
           >
-            <p className="text-sm font-medium text-[#2E2E2E]">
+            <p className="text-sm font-medium text-ink">
               {section.heading}
             </p>
-            <p className="mt-1 text-sm text-[#666666]">{section.body}</p>
+            <p className="mt-1 text-sm text-ink-2">{section.body}</p>
           </div>
         ))}
       </div>

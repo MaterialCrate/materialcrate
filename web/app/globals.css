@@ -1,26 +1,106 @@
 @import "tailwindcss";
 
+/* ─── Raw semantic tokens ─────────────────────────────────────────── */
+
 :root {
+  /* legacy – keep for compat */
   --background: #ffffff;
   --foreground: #171717;
+
+  /* page / surface */
+  --page-bg: #F7F7F7;
+  --surface: #FFFFFF;
+  --surface-high: #FFFFFF;
+
+  /* text */
+  --ink: #202020;
+  --ink-2: #696969;
+  --ink-3: #9E9E9E;
+
+  /* borders */
+  --edge: rgba(0, 0, 0, 0.06);
+  --edge-mid: rgba(0, 0, 0, 0.10);
+  --edge-strong: rgba(0, 0, 0, 0.20);
+
+  /* inputs */
+  --input-bg: #FFFFFF;
+
+  /* document card (warm parchment tint) */
+  --doc-card: #F6F3EE;
+  --doc-card-hover: #F2ECE4;
 }
 
 [data-theme="dark"] {
-  --background: #121212;
-  --foreground: #f5f5f5;
+  --background: #111111;
+  --foreground: #EFEFEF;
+
+  --page-bg: #111111;
+  --surface: #1C1C1C;
+  --surface-high: #252525;
+
+  --ink: #EFEFEF;
+  --ink-2: #909090;
+  --ink-3: #5E5E5E;
+
+  --edge: rgba(255, 255, 255, 0.07);
+  --edge-mid: rgba(255, 255, 255, 0.12);
+  --edge-strong: rgba(255, 255, 255, 0.20);
+
+  --input-bg: #252525;
+
+  --doc-card: #252525;
+  --doc-card-hover: #2E2E2E;
 }
 
 [data-theme="sepia"] {
-  --background: #f5ecdc;
-  --foreground: #3d3127;
+  --background: #F5ECDC;
+  --foreground: #3D3127;
+
+  --page-bg: #E8DCC8;
+  --surface: #F5ECDC;
+  --surface-high: #FBF6EC;
+
+  --ink: #3D3127;
+  --ink-2: #7A6A55;
+  --ink-3: #9A8A75;
+
+  --edge: rgba(100, 70, 30, 0.10);
+  --edge-mid: rgba(100, 70, 30, 0.16);
+  --edge-strong: rgba(100, 70, 30, 0.28);
+
+  --input-bg: #FBF6EC;
+
+  --doc-card: #EDE5D5;
+  --doc-card-hover: #E5D9C5;
 }
 
+/* ─── Tailwind color utilities ─────────────────────────────────────── */
+
 @theme inline {
+  /* legacy */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
+  /* semantic */
+  --color-page: var(--page-bg);
+  --color-surface: var(--surface);
+  --color-surface-high: var(--surface-high);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-edge: var(--edge);
+  --color-edge-mid: var(--edge-mid);
+  --color-edge-strong: var(--edge-strong);
+  --color-input: var(--input-bg);
+  --color-doc-card: var(--doc-card);
+  --color-doc-card-hover: var(--doc-card-hover);
+
+  /* fonts */
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
+
+/* ─── System default (no explicit theme set) ───────────────────────── */
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -28,6 +108,8 @@
     --foreground: #000000;
   }
 }
+
+/* ─── Base ─────────────────────────────────────────────────────────── */
 
 html {
   background: var(--background);
@@ -41,6 +123,18 @@ body {
     background-color 180ms ease,
     color 180ms ease;
 }
+
+/* Smooth color transitions across all elements when theme changes.
+   Low specificity (0,0,0,0) so Tailwind utilities always override. */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 180ms;
+  transition-timing-function: ease;
+}
+
+/* ─── Animations ────────────────────────────────────────────────────── */
 
 @keyframes loading-bar {
   0% {

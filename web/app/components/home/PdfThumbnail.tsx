@@ -132,7 +132,7 @@ export default function PdfThumbnail({
         }`}
       />
       {!canUseStoredThumbnail && thumbnailState !== "ready" && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#E8E8E8] px-2 text-center text-[10px] font-medium text-[#767676]">
+        <div className="absolute inset-0 flex items-center justify-center bg-[#E8E8E8] px-2 text-center text-[10px] font-medium text-ink-2">
           {thumbnailState === "error" ? "PDF" : "Loading preview..."}
         </div>
       )}

@@ -90,9 +90,9 @@ export default function Page() {
           </p>
         </div>
 
-        <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
-          <h3 className="text-sm font-semibold text-[#1F1F1F]">Topic</h3>
-          <p className="mt-0.5 text-xs text-[#888888]">
+        <div className="w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
+          <h3 className="text-sm font-semibold text-ink">Topic</h3>
+          <p className="mt-0.5 text-xs text-ink-3">
             What do you need help with?
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -104,7 +104,7 @@ export default function Page() {
                 className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
                   topic === t.value
                     ? "border-[#E1761F] bg-[#FFF4EA] text-[#B46B28]"
-                    : "border-black/8 bg-[#F8F8F8] text-[#5B5B5B] hover:bg-[#F0ECE6]"
+                    : "border-edge-mid bg-surface-high text-ink-2 hover:bg-[#F0ECE6]"
                 }`}
               >
                 {t.label}
@@ -113,11 +113,11 @@ export default function Page() {
           </div>
         </div>
 
-        <div className="w-full rounded-[20px] border border-black/6 bg-white px-4 py-4">
-          <h3 className="text-sm font-semibold text-[#1F1F1F]">Your Message</h3>
+        <div className="w-full rounded-[20px] border border-edge bg-surface px-4 py-4">
+          <h3 className="text-sm font-semibold text-ink">Your Message</h3>
 
           <div className="mt-3 space-y-1">
-            <p className="text-sm font-medium text-[#5B5B5B]">Subject</p>
+            <p className="text-sm font-medium text-ink-2">Subject</p>
             <input
               type="text"
               placeholder="What's this about?"
@@ -125,7 +125,7 @@ export default function Page() {
               onChange={(e) => setSubject(e.target.value)}
               disabled={isSubmitting}
               maxLength={MAX_SUBJECT_LENGTH}
-              className="w-full rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 text-sm placeholder:text-[#B1B1B1] focus:outline-none"
+              className="w-full rounded-2xl border border-edge bg-surface-high px-3 py-3 text-sm placeholder:text-ink-3 focus:outline-none"
             />
             <p className="text-right text-[11px] text-[#AAAAAA]">
               {subject.length}/{MAX_SUBJECT_LENGTH}
@@ -133,7 +133,7 @@ export default function Page() {
           </div>
 
           <div className="mt-3 space-y-1">
-            <p className="text-sm font-medium text-[#5B5B5B]">Message</p>
+            <p className="text-sm font-medium text-ink-2">Message</p>
             <textarea
               placeholder="Describe what you need help with in detail…"
               value={message}
@@ -141,7 +141,7 @@ export default function Page() {
               disabled={isSubmitting}
               maxLength={MAX_MESSAGE_LENGTH}
               rows={6}
-              className="w-full resize-none rounded-2xl border border-black/6 bg-[#F8F8F8] px-3 py-3 text-sm leading-relaxed placeholder:text-[#B1B1B1] focus:outline-none"
+              className="w-full resize-none rounded-2xl border border-edge bg-surface-high px-3 py-3 text-sm leading-relaxed placeholder:text-ink-3 focus:outline-none"
             />
             <p className="text-right text-[11px] text-[#AAAAAA]">
               {message.length}/{MAX_MESSAGE_LENGTH}

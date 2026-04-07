@@ -273,7 +273,7 @@ export default function SavedFolderPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#ffffff] pb-32 pt-22">
+    <div className="min-h-screen bg-surface pb-32 pt-22">
       <PdfViewerModal
         isOpen={Boolean(activePdfPost)}
         post={activePdfPost}
@@ -283,7 +283,7 @@ export default function SavedFolderPage() {
       {error && <Alert type="error" message={error} />}
 
       <div className="fixed top-0 left-0 right-0 z-40">
-        <header className="bg-[#F7F7F7] px-6 pt-6 pb-3">
+        <header className="bg-page px-6 pt-6 pb-3">
           <div className="relative flex items-center justify-center min-h-10">
             <button
               type="button"
@@ -291,7 +291,7 @@ export default function SavedFolderPage() {
               onClick={() => router.push("/saved")}
               className="absolute left-0 top-1/2 -translate-y-1/2 transition-opacity hover:opacity-60 active:opacity-40"
             >
-              <ArrowLeft size={22} color="#202020" />
+              <ArrowLeft size={22} color="var(--ink)" />
             </button>
             <div className="flex w-full justify-center px-12">
               {folder && isEditingTitle ? (
@@ -342,7 +342,7 @@ export default function SavedFolderPage() {
               onClick={() => void handleDeleteFolder()}
               disabled={isDeleting}
             >
-              <Trash size={22} color="#202020" />
+              <Trash size={22} color="var(--ink)" />
             </button>
           </div>
         </header>
@@ -352,32 +352,32 @@ export default function SavedFolderPage() {
       {!isLoading && (
         <main className="mx-auto max-w-2xl space-y-6 px-4 sm:px-6">
           {!folder ? (
-            <div className="rounded-[28px] bg-white px-5 py-6 shadow-sm lg:rounded-3xl lg:border lg:border-black/6">
-              <p className="text-base font-medium text-[#202020]">
+            <div className="rounded-[28px] bg-surface px-5 py-6 shadow-sm lg:rounded-3xl lg:border lg:border-edge">
+              <p className="text-base font-medium text-ink">
                 Folder not found.
               </p>
-              <p className="mt-2 text-sm text-[#696969]">
+              <p className="mt-2 text-sm text-ink-2">
                 This saved folder may have been removed.
               </p>
             </div>
           ) : (
             <>
-              <div className="space-y-6 lg:rounded-3xl lg:border lg:border-black/6 lg:bg-white lg:p-5 lg:shadow-sm">
+              <div className="space-y-6 lg:rounded-3xl lg:border lg:border-edge lg:bg-surface lg:p-5 lg:shadow-sm">
               <section className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                  <DocumentText size={20} color="#202020" />
-                  <h2 className="text-base font-medium text-[#202020]">
+                  <DocumentText size={20} color="var(--ink)" />
+                  <h2 className="text-base font-medium text-ink">
                     Files
                   </h2>
                 </div>
-                <span className="text-sm text-[#767676]">
+                <span className="text-sm text-ink-2">
                   {folderSavedPosts.length}
                 </span>
               </section>
 
               <section className="space-y-3">
                 {folderSavedPosts.length === 0 ? (
-                  <p className="text-sm text-[#696969]">
+                  <p className="text-sm text-ink-2">
                     No files saved in this folder yet.
                   </p>
                 ) : (

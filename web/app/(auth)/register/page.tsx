@@ -227,7 +227,7 @@ export default function Page() {
 
   return (
     <form
-      className="min-h-dvh bg-[#FAFAFA] px-4 py-4 sm:px-6 sm:py-6"
+      className="min-h-dvh bg-surface-high px-4 py-4 sm:px-6 sm:py-6"
       onSubmit={
         isSocialSignup
           ? step < 6
@@ -243,7 +243,7 @@ export default function Page() {
       }
     >
       <Alert type="error" message={error} />
-      <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-130 flex-col rounded-[28px] bg-white px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6">
+      <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-130 flex-col rounded-[28px] bg-surface px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6">
         <div className="flex min-h-10 items-center">
           {((!isSocialSignup && step !== 1 && step !== 7) ||
             (isSocialSignup && step !== 3)) && (
@@ -251,7 +251,7 @@ export default function Page() {
               type="button"
               aria-label="Go back"
               onClick={handleBack}
-              className="cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-full text-[#202020] transition-all duration-200 hover:bg-black/5 active:scale-95"
+              className="cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-full text-ink transition-all duration-200 hover:bg-black/5 active:scale-95"
             >
               <HiOutlineArrowLeft size={26} />
             </button>
@@ -284,7 +284,7 @@ export default function Page() {
         <div className="mt-6 flex flex-1 flex-col justify-center transition-all duration-200 ease-out">
           {isSocialSignup ? (
             isPrefillingSocial ? (
-              <div className="mx-auto flex w-full max-w-md flex-1 items-center justify-center px-2 text-center text-[#444444]">
+              <div className="mx-auto flex w-full max-w-md flex-1 items-center justify-center px-2 text-center text-ink">
                 Preparing your social profile...
               </div>
             ) : step === 3 ? (

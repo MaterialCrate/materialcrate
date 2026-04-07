@@ -67,20 +67,20 @@ export default function Header({
   const hasCustomBackground = !isDefaultProfileBackground(profileBackground);
   const primaryTextClass = hasCustomBackground
     ? "text-white"
-    : "text-[#1F1F1F]";
+    : "text-[#333333]";
   const secondaryTextClass = hasCustomBackground
     ? "text-white/80"
-    : "text-[#333333]";
+    : "text-[#343434]";
   const iconColor = hasCustomBackground ? "#FFFFFF" : "#444444";
   const iconButtonClass = hasCustomBackground
     ? "cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-white/18 bg-black/28 backdrop-blur-md transition-all duration-200 hover:bg-black/38 active:scale-95"
-    : "cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-black/8 bg-white/82 backdrop-blur transition-all duration-200 hover:bg-white hover:shadow-[0_6px_18px_rgba(0,0,0,0.08)] active:scale-95";
+    : "cursor-pointer flex h-10 w-10 items-center justify-center rounded-full border border-edge-mid bg-white/82 backdrop-blur transition-all duration-200 hover:bg-surface hover:shadow-[0_6px_18px_rgba(0,0,0,0.08)] active:scale-95";
   const statLabelClass = hasCustomBackground
     ? "text-white/78"
     : "text-[#343434]";
   const followMutedClass = hasCustomBackground
-    ? "border-white/18 bg-white/88 text-[#202020] backdrop-blur transition-all duration-200 hover:bg-white active:scale-95"
-    : "border-[#979797] bg-white text-[#202020] transition-all duration-200 hover:bg-[#F7F7F7] active:scale-95";
+    ? "border-white/18 bg-white/88 text-ink backdrop-blur transition-all duration-200 hover:bg-surface active:scale-95"
+    : "border-[#979797] bg-surface text-ink transition-all duration-200 hover:bg-page active:scale-95";
   const followPrimaryClass = hasCustomBackground
     ? "border-white/18 bg-black/45 text-white backdrop-blur transition-all duration-200 hover:bg-black/55 active:scale-95"
     : "border-black bg-[#131212] text-white transition-all duration-200 hover:bg-[#2A2A2A] active:scale-95";
@@ -88,10 +88,10 @@ export default function Header({
   const tabInactiveClass = hasCustomBackground
     ? "text-white/55"
     : "text-[#787777]";
-  const indicatorClass = hasCustomBackground ? "bg-white" : "bg-[#404040]";
+  const indicatorClass = hasCustomBackground ? "bg-surface" : "bg-[#404040]";
   const detailBadgeClass = hasCustomBackground
     ? "border-white/12 bg-black/24 text-white"
-    : "border-black/8 bg-black/[0.04] text-[#2E2E2E]";
+    : "border-edge-mid bg-black/[0.04] text-ink";
 
   const normalizedSubscriptionPlan =
     normalizeSubscriptionPlan(subscriptionPlan);

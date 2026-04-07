@@ -103,7 +103,7 @@ export default function Navbar() {
             className={`cursor-pointer flex w-full items-center gap-4 rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:bg-black/5 active:scale-[0.97] ${
               pathname === "/search"
                 ? "bg-[#FFF3E7] text-[#E1761F]"
-                : "text-[#606060] hover:text-[#303030]"
+                : "text-ink-2 hover:text-ink"
             }`}
             aria-label="Search"
           >
@@ -132,7 +132,7 @@ export default function Navbar() {
                   className={`flex items-center gap-4 rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:bg-black/5 active:scale-[0.97] ${
                     isActive
                       ? "text-[#E1761F] bg-[#FFF3E7]"
-                      : "text-[#606060] hover:text-[#303030]"
+                      : "text-ink-2 hover:text-ink"
                   }`}
                   aria-current={isActive ? "page" : undefined}
                   onClick={(event) => {

@@ -101,7 +101,7 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-dvh bg-[#F7F7F7]">
+    <div className="min-h-dvh bg-page">
       <Header title="Blocked Users" isLoading={isLoading} />
       <div className="mx-auto max-w-2xl px-4 pb-8 pt-20 sm:px-6">
       {alert && (
@@ -122,7 +122,7 @@ export default function Page() {
         </p>
       </div>
       {!isLoading && blockedUsers.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[#8C8C8C]">
+        <p className="py-8 text-center text-sm text-ink-3">
           You haven&apos;t blocked anyone.
         </p>
       ) : (
@@ -130,7 +130,7 @@ export default function Page() {
           {blockedUsers.map((user) => (
             <div
               key={user.id}
-              className="flex items-center justify-between gap-3 rounded-[20px] border border-black/6 bg-white px-4 py-3"
+              className="flex items-center justify-between gap-3 rounded-[20px] border border-edge bg-surface px-4 py-3"
             >
               <div className="flex items-center gap-3">
                 <div className="relative rounded-[14px] bg-[#FDEEEE] p-2.5">
@@ -152,10 +152,10 @@ export default function Page() {
                   )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-[#3D3D3D]">
+                  <p className="text-sm font-medium text-ink">
                     @{user.username}
                   </p>
-                  <p className="text-xs text-[#6B6B6B]">
+                  <p className="text-xs text-ink-2">
                     This user is currently blocked.
                   </p>
                 </div>

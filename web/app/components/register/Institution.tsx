@@ -16,13 +16,13 @@ export default function Institution({
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
       <div className="flex flex-1 flex-col justify-center">
         <div>
-          <h4 className="font-medium text-[#202020]">INSTITUTION NAME</h4>
+          <h4 className="font-medium text-ink">INSTITUTION NAME</h4>
           <input
             type="text"
             value={institution}
             onChange={(e) => setInstitution(e.target.value)}
             placeholder="e.g. Copperbelt University"
-            className="mt-2 w-full rounded-2xl border border-black/10 bg-[#FAFAFA] px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
+            className="mt-2 w-full rounded-2xl border border-edge-mid bg-surface-high px-4 py-3.5 text-[16px] transition-all duration-200 focus:border-[#E1761F] focus:bg-surface focus:outline-none focus:ring-2 focus:ring-[#E1761F]/15"
             required
           />
         </div>

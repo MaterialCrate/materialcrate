@@ -40,7 +40,7 @@ export default function SavedFileCard({
   isRemoving?: boolean;
 }) {
   return (
-    <div className="rounded-3xl border border-black/8 bg-[#FBFBFB] p-3">
+    <div className="rounded-3xl border border-edge-mid bg-surface p-3">
       <div className="flex gap-2">
         <button
           aria-label="Saved document"
@@ -72,10 +72,10 @@ export default function SavedFileCard({
         <div className="w-full flex flex-col justify-between">
           <div className="flex items-start justify-between gap-0.5">
             <div>
-              <p className="line-clamp-2 text-sm font-medium text-[#202020]">
+              <p className="line-clamp-2 text-sm font-medium text-ink">
                 {savedPost.post.title}
               </p>
-              <p className="mt-1 text-xs text-[#767676]">
+              <p className="mt-1 text-xs text-ink-2">
                 {savedPost.post.categories.join(", ")}
                 {savedPost.post.year && ` • ${savedPost.post.year}`}
               </p>
@@ -87,18 +87,18 @@ export default function SavedFileCard({
               disabled={isRemoving}
               className={`transition-opacity hover:opacity-70 active:opacity-40 ${isRemoving && "opacity-50"}`}
             >
-              <CloseCircle size={24} color="#9e9e9e" />
+              <CloseCircle size={24} color="var(--ink-3)" />
             </button>
           </div>
           <div className="w-full space-y-1">
             <div className="flex justify-end">
-              <span className="text-xs text-[#8C8C8C]">Attachment saved</span>
+              <span className="text-xs text-ink-3">Attachment saved</span>
             </div>
             <div className="flex items-center justify-end gap-3">
               {onUseInHub ? (
                 <button
                   type="button"
-                  className="text-sm font-medium text-[#7f6d5a] transition-opacity hover:opacity-70 active:opacity-50"
+                  className="text-sm font-medium text-ink-2 transition-opacity hover:opacity-70 active:opacity-50"
                   onClick={() => onUseInHub(savedPost)}
                 >
                   Use in Hub
@@ -106,11 +106,11 @@ export default function SavedFileCard({
               ) : null}
               <button
                 type="button"
-                className="inline-flex items-center gap-1 text-sm font-medium text-[#202020] transition-opacity hover:opacity-70 active:opacity-50"
+                className="inline-flex items-center gap-1 text-sm font-medium text-ink transition-opacity hover:opacity-70 active:opacity-50"
                 onClick={() => onOpenPost(savedPost.postId)}
               >
                 View full post
-                <ArrowRight size={16} color="#202020" />
+                <ArrowRight size={16} color="var(--ink)" />
               </button>
             </div>
           </div>

@@ -24,7 +24,7 @@ export default function ActionButton({
         focus-visible:ring-[#E1761F]/35 focus-visible:ring-offset-2
         ${
           disabled
-            ? "cursor-not-allowed bg-[#E5E5E5] text-[#818181] shadow-none"
+            ? "cursor-not-allowed bg-surface-high text-ink-3 shadow-none"
             : "cursor-pointer bg-[#E1761F] text-white hover:bg-[#c86518] hover:shadow-[0_10px_24px_rgba(225,118,31,0.18)] active:scale-[0.98]"
         }
         ${className}

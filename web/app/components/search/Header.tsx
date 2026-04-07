@@ -26,7 +26,7 @@ export default function Header({
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-30 border-b border-black/20 bg-white backdrop-blur-md transition-transform duration-300 ease-out ${
+      className={`fixed top-0 left-0 right-0 z-30 border-b border-edge-strong bg-surface backdrop-blur-md transition-transform duration-300 ease-out ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       } ${!query ? "pb-6" : ""}`}
     >
@@ -38,7 +38,7 @@ export default function Header({
             onClick={() => router.back()}
             className="transition-opacity hover:opacity-60 active:opacity-40"
           >
-            <ArrowLeft2 size={20} color="#202020" />
+            <ArrowLeft2 size={20} color="var(--ink)" />
           </button>
 
           <div className="w-full rounded-[28px] border border-[#f0dfc8] bg-[#fffaf4]/90 px-4 py-3 shadow-[0_24px_60px_rgba(92,57,16,0.08)]">
@@ -48,7 +48,7 @@ export default function Header({
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
                 placeholder="Find users and documents..."
-                className="w-full bg-transparent text-[15px] text-[#20160b] outline-none placeholder:text-[#9f8f7f]"
+                className="w-full bg-transparent text-[15px] text-ink outline-none placeholder:text-ink-3"
               />
               <button type="button" onClick={search} aria-label="Search">
                 <SearchNormal1 size={18} color="#c56f1b" />
@@ -61,7 +61,7 @@ export default function Header({
           <div className="relative mt-4 grid grid-cols-2 gap-2">
             <span
               aria-hidden="true"
-              className={`pointer-events-none absolute bottom-0 h-0.75 w-[calc(50%-0.5rem)]  rounded-full bg-[#20160b] transition-transform duration-300 ease-out ${
+              className={`pointer-events-none absolute bottom-0 h-0.75 w-[calc(50%-0.5rem)]  rounded-full bg-ink transition-transform duration-300 ease-out ${
                 activeTab === "documents"
                   ? "translate-x-4"
                   : "translate-x-[calc(100%+0.5rem)]"
@@ -73,7 +73,7 @@ export default function Header({
                   key={tab}
                   type="button"
                   onClick={() => onTabChange(tab)}
-                  className="relative px-4 py-3 text-sm font-medium capitalize text-[#6d5a46] transition-colors duration-300"
+                  className="relative px-4 py-3 text-sm font-medium capitalize text-ink-2 transition-colors duration-300"
                 >
                   <span>{tab}</span>
                 </button>
