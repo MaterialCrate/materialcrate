@@ -5,8 +5,8 @@ const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
 const SEARCH_QUERY = `
-  query Search($query: String!, $limit: Int!) {
-    searchUsers(query: $query, limit: $limit) {
+  query Search($query: String!, $limit: Int!, $offset: Int!) {
+    searchUsers(query: $query, limit: $limit, offset: $offset) {
       id
       username
       displayName
@@ -18,7 +18,7 @@ const SEARCH_QUERY = `
       institution
       program
     }
-    searchPosts(query: $query, limit: $limit) {
+    searchPosts(query: $query, limit: $limit, offset: $offset) {
       id
       fileUrl
       thumbnailUrl
@@ -44,7 +44,7 @@ const SEARCH_QUERY = `
 `;
 
 const AUTHENTICATED_SEARCH_QUERY = `
-  query Search($query: String!, $limit: Int!) {
+  query Search($query: String!, $limit: Int!, $offset: Int!) {
     me {
       blockedUserIds
       following {
@@ -54,7 +54,7 @@ const AUTHENTICATED_SEARCH_QUERY = `
         username
       }
     }
-    searchUsers(query: $query, limit: $limit) {
+    searchUsers(query: $query, limit: $limit, offset: $offset) {
       id
       username
       displayName
@@ -66,7 +66,7 @@ const AUTHENTICATED_SEARCH_QUERY = `
       institution
       program
     }
-    searchPosts(query: $query, limit: $limit) {
+    searchPosts(query: $query, limit: $limit, offset: $offset) {
       id
       fileUrl
       thumbnailUrl
@@ -101,12 +101,14 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
   const limitInput = Number.parseInt(searchParams.get("limit") || "", 10);
+  const offsetInput = Number.parseInt(searchParams.get("offset") || "0", 10);
   const limit = Number.isFinite(limitInput)
     ? Math.max(1, Math.min(limitInput, 25))
     : 12;
+  const offset = Number.isFinite(offsetInput) ? Math.max(0, offsetInput) : 0;
 
   if (!query) {
-    return NextResponse.json({ users: [], documents: [] });
+    return NextResponse.json({ users: [], documents: [], hasMore: false });
   }
 
   const cookieStore = await cookies();
@@ -120,10 +122,7 @@ export async function GET(request: Request) {
     },
     body: JSON.stringify({
       query: token ? AUTHENTICATED_SEARCH_QUERY : SEARCH_QUERY,
-      variables: {
-        query,
-        limit,
-      },
+      variables: { query, limit, offset },
     }),
   });
 
@@ -165,7 +164,7 @@ export async function GET(request: Request) {
     ).filter(Boolean),
   );
 
-  if (token && query.length >= 2) {
+  if (token && query.length >= 2 && offset === 0) {
     await fetch(GRAPHQL_ENDPOINT, {
       method: "POST",
       headers: {
@@ -187,11 +186,14 @@ export async function GET(request: Request) {
     }).catch(() => null);
   }
 
-  const documents = (
-    Array.isArray(graphqlBody?.data?.searchPosts)
-      ? graphqlBody.data.searchPosts
-      : []
-  ).map((post: Record<string, unknown>) => {
+  const rawPosts = Array.isArray(graphqlBody?.data?.searchPosts)
+    ? graphqlBody.data.searchPosts
+    : [];
+  const rawUsers = Array.isArray(graphqlBody?.data?.searchUsers)
+    ? graphqlBody.data.searchUsers
+    : [];
+
+  const documents = rawPosts.map((post: Record<string, unknown>) => {
     const author = (post.author ?? null) as {
       id?: string | null;
       username?: string | null;
@@ -213,7 +215,8 @@ export async function GET(request: Request) {
   });
 
   return NextResponse.json({
-    users: graphqlBody?.data?.searchUsers ?? [],
+    users: rawUsers,
     documents,
+    hasMore: rawPosts.length === limit || rawUsers.length === limit,
   });
 }

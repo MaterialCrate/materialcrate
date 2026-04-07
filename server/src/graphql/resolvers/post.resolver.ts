@@ -1012,7 +1012,7 @@ export const PostResolver = {
     },
     searchPosts: async (
       _: unknown,
-      { query, limit = 12 }: { query: string; limit?: number },
+      { query, limit = 12, offset = 0 }: { query: string; limit?: number; offset?: number },
       ctx: GraphQLContext,
     ) => {
       const viewerId = ctx.user?.sub;
@@ -1023,6 +1023,7 @@ export const PostResolver = {
       }
 
       const safeLimit = Math.max(1, Math.min(limit, 25));
+      const safeOffset = Math.max(0, offset);
       const numericYear = Number.parseInt(normalizedQuery, 10);
       const [blockedIds, privateIds] = await Promise.all([
         getInaccessibleAuthorIds(viewerId),
@@ -1089,6 +1090,7 @@ export const PostResolver = {
           createdAt: "desc",
         },
         take: safeLimit,
+        skip: safeOffset,
       });
 
       return posts.map((post) => mapPostForGraphQL(post, viewerId));

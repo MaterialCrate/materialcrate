@@ -459,7 +459,7 @@ export const UserResolver = {
 
     searchUsers: async (
       _: unknown,
-      { query, limit = 12 }: { query: string; limit?: number },
+      { query, limit = 12, offset = 0 }: { query: string; limit?: number; offset?: number },
       ctx: any,
     ) => {
       const normalizedQuery = String(query || "").trim();
@@ -468,6 +468,7 @@ export const UserResolver = {
       }
 
       const safeLimit = Math.max(1, Math.min(limit, 25));
+      const safeOffset = Math.max(0, offset);
       const viewerId = ctx.user?.sub;
 
       return (prisma as any).user.findMany({
@@ -512,6 +513,7 @@ export const UserResolver = {
         },
         orderBy: [{ createdAt: "desc" }],
         take: safeLimit,
+        skip: safeOffset,
       });
     },
 

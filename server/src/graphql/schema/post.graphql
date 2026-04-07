@@ -60,7 +60,7 @@ extend type Query {
   post(id: ID!): Post
   postVersions(postId: ID!): [PostVersion!]!
   posts(authorUsername: String, limit: Int = 50, offset: Int = 0): [Post!]!
-  searchPosts(query: String!, limit: Int = 12): [Post!]!
+  searchPosts(query: String!, limit: Int = 12, offset: Int = 0): [Post!]!
   comments(
     postId: ID!
     parentCommentId: ID

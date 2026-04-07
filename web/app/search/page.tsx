@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Post, {
   type HomePost,
@@ -12,7 +12,7 @@ import UserCard, { type SearchUser } from "@/app/components/search/UserCard";
 import LoadingBar from "../components/LoadingBar";
 import Alert from "../components/Alert";
 
-const RESULT_LIMIT = 12;
+const PAGE_SIZE = 12;
 
 export default function SearchPage() {
   const router = useRouter();
@@ -27,47 +27,71 @@ export default function SearchPage() {
   const [users, setUsers] = useState<SearchUser[]>([]);
   const [documents, setDocuments] = useState<HomePost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState("");
   const [isPostOptionsDrawerOpen, setIsPostOptionsDrawerOpen] = useState(false);
   const [activeOptionsPost, setActiveOptionsPost] = useState<HomePost | null>(null);
   const [activeOptionsAnchor, setActiveOptionsAnchor] =
     useState<PostOptionsAnchor | null>(null);
 
+  // track how many items are loaded per tab
+  const offsetRef = useRef({ users: 0, documents: 0 });
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
   const deferredQuery = useDeferredValue(query.trim());
 
+  // sync URL → state
   useEffect(() => {
     const nextQuery = searchParams.get("q")?.trim() ?? "";
     const nextTab = searchParams.get("tab") === "users" ? "users" : "documents";
-
-    setQuery((current) => (current === nextQuery ? current : nextQuery));
-    setActiveTab((current) => (current === nextTab ? current : nextTab));
+    setQuery((c) => (c === nextQuery ? c : nextQuery));
+    setActiveTab((c) => (c === nextTab ? c : nextTab));
   }, [searchParams]);
 
+  // sync state → URL
   useEffect(() => {
     const nextParams = new URLSearchParams(searchParamsString);
-
-    if (query.trim()) {
-      nextParams.set("q", query.trim());
-    } else {
-      nextParams.delete("q");
-    }
-
+    if (query.trim()) nextParams.set("q", query.trim());
+    else nextParams.delete("q");
     nextParams.set("tab", activeTab);
-
-    const nextQueryString = nextParams.toString();
-    router.replace(nextQueryString ? `/search?${nextQueryString}` : "/search", {
-      scroll: false,
-    });
+    const qs = nextParams.toString();
+    router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
   }, [activeTab, query, router, searchParamsString]);
 
+  const fetchResults = useCallback(
+    async (
+      q: string,
+      tab: SearchTab,
+      offset: number,
+      signal: AbortSignal,
+    ): Promise<{ users: SearchUser[]; documents: HomePost[]; hasMore: boolean }> => {
+      const response = await fetch(
+        `/api/search?q=${encodeURIComponent(q)}&limit=${PAGE_SIZE}&offset=${offset}`,
+        { cache: "no-store", signal },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body?.error || "Failed to search");
+      return {
+        users: Array.isArray(body?.users) ? body.users : [],
+        documents: Array.isArray(body?.documents) ? body.documents : [],
+        hasMore: Boolean(body?.hasMore),
+      };
+    },
+    [],
+  );
+
+  // initial / query-change fetch
   useEffect(() => {
     const normalizedQuery = deferredQuery.trim();
 
     if (!normalizedQuery) {
       setUsers([]);
       setDocuments([]);
+      setHasMore(false);
       setError("");
       setIsLoading(false);
+      offsetRef.current = { users: 0, documents: 0 };
       return;
     }
 
@@ -76,35 +100,29 @@ export default function SearchPage() {
       try {
         setIsLoading(true);
         setError("");
+        offsetRef.current = { users: 0, documents: 0 };
 
-        const response = await fetch(
-          `/api/search?q=${encodeURIComponent(normalizedQuery)}&limit=${RESULT_LIMIT}`,
-          {
-            cache: "no-store",
-            signal: controller.signal,
-          },
-        );
-        const body = await response.json().catch(() => ({}));
-
-        if (!response.ok) {
-          throw new Error(body?.error || "Failed to search");
-        }
+        const result = await fetchResults(normalizedQuery, activeTab, 0, controller.signal);
 
         if (!controller.signal.aborted) {
-          setUsers(Array.isArray(body?.users) ? body.users : []);
-          setDocuments(Array.isArray(body?.documents) ? body.documents : []);
+          setUsers(result.users);
+          setDocuments(result.documents);
+          setHasMore(result.hasMore);
+          offsetRef.current = {
+            users: result.users.length,
+            documents: result.documents.length,
+          };
         }
       } catch (searchError) {
         if (!controller.signal.aborted) {
           setUsers([]);
           setDocuments([]);
+          setHasMore(false);
           setError("Failed to search");
           console.error("Error during search:", searchError);
         }
       } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     }, 220);
 
@@ -112,10 +130,101 @@ export default function SearchPage() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [deferredQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deferredQuery, fetchResults]);
+
+  // re-fetch when tab switches (reset to offset 0)
+  useEffect(() => {
+    const normalizedQuery = deferredQuery.trim();
+    if (!normalizedQuery) return;
+
+    const controller = new AbortController();
+
+    void (async () => {
+      try {
+        setIsLoading(true);
+        setError("");
+        offsetRef.current = { users: 0, documents: 0 };
+
+        const result = await fetchResults(normalizedQuery, activeTab, 0, controller.signal);
+
+        if (!controller.signal.aborted) {
+          setUsers(result.users);
+          setDocuments(result.documents);
+          setHasMore(result.hasMore);
+          offsetRef.current = {
+            users: result.users.length,
+            documents: result.documents.length,
+          };
+        }
+      } catch {
+        if (!controller.signal.aborted) setError("Failed to search");
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
+    })();
+
+    return () => controller.abort();
+    // only runs when tab changes, not query (query effect above handles that)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // load more
+  const loadMore = useCallback(async () => {
+    const normalizedQuery = deferredQuery.trim();
+    if (!normalizedQuery || isFetchingMore || !hasMore) return;
+
+    const offset =
+      activeTab === "users"
+        ? offsetRef.current.users
+        : offsetRef.current.documents;
+
+    setIsFetchingMore(true);
+    try {
+      const controller = new AbortController();
+      const result = await fetchResults(normalizedQuery, activeTab, offset, controller.signal);
+
+      setUsers((prev) =>
+        activeTab === "users" ? [...prev, ...result.users] : prev,
+      );
+      setDocuments((prev) =>
+        activeTab === "documents" ? [...prev, ...result.documents] : prev,
+      );
+      setHasMore(result.hasMore);
+      offsetRef.current = {
+        users: activeTab === "users"
+          ? offsetRef.current.users + result.users.length
+          : offsetRef.current.users,
+        documents: activeTab === "documents"
+          ? offsetRef.current.documents + result.documents.length
+          : offsetRef.current.documents,
+      };
+    } catch {
+      // silently fail — user can scroll again to retry
+    } finally {
+      setIsFetchingMore(false);
+    }
+  }, [activeTab, deferredQuery, fetchResults, hasMore, isFetchingMore]);
+
+  // IntersectionObserver sentinel
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) void loadMore();
+      },
+      { rootMargin: "200px" },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const visibleResults = activeTab === "users" ? users : documents;
   const hasQuery = query.trim().length > 0;
+
   const handlePostUpdated = (updatedPost: HomePost) => {
     const updatedAuthorUsername =
       updatedPost.author?.username?.trim().toLowerCase() || "";
@@ -143,15 +252,18 @@ export default function SearchPage() {
       current?.id === updatedPost.id ? { ...current, ...updatedPost } : current,
     );
   };
+
   const handlePostDeleted = (deletedPostId: string) => {
-    setDocuments((current) => current.filter((post) => post.id !== deletedPostId));
+    setDocuments((current) =>
+      current.filter((post) => post.id !== deletedPostId),
+    );
     setActiveOptionsPost((current) =>
       current?.id === deletedPostId ? null : current,
     );
   };
 
   return (
-    <div className="min-h-dvh bg-page pb-4 pt-34">
+    <div className="min-h-dvh bg-page pb-16 pt-34">
       {error && <Alert type="error" message={error} />}
       <OptionsDrawer
         isOpen={isPostOptionsDrawerOpen}
@@ -173,28 +285,20 @@ export default function SearchPage() {
           onTabChange={setActiveTab}
           search={() => {
             const nextParams = new URLSearchParams(searchParamsString);
-
-            if (query.trim()) {
-              nextParams.set("q", query.trim());
-            } else {
-              nextParams.delete("q");
-            }
-
+            if (query.trim()) nextParams.set("q", query.trim());
+            else nextParams.delete("q");
             nextParams.set("tab", activeTab);
-
-            const nextQueryString = nextParams.toString();
-            router.push(
-              nextQueryString ? `/search?${nextQueryString}` : "/search",
-            );
+            const qs = nextParams.toString();
+            router.push(qs ? `/search?${qs}` : "/search");
           }}
         />
-        {isLoading && <LoadingBar />}
+        {(isLoading || isFetchingMore) && <LoadingBar />}
       </>
 
       <main className="mx-auto max-w-2xl">
-        {visibleResults.length === 0 && hasQuery ? (
+        {visibleResults.length === 0 && hasQuery && !isLoading ? (
           <section>
-            <p className="text-sm leading-6 text-ink-2 px-4 ">
+            <p className="px-4 text-sm leading-6 text-ink-2">
               Nothing matched &quot;{query.trim()}&quot;. Try a broader keyword
               or switch tabs.
             </p>
@@ -216,9 +320,8 @@ export default function SearchPage() {
         ) : (
           <section>
             {documents.map((document, index) => (
-              <div key={index}>
+              <div key={document.id}>
                 <Post
-                  key={document.id}
                   post={document}
                   onOptionsClick={(selectedDocument, anchor) => {
                     setActiveOptionsPost(selectedDocument);
@@ -238,12 +341,17 @@ export default function SearchPage() {
                 />
                 {index < documents.length - 1 && (
                   <div className="px-6">
-                    <div className="h-px w-full bg-black/20 mt-4" />
+                    <div className="mt-4 h-px w-full bg-edge-strong" />
                   </div>
                 )}
               </div>
             ))}
           </section>
+        )}
+
+        {/* Infinite scroll sentinel */}
+        {hasQuery && hasMore && !isLoading && (
+          <div ref={sentinelRef} className="h-16" />
         )}
       </main>
     </div>

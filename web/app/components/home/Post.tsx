@@ -613,11 +613,11 @@ export default function Post({
               title={post.title}
             />
             <div className="min-w-0 flex-1 space-y-2">
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {post.categories.map((category) => (
                   <span
                     key={category}
-                    className="rounded-full bg-doc-card py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-2"
+                    className="rounded-full bg-doc-card text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-2"
                   >
                     {category}
                   </span>
