@@ -37,6 +37,7 @@ const WORKSPACE_QUERY = `
           likeCount
           commentCount
           viewerHasLiked
+      viewCount
           createdAt
           author {
             id
@@ -76,6 +77,7 @@ const SAVE_POST_MUTATION = `
         likeCount
         commentCount
         viewerHasLiked
+      viewCount
         createdAt
         author {
           id

@@ -12,6 +12,7 @@ import {
   Cpu,
   Location,
   Send2,
+  Eye,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import { subscribeToPostActivity } from "@/app/lib/post-activity-realtime";
@@ -34,6 +35,7 @@ export type HomePost = {
   commentsDisabled?: boolean;
   likeCount?: number;
   commentCount?: number;
+  viewCount?: number;
   viewerHasLiked?: boolean;
   isAuthorFollowedByCurrentUser?: boolean;
   isAuthorMutedByCurrentUser?: boolean;
@@ -667,6 +669,12 @@ export default function Post({
               <Messages2 size={18} color="var(--ink-3)" />
               <span>{commentCount}</span>
             </button>
+            {(post.viewCount ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-2 text-xs font-semibold text-ink-2">
+                <Eye size={18} color="var(--ink-3)" />
+                <span>{post.viewCount}</span>
+              </span>
+            )}
             <button
               aria-label="Archive"
               type="button"

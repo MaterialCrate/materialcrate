@@ -35,6 +35,7 @@ const UPDATE_POST_MUTATION = `
       likeCount
       commentCount
       viewerHasLiked
+      viewCount
       author {
         id
         displayName

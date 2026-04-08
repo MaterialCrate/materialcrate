@@ -19,6 +19,7 @@ const POSTS_QUERY = `
       likeCount
       commentCount
       viewerHasLiked
+      viewCount
       createdAt
       author {
         id
@@ -57,6 +58,7 @@ const AUTHENTICATED_POSTS_QUERY = `
       likeCount
       commentCount
       viewerHasLiked
+      viewCount
       createdAt
       author {
         id

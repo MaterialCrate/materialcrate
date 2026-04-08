@@ -12,6 +12,7 @@ type Post {
   commentsDisabled: Boolean!
   comments(limit: Int = 20, offset: Int = 0): [Comment!]!
   viewerHasLiked: Boolean!
+  viewCount: Int!
   pinned: Boolean!
   createdAt: String!
 }

@@ -10,6 +10,7 @@ const TOGGLE_POST_LIKE_MUTATION = `
       id
       likeCount
       viewerHasLiked
+      viewCount
     }
   }
 `;

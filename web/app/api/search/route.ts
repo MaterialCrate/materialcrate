@@ -30,6 +30,7 @@ const SEARCH_QUERY = `
       likeCount
       commentCount
       viewerHasLiked
+      viewCount
       createdAt
       author {
         id
@@ -78,6 +79,7 @@ const AUTHENTICATED_SEARCH_QUERY = `
       likeCount
       commentCount
       viewerHasLiked
+      viewCount
       createdAt
       author {
         id

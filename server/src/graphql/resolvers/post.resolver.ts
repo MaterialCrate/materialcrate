@@ -324,6 +324,7 @@ const mapPostForGraphQL = (post: any, viewerId?: string) => ({
   likeCount: post?._count?.likes ?? 0,
   commentCount: post?._count?.comments ?? 0,
   viewerHasLiked: viewerId ? (post?.likes?.length ?? 0) > 0 : false,
+  viewCount: post?.viewCount ?? 0,
 });
 
 type FeedViewerSignals = {
@@ -1609,9 +1610,37 @@ export const PostResolver = {
         throw new Error("Not authenticated");
       }
 
+      // Check for existing LONG_VIEW today BEFORE creating the new record
+      let isFirstLongViewToday = false;
+      if (input.interactionType === "LONG_VIEW" && input.postId?.trim()) {
+        const postId = input.postId.trim();
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+
+        const existingToday = await (prisma as any).feedInteraction.findFirst({
+          where: {
+            userId: viewerId,
+            postId,
+            interactionType: "LONG_VIEW",
+            createdAt: { gte: todayStart },
+          },
+          select: { id: true },
+        });
+
+        isFirstLongViewToday = !existingToday;
+      }
+
       const result = await recordFeedInteraction(viewerId, input);
+
       if (input.interactionType === "LONG_VIEW") {
         checkAchievements(viewerId, "document_viewed_long").catch(() => null);
+
+        if (isFirstLongViewToday && input.postId?.trim()) {
+          await (prisma as any).post.update({
+            where: { id: input.postId.trim() },
+            data: { viewCount: { increment: 1 } },
+          });
+        }
       }
       if (input.interactionType === "SHARE") {
         checkAchievements(viewerId, "post_shared").catch(() => null);

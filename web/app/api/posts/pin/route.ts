@@ -22,6 +22,7 @@ const PIN_POST_MUTATION = `
       likeCount
       commentCount
       viewerHasLiked
+      viewCount
       author {
         id
         displayName

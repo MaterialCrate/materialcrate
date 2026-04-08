@@ -32,7 +32,6 @@ model User {
   linkedSEOs    String[] @default([])
   uninterestedPostIds String[] @default([])
   blockedUserIds String[] @default([])
-  /// Allowed values: free, pro, premium
   subscriptionPlan             String   @default("free")
   subscriptionStartedAt        DateTime @default(now())
   subscriptionEndsAt           DateTime?
@@ -150,6 +149,7 @@ model Post {
   categories String[]
   description String?
   year       Int?
+  viewCount  Int      @default(0)
   authorId   String?
   author     User?    @relation("UserPosts", fields: [authorId], references: [id], onDelete: SetNull)
   versions   PostVersion[]
