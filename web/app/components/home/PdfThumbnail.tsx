@@ -28,6 +28,9 @@ export default function PdfThumbnail({
   const proxiedFileUrl = postId
     ? `/api/posts/file?postId=${encodeURIComponent(postId)}`
     : "";
+  const proxiedThumbnailUrl = postId
+    ? `/api/posts/thumbnail?postId=${encodeURIComponent(postId)}`
+    : "";
   const canUseStoredThumbnail = Boolean(thumbnailUrl && !imageFailed);
 
   useEffect(() => {
@@ -116,9 +119,9 @@ export default function PdfThumbnail({
 
   return (
     <div className="relative h-40 w-28 shrink-0 overflow-hidden rounded-sm bg-[#E8E8E8]">
-      {canUseStoredThumbnail && thumbnailUrl ? (
+      {canUseStoredThumbnail && proxiedThumbnailUrl ? (
         <Image
-          src={thumbnailUrl}
+          src={proxiedThumbnailUrl}
           alt={`${title} preview`}
           className="block h-full w-full object-cover object-top"
           width={112}

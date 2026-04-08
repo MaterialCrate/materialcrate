@@ -14,7 +14,6 @@ export const getBaseUrl = () => {
 
 export const getPublicRoutes = () => [
   "/",
-  "/feed",
   "/login",
   "/register",
   "/settings/legal/privacy-policy",

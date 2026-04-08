@@ -28,7 +28,7 @@ export default function Header({
     <div
       className={`fixed top-0 left-0 right-0 z-30 border-b border-edge-strong bg-surface backdrop-blur-md transition-transform duration-300 ease-out ${
         isVisible ? "translate-y-0" : "-translate-y-full"
-      } ${!query ? "pb-6" : ""}`}
+      } ${!query && "pb-6"}`}
     >
       <div className="mx-auto max-w-2xl px-5 pt-6">
         <div className="flex items-center gap-3">

@@ -165,11 +165,9 @@ export default function SearchPage() {
     })();
 
     return () => controller.abort();
-    // only runs when tab changes, not query (query effect above handles that)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
-  // load more
   const loadMore = useCallback(async () => {
     const normalizedQuery = deferredQuery.trim();
     if (!normalizedQuery || isFetchingMore || !hasMore) return;
@@ -206,7 +204,6 @@ export default function SearchPage() {
     }
   }, [activeTab, deferredQuery, fetchResults, hasMore, isFetchingMore]);
 
-  // IntersectionObserver sentinel
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
