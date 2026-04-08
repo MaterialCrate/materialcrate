@@ -181,6 +181,20 @@ export default function Navbar() {
             );
           })}
         </ul>
+        {!isLoading && !user && (
+          <div className="px-3 pb-6">
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="cursor-pointer w-full rounded-xl bg-[#131212] px-3 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#2A2A2A] active:scale-[0.97]"
+            >
+              <span className="hidden xl:inline">Log in</span>
+              <span className="xl:hidden">
+                <Profile size={24} color="white" variant="Bold" />
+              </span>
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

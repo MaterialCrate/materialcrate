@@ -5,6 +5,7 @@ import useScrollVisibility from "../useScrollVisibility";
 import { SearchNormal1 } from "iconsax-reactjs";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/lib/auth-client";
 
 interface HeaderProps {
   forceVisible?: boolean;
@@ -18,6 +19,8 @@ export default function Header({
   const isScrollVisible = useScrollVisibility();
   const isVisible = forceVisible || isScrollVisible;
   const router = useRouter();
+  const { user, isLoading: authLoading } = useAuth();
+  const showLoginButton = !authLoading && !user;
 
   return (
     <header
@@ -39,14 +42,25 @@ export default function Header({
             height={120}
           />
         </button>
-        <button
-          type="button"
-          aria-label="search"
-          onClick={() => router.push("/search")}
-          className="cursor-pointer rounded-full p-2 transition-colors duration-200 hover:bg-black/5 active:bg-black/10"
-        >
-          <SearchNormal1 size={22} color="#959595" />
-        </button>
+        <div className="flex items-center gap-2">
+          {showLoginButton && (
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="cursor-pointer rounded-full bg-[#131212] px-4 py-1.5 text-sm font-medium text-white transition-all duration-200 hover:bg-[#2A2A2A] active:scale-95"
+            >
+              Log in
+            </button>
+          )}
+          <button
+            type="button"
+            aria-label="search"
+            onClick={() => router.push("/search")}
+            className="cursor-pointer rounded-full p-2 transition-colors duration-200 hover:bg-black/5 active:bg-black/10"
+          >
+            <SearchNormal1 size={22} color="#959595" />
+          </button>
+        </div>
       </div>
       {showLoadingBar && (
         <div className="h-0.75 w-full overflow-hidden bg-[#FFF3E7]">
