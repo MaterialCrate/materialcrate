@@ -343,6 +343,17 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {/* Quick links */}
+        <div className="flex gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => router.push("/admin/payouts")}
+            className="rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 transition-colors"
+          >
+            Payout Requests →
+          </button>
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-2">
           <button

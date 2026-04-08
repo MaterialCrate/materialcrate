@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import {
   ArrowRight2,
   Brush2,
+  Coin1,
   Logout,
   Notification,
   SecuritySafe,
@@ -17,6 +18,20 @@ import { refreshAuth } from "@/app/lib/auth-client";
 import Alert from "../components/Alert";
 
 const settingPages = [
+  {
+    eyebrow: "Earn",
+    title: "Tokens & Rewards",
+    description: "Track tokens earned from views and redeem for perks or cash.",
+    icon: Coin1,
+    buttons: [
+      {
+        key: "tokens",
+        text: "Tokens & Rewards",
+        note: "Balance, earn rate, redeem for subscriptions or cash",
+        href: "/tokens",
+      },
+    ],
+  },
   {
     eyebrow: "Access",
     title: "Account",

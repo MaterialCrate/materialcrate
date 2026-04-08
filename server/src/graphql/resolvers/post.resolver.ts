@@ -1636,10 +1636,39 @@ export const PostResolver = {
         checkAchievements(viewerId, "document_viewed_long").catch(() => null);
 
         if (isFirstLongViewToday && input.postId?.trim()) {
-          await (prisma as any).post.update({
-            where: { id: input.postId.trim() },
+          const postId = input.postId.trim();
+
+          const updatedPost = await (prisma as any).post.update({
+            where: { id: postId },
             data: { viewCount: { increment: 1 } },
+            select: { viewCount: true, authorId: true },
           });
+
+          // Award 1 token to the author for every view past the 1,000-view threshold
+          const VIEW_THRESHOLD = 1000;
+          if (
+            updatedPost?.authorId &&
+            updatedPost.viewCount > VIEW_THRESHOLD
+          ) {
+            await (prisma as any).$transaction([
+              (prisma as any).user.update({
+                where: { id: updatedPost.authorId },
+                data: {
+                  tokenBalance: { increment: 1 },
+                  tokensEarned: { increment: 1 },
+                },
+              }),
+              (prisma as any).tokenTransaction.create({
+                data: {
+                  userId: updatedPost.authorId,
+                  type: "VIEW_EARN",
+                  amount: 1,
+                  postId,
+                  description: `Earned from view #${updatedPost.viewCount}`,
+                },
+              }),
+            ]);
+          }
         }
       }
       if (input.interactionType === "SHARE") {

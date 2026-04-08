@@ -624,6 +624,59 @@ export const UserResolver = {
 
       return request?.id ?? null;
     },
+
+    myTokenTransactions: async (
+      _: unknown,
+      { limit = 20, offset = 0 }: { limit?: number; offset?: number },
+      ctx: any,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated");
+
+      const transactions = await (prisma as any).tokenTransaction.findMany({
+        where: { userId: viewerId },
+        orderBy: { createdAt: "desc" },
+        take: Math.min(Number(limit) || 20, 50),
+        skip: Math.max(Number(offset) || 0, 0),
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          description: true,
+          postId: true,
+          createdAt: true,
+        },
+      });
+
+      return transactions.map((t: any) => ({
+        ...t,
+        createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : String(t.createdAt),
+      }));
+    },
+
+    myTokenCashoutRequests: async (_: unknown, _args: unknown, ctx: any) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated");
+
+      const requests = await (prisma as any).tokenCashoutRequest.findMany({
+        where: { userId: viewerId },
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          tokensAmount: true,
+          cashAmount: true,
+          status: true,
+          paypalEmail: true,
+          adminNote: true,
+          createdAt: true,
+        },
+      });
+
+      return requests.map((r: any) => ({
+        ...r,
+        createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
+      }));
+    },
   },
 
   Mutation: {
@@ -2287,6 +2340,188 @@ export const UserResolver = {
 
         throw error;
       }
+    },
+
+    redeemTokensForSubscription: async (
+      _: unknown,
+      { plan }: { plan: string },
+      ctx: any,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated");
+
+      const normalizedPlan = String(plan || "").trim().toLowerCase();
+      if (normalizedPlan !== "pro" && normalizedPlan !== "premium") {
+        throw new Error("Invalid plan. Must be 'pro' or 'premium'.");
+      }
+
+      const COSTS: Record<string, number> = { pro: 3990, premium: 6990 };
+      const cost = COSTS[normalizedPlan];
+
+      const user = await (prisma as any).user.findUnique({
+        where: { id: viewerId },
+        select: { tokenBalance: true, subscriptionPlan: true },
+      });
+
+      if (!user) throw new Error("User not found");
+      if (user.tokenBalance < cost) {
+        throw new Error(`Not enough tokens. You need ${cost} tokens for ${normalizedPlan}.`);
+      }
+
+      // Already on this plan or higher — prevent downgrade/same redemption
+      const planTier: Record<string, number> = { free: 0, pro: 1, premium: 2 };
+      const currentTier = planTier[user.subscriptionPlan] ?? 0;
+      const targetTier = planTier[normalizedPlan] ?? 0;
+      if (currentTier >= targetTier && user.subscriptionPlan !== "free") {
+        throw new Error(`You already have ${user.subscriptionPlan} or a higher plan active.`);
+      }
+
+      const now = new Date();
+      const oneMonthLater = new Date(now);
+      oneMonthLater.setMonth(oneMonthLater.getMonth() + 1);
+
+      await (prisma as any).$transaction([
+        (prisma as any).user.update({
+          where: { id: viewerId },
+          data: {
+            tokenBalance: { decrement: cost },
+            tokensRedeemed: { increment: cost },
+            subscriptionPlan: normalizedPlan,
+            subscriptionStartedAt: now,
+            subscriptionEndsAt: oneMonthLater,
+          },
+        }),
+        (prisma as any).tokenTransaction.create({
+          data: {
+            userId: viewerId,
+            type: normalizedPlan === "pro" ? "REDEEM_PRO" : "REDEEM_PREMIUM",
+            amount: -cost,
+            description: `Redeemed for 1 month ${normalizedPlan.charAt(0).toUpperCase() + normalizedPlan.slice(1)} subscription`,
+          },
+        }),
+      ]);
+
+      return true;
+    },
+
+    requestTokenCashout: async (
+      _: unknown,
+      {
+        tokensAmount,
+        payoutMethod,
+        payoutDetails,
+      }: { tokensAmount: number; payoutMethod: string; payoutDetails: string },
+      ctx: any,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated");
+
+      const MIN_CASHOUT = 5000;
+      const TOKENS_PER_DOLLAR = 1000;
+
+      const VALID_METHODS = ["paypal", "mobile_money", "bank_transfer"];
+      const method = String(payoutMethod || "").trim().toLowerCase();
+      if (!VALID_METHODS.includes(method)) {
+        throw new Error("Invalid payout method.");
+      }
+
+      let parsedDetails: Record<string, unknown>;
+      try {
+        parsedDetails = JSON.parse(payoutDetails);
+        if (!parsedDetails || typeof parsedDetails !== "object" || Array.isArray(parsedDetails)) {
+          throw new Error("Invalid payout details format.");
+        }
+      } catch {
+        throw new Error("Payout details must be valid JSON.");
+      }
+
+      // Validate required fields per method
+      if (method === "paypal") {
+        const email = String(parsedDetails.email || "").trim().toLowerCase();
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          throw new Error("A valid PayPal email is required.");
+        }
+        parsedDetails.email = email;
+      } else if (method === "mobile_money") {
+        if (!String(parsedDetails.phone || "").trim()) {
+          throw new Error("Phone number is required for mobile money.");
+        }
+        if (!String(parsedDetails.provider || "").trim()) {
+          throw new Error("Provider name is required for mobile money (e.g. M-Pesa).");
+        }
+      } else if (method === "bank_transfer") {
+        if (!String(parsedDetails.accountName || "").trim()) {
+          throw new Error("Account name is required for bank transfer.");
+        }
+        if (!String(parsedDetails.accountNumber || "").trim()) {
+          throw new Error("Account number is required for bank transfer.");
+        }
+        if (!String(parsedDetails.bankName || "").trim()) {
+          throw new Error("Bank name is required for bank transfer.");
+        }
+      }
+
+      const amount = Math.floor(Number(tokensAmount));
+      if (!Number.isFinite(amount) || amount < MIN_CASHOUT) {
+        throw new Error(`Minimum cashout is ${MIN_CASHOUT} tokens ($${(MIN_CASHOUT / TOKENS_PER_DOLLAR).toFixed(2)}).`);
+      }
+
+      const user = await (prisma as any).user.findUnique({
+        where: { id: viewerId },
+        select: { tokenBalance: true },
+      });
+
+      if (!user) throw new Error("User not found");
+      if (user.tokenBalance < amount) {
+        throw new Error(`Not enough tokens. You have ${user.tokenBalance} tokens.`);
+      }
+
+      // Block duplicate pending requests
+      const existingPending = await (prisma as any).tokenCashoutRequest.findFirst({
+        where: { userId: viewerId, status: "pending" },
+        select: { id: true },
+      });
+      if (existingPending) {
+        throw new Error("You already have a pending cashout request. Please wait for it to be processed.");
+      }
+
+      const cashAmount = amount / TOKENS_PER_DOLLAR;
+      const methodLabel =
+        method === "paypal"
+          ? `PayPal (${parsedDetails.email})`
+          : method === "mobile_money"
+            ? `Mobile Money – ${parsedDetails.provider} (${parsedDetails.phone})`
+            : `Bank Transfer – ${parsedDetails.bankName}`;
+
+      await (prisma as any).$transaction([
+        (prisma as any).user.update({
+          where: { id: viewerId },
+          data: {
+            tokenBalance: { decrement: amount },
+            tokensRedeemed: { increment: amount },
+          },
+        }),
+        (prisma as any).tokenCashoutRequest.create({
+          data: {
+            userId: viewerId,
+            tokensAmount: amount,
+            cashAmount,
+            payoutMethod: method,
+            payoutDetails: parsedDetails,
+            status: "pending",
+          },
+        }),
+        (prisma as any).tokenTransaction.create({
+          data: {
+            userId: viewerId,
+            type: "REDEEM_CASH",
+            amount: -amount,
+            description: `Cashout request: $${cashAmount.toFixed(2)} via ${methodLabel}`,
+          },
+        }),
+      ]);
+
+      return true;
     },
 
     removeProfilePicture: async (_: unknown, _args: unknown, ctx: any) => {

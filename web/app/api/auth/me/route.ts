@@ -42,6 +42,9 @@ const ME_QUERY = `
       pushNotificationsFollows
       pushNotificationsMentions
       theme
+      tokenBalance
+      tokensEarned
+      tokensRedeemed
     }
   }
 `;
@@ -105,7 +108,7 @@ export async function GET() {
   const primary = await fetchMe(token, ME_QUERY);
   const missingFieldError = Array.isArray(primary.body?.errors)
     ? primary.body.errors.some((error: { message?: string }) =>
-        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus|emailNotificationsAccountActivity|emailNotificationsWeeklySummary|emailNotificationsProductUpdates|emailNotificationsMarketing|pendingSubscriptionPlan|pendingSubscriptionAction|pendingSubscriptionEffectiveAt|institutionVisibility|programVisibility)"/.test(
+        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus|emailNotificationsAccountActivity|emailNotificationsWeeklySummary|emailNotificationsProductUpdates|emailNotificationsMarketing|pendingSubscriptionPlan|pendingSubscriptionAction|pendingSubscriptionEffectiveAt|institutionVisibility|programVisibility|tokenBalance|tokensEarned|tokensRedeemed)"/.test(
           error?.message ?? "",
         ),
       )
@@ -152,6 +155,9 @@ export async function GET() {
         institutionVisibility: "everyone",
         programVisibility: "everyone",
         theme: "light",
+        tokenBalance: 0,
+        tokensEarned: 0,
+        tokensRedeemed: 0,
       },
     });
   }

@@ -38,6 +38,9 @@ type User = {
   pushNotificationsFollows: boolean;
   pushNotificationsMentions: boolean;
   theme: string;
+  tokenBalance: number;
+  tokensEarned: number;
+  tokensRedeemed: number;
 };
 
 type AuthState = {

@@ -49,6 +49,9 @@ model User {
   disabledAt    DateTime?
   disabledUntil DateTime?
   isBot         Boolean  @default(false)
+  tokenBalance     Int      @default(0)
+  tokensEarned     Int      @default(0)
+  tokensRedeemed   Int      @default(0)
   aiTokensUsedDaily    Int       @default(0)
   aiTokensUsedMonthly  Int       @default(0)
   aiTokensDailyResetAt DateTime  @default(now())
@@ -76,12 +79,50 @@ model User {
   notifications Notification[]
   achievements  UserAchievement[]
   reports       Report[]
+  tokenTransactions TokenTransaction[]
+  cashoutRequests   TokenCashoutRequest[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([username])
   @@index([email])
   @@index([pendingEmail])
+}
+
+model TokenTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // VIEW_EARN | REDEEM_PRO | REDEEM_PREMIUM | REDEEM_CASH
+  amount      Int      // positive = earned, negative = spent
+  postId      String?
+  description String?
+  createdAt   DateTime @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([userId, type])
+  @@index([postId])
+}
+
+model TokenCashoutRequest {
+  id            String   @id @default(cuid())
+  userId        String
+  tokensAmount  Int
+  cashAmount    Float
+  status        String   @default("pending") // pending | approved | paid | rejected
+  payoutMethod  String   // paypal | mobile_money | bank_transfer
+  payoutDetails Json     // method-specific fields (email, phone, bank info, etc.)
+  adminNote     String?
+  reviewedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([status])
 }
 
 model Notification {
@@ -159,6 +200,7 @@ model Post {
   savedInArchives ArchiveSavedPost[]
   hubChats   HubChat[]
   feedInteractions FeedInteraction[]
+  tokenTransactions TokenTransaction[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

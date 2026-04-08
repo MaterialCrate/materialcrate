@@ -45,7 +45,30 @@ type User {
   program: String
   programVisibility: String!
   isBot: Boolean!
+  tokenBalance: Int!
+  tokensEarned: Int!
+  tokensRedeemed: Int!
   createdAt: String
+}
+
+type TokenTransaction {
+  id: ID!
+  type: String!
+  amount: Int!
+  description: String
+  postId: ID
+  createdAt: String!
+}
+
+type TokenCashoutRequest {
+  id: ID!
+  tokensAmount: Int!
+  cashAmount: Float!
+  status: String!
+  payoutMethod: String!
+  payoutDetails: String!
+  adminNote: String
+  createdAt: String!
 }
 
 type AuthPayload {
@@ -73,6 +96,8 @@ type Query {
   emailAvailable(email: String!): Boolean!
   pendingFollowRequestId(username: String!): ID
   pendingFollowRequestForActor(actorId: ID!): ID
+  myTokenTransactions(limit: Int = 20, offset: Int = 0): [TokenTransaction!]!
+  myTokenCashoutRequests: [TokenCashoutRequest!]!
 }
 
 type Mutation {
@@ -146,4 +171,6 @@ type Mutation {
     profilePictureMimeType: String
   ): User
   removeProfilePicture: Boolean!
+  redeemTokensForSubscription(plan: String!): Boolean!
+  requestTokenCashout(tokensAmount: Int!, payoutMethod: String!, payoutDetails: String!): Boolean!
 }

@@ -1,4 +1,29 @@
+type AdminCashoutRequest {
+  id: ID!
+  userId: ID!
+  tokensAmount: Int!
+  cashAmount: Float!
+  status: String!
+  payoutMethod: String!
+  payoutDetails: String!
+  adminNote: String
+  reviewedAt: String
+  createdAt: String!
+  user: AdminCashoutUser!
+}
+
+type AdminCashoutUser {
+  id: ID!
+  username: String!
+  displayName: String!
+  email: String!
+  tokenBalance: Int!
+  tokensEarned: Int!
+}
+
 extend type Mutation {
+  adminReviewCashoutRequest(id: ID!, status: String!, adminNote: String): Boolean!
+
   adminCreateBot(
     username: String!
     displayName: String!
@@ -22,4 +47,5 @@ extend type Mutation {
 
 extend type Query {
   adminListBots: [User!]!
+  adminListCashoutRequests(status: String, limit: Int = 50, offset: Int = 0): [AdminCashoutRequest!]!
 }

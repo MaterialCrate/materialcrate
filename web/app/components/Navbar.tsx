@@ -10,6 +10,7 @@ import {
   Archive,
   Profile,
   SearchNormal1,
+  Coin1,
 } from "iconsax-reactjs";
 import type { Icon as IconsaxIcon } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
@@ -115,6 +116,33 @@ export default function Navbar() {
           </button>
         </div>
         <ul className="flex flex-col gap-1 px-2 flex-1">
+          {user && (
+            <li>
+              <Link
+                href="/tokens"
+                className={`flex items-center gap-4 rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:bg-black/5 active:scale-[0.97] ${
+                  pathname === "/tokens"
+                    ? "text-[#E1761F] bg-[#FFF3E7]"
+                    : "text-ink-2 hover:text-ink"
+                }`}
+                aria-current={pathname === "/tokens" ? "page" : undefined}
+              >
+                <Coin1
+                  size={24}
+                  color={pathname === "/tokens" ? "#E1761F" : "#959595"}
+                  variant={pathname === "/tokens" ? "Bold" : "Linear"}
+                />
+                <span className="hidden xl:inline">
+                  Tokens
+                  {(user.tokenBalance ?? 0) > 0 && (
+                    <span className="ml-1.5 rounded-full bg-[#FFF3E7] px-2 py-0.5 text-[10px] font-semibold text-[#E1761F]">
+                      {new Intl.NumberFormat("en-US").format(user.tokenBalance)}
+                    </span>
+                  )}
+                </span>
+              </Link>
+            </li>
+          )}
           {items.map(({ label, href, Icon }) => {
             const isProfileItem = href === "/user";
             const isArchiveItem = href === "/saved";

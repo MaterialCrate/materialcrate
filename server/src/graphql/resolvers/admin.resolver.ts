@@ -43,6 +43,13 @@ function requireAdmin(ctx: AdminContext) {
   }
 }
 
+const toIso = (v: unknown): string | null => {
+  if (!v) return null;
+  if (v instanceof Date) return v.toISOString();
+  const d = new Date(String(v));
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+};
+
 export const AdminResolver = {
   Query: {
     adminListBots: async (_: unknown, __: unknown, ctx: AdminContext) => {
@@ -52,8 +59,126 @@ export const AdminResolver = {
         orderBy: { createdAt: "desc" },
       });
     },
+
+    adminListCashoutRequests: async (
+      _: unknown,
+      {
+        status,
+        limit = 50,
+        offset = 0,
+      }: { status?: string | null; limit?: number; offset?: number },
+      ctx: AdminContext,
+    ) => {
+      requireAdmin(ctx);
+
+      const where: any = {};
+      if (status && status.trim()) {
+        where.status = status.trim().toLowerCase();
+      }
+
+      const requests = await (prisma as any).tokenCashoutRequest.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: Math.min(Number(limit) || 50, 200),
+        skip: Math.max(Number(offset) || 0, 0),
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              email: true,
+              tokenBalance: true,
+              tokensEarned: true,
+            },
+          },
+        },
+      });
+
+      return requests.map((r: any) => ({
+        ...r,
+        payoutDetails:
+          typeof r.payoutDetails === "object"
+            ? JSON.stringify(r.payoutDetails)
+            : String(r.payoutDetails ?? "{}"),
+        createdAt: toIso(r.createdAt) ?? "",
+        reviewedAt: toIso(r.reviewedAt),
+      }));
+    },
   },
   Mutation: {
+    adminReviewCashoutRequest: async (
+      _: unknown,
+      {
+        id,
+        status,
+        adminNote,
+      }: { id: string; status: string; adminNote?: string | null },
+      ctx: AdminContext,
+    ) => {
+      requireAdmin(ctx);
+
+      const normalizedId = String(id || "").trim();
+      const normalizedStatus = String(status || "")
+        .trim()
+        .toLowerCase();
+
+      const VALID_STATUSES = ["approved", "paid", "rejected", "pending"];
+      if (!normalizedId || !VALID_STATUSES.includes(normalizedStatus)) {
+        throw new Error(
+          "Invalid id or status. Must be: approved | paid | rejected | pending",
+        );
+      }
+
+      const existing = await (prisma as any).tokenCashoutRequest.findUnique({
+        where: { id: normalizedId },
+        select: { id: true, status: true, userId: true, tokensAmount: true },
+      });
+
+      if (!existing) {
+        throw new Error("Cashout request not found");
+      }
+
+      // If rejecting a pending request, refund the tokens
+      if (normalizedStatus === "rejected" && existing.status === "pending") {
+        await (prisma as any).$transaction([
+          (prisma as any).tokenCashoutRequest.update({
+            where: { id: normalizedId },
+            data: {
+              status: normalizedStatus,
+              adminNote: adminNote?.trim() || null,
+              reviewedAt: new Date(),
+            },
+          }),
+          (prisma as any).user.update({
+            where: { id: existing.userId },
+            data: {
+              tokenBalance: { increment: existing.tokensAmount },
+              tokensRedeemed: { decrement: existing.tokensAmount },
+            },
+          }),
+          (prisma as any).tokenTransaction.create({
+            data: {
+              userId: existing.userId,
+              type: "CASHOUT_REFUND",
+              amount: existing.tokensAmount,
+              description: `Cashout request rejected — tokens refunded`,
+            },
+          }),
+        ]);
+      } else {
+        await (prisma as any).tokenCashoutRequest.update({
+          where: { id: normalizedId },
+          data: {
+            status: normalizedStatus,
+            adminNote: adminNote?.trim() || null,
+            reviewedAt: new Date(),
+          },
+        });
+      }
+
+      return true;
+    },
     adminCreateBot: async (
       _: unknown,
       args: CreateBotArgs,
