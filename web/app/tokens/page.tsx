@@ -425,10 +425,12 @@ export default function TokensPage() {
             <h2 className="text-sm font-semibold text-ink">How to Earn</h2>
           </div>
           <p className="text-sm text-ink-2">
-            Every view your post receives earns you{" "}
+            Every{" "}
+            <span className="font-semibold text-ink">10 views</span> your post
+            receives earns you{" "}
             <span className="font-semibold text-ink">1 token</span>. A view is
             counted when someone opens your PDF and reads for at least 8 seconds
-            — once per person per day. You don&apos;t earn tokens from your own
+            once per person per day. You don&apos;t earn tokens from your own
             views.
           </p>
         </div>

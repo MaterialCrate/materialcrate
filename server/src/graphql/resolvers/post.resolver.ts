@@ -1644,8 +1644,13 @@ export const PostResolver = {
             select: { viewCount: true, authorId: true },
           });
 
-          // Award 1 token to the author for every unique daily view (skip self-views)
-          if (updatedPost?.authorId && updatedPost.authorId !== viewerId) {
+          // Award 1 token to the author every 10 views (skip self-views)
+          const VIEWS_PER_TOKEN = 10;
+          if (
+            updatedPost?.authorId &&
+            updatedPost.authorId !== viewerId &&
+            updatedPost.viewCount % VIEWS_PER_TOKEN === 0
+          ) {
             await (prisma as any).$transaction([
               (prisma as any).user.update({
                 where: { id: updatedPost.authorId },
