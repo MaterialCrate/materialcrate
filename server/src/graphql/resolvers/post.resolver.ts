@@ -1644,8 +1644,7 @@ export const PostResolver = {
             select: { viewCount: true, authorId: true },
           });
 
-          // Award 1 token to the author every 10 views (skip self-views)
-          const VIEWS_PER_TOKEN = 10;
+          const VIEWS_PER_TOKEN = 5;
           if (
             updatedPost?.authorId &&
             updatedPost.authorId !== viewerId &&

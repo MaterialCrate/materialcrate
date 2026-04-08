@@ -426,7 +426,7 @@ export default function TokensPage() {
           </div>
           <p className="text-sm text-ink-2">
             Every{" "}
-            <span className="font-semibold text-ink">10 views</span> your post
+            <span className="font-semibold text-ink">5 views</span> your post
             receives earns you{" "}
             <span className="font-semibold text-ink">1 token</span>. A view is
             counted when someone opens your PDF and reads for at least 8 seconds
