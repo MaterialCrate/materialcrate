@@ -22,7 +22,6 @@ import Header from "@/app/components/Header";
 const TOKEN_COSTS = { pro: 3990, premium: 6990 };
 const MIN_CASHOUT = 5000;
 const TOKENS_PER_DOLLAR = 1000;
-const VIEW_THRESHOLD = 1000;
 
 type PayoutMethod = "paypal" | "mobile_money" | "bank_transfer";
 
@@ -70,10 +69,30 @@ const STATUS_CONFIG: Record<
   string,
   { label: string; color: string; bg: string; Icon: React.ElementType }
 > = {
-  pending: { label: "Pending", color: "text-amber-700", bg: "bg-amber-50 border-amber-200", Icon: Clock },
-  approved: { label: "Approved", color: "text-blue-700", bg: "bg-blue-50 border-blue-200", Icon: TickCircle },
-  paid: { label: "Paid", color: "text-green-700", bg: "bg-green-50 border-green-200", Icon: TickCircle },
-  rejected: { label: "Rejected", color: "text-red-700", bg: "bg-red-50 border-red-200", Icon: CloseCircle },
+  pending: {
+    label: "Pending",
+    color: "text-amber-700",
+    bg: "bg-amber-50 border-amber-200",
+    Icon: Clock,
+  },
+  approved: {
+    label: "Approved",
+    color: "text-blue-700",
+    bg: "bg-blue-50 border-blue-200",
+    Icon: TickCircle,
+  },
+  paid: {
+    label: "Paid",
+    color: "text-green-700",
+    bg: "bg-green-50 border-green-200",
+    Icon: TickCircle,
+  },
+  rejected: {
+    label: "Rejected",
+    color: "text-red-700",
+    bg: "bg-red-50 border-red-200",
+    Icon: CloseCircle,
+  },
 };
 
 const METHOD_LABELS: Record<string, string> = {
@@ -96,7 +115,6 @@ function formatPayoutSummary(method: string, detailsStr: string): string {
   return METHOD_LABELS[method] ?? method;
 }
 
-// ---------- Input component ----------
 function Field({
   label,
   children,
@@ -134,7 +152,6 @@ function TextInput({
   );
 }
 
-// ---------- Payout method form ----------
 function PayoutDetailsForm({
   method,
   details,
@@ -224,7 +241,6 @@ function PayoutDetailsForm({
   return null;
 }
 
-// ---------- Main page ----------
 export default function TokensPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
@@ -233,15 +249,15 @@ export default function TokensPage() {
   const [cashouts, setCashouts] = useState<CashoutRequest[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
 
-  // Redeem modal
   const [redeemPlan, setRedeemPlan] = useState<"pro" | "premium" | null>(null);
   const [isRedeeming, setIsRedeeming] = useState(false);
 
-  // Cashout form
   const [showCashout, setShowCashout] = useState(false);
   const [cashoutTokens, setCashoutTokens] = useState(String(MIN_CASHOUT));
   const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>("paypal");
-  const [payoutDetails, setPayoutDetails] = useState<Record<string, string>>({});
+  const [payoutDetails, setPayoutDetails] = useState<Record<string, string>>(
+    {},
+  );
   const [isCashingOut, setIsCashingOut] = useState(false);
 
   const [alert, setAlert] = useState<{
@@ -376,16 +392,16 @@ export default function TokensPage() {
       <Header title="Tokens & Rewards" />
 
       <div className="mx-auto max-w-2xl space-y-5 px-4 pb-12 pt-20 sm:px-6">
-
-        {/* Balance card */}
-        <div className="overflow-hidden rounded-[20px] bg-gradient-to-br from-[#E1761F] to-[#B35A12] p-6 text-white shadow-md">
+        <div className="overflow-hidden rounded-[20px] bg-linear-to-br from-[#E1761F] to-[#B35A12] p-6 text-white shadow-md">
           <div className="flex items-center gap-2 mb-1 opacity-80">
             <Coin1 size={16} color="white" variant="Bold" />
             <span className="text-xs font-semibold uppercase tracking-widest">
               Token Balance
             </span>
           </div>
-          <p className="text-4xl font-bold tracking-tight">{fmt(tokenBalance)}</p>
+          <p className="text-4xl font-bold tracking-tight">
+            {fmt(tokenBalance)}
+          </p>
           <p className="mt-1 text-sm opacity-70">tokens</p>
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-white/10 px-3 py-2.5">
@@ -403,24 +419,20 @@ export default function TokensPage() {
           </div>
         </div>
 
-        {/* How to earn */}
         <div className="rounded-[20px] border border-edge bg-surface p-5">
           <div className="flex items-center gap-2 mb-3">
             <Eye size={18} color="#E1761F" variant="Bold" />
             <h2 className="text-sm font-semibold text-ink">How to Earn</h2>
           </div>
           <p className="text-sm text-ink-2">
-            Every view your post receives after the{" "}
-            <span className="font-semibold text-ink">
-              {fmt(VIEW_THRESHOLD)}-view threshold
-            </span>{" "}
-            earns you <span className="font-semibold text-ink">1 token</span>.
-            A view is counted when someone opens your PDF and reads for at
-            least 8 seconds — once per person per day.
+            Every view your post receives earns you{" "}
+            <span className="font-semibold text-ink">1 token</span>. A view is
+            counted when someone opens your PDF and reads for at least 8 seconds
+            — once per person per day. You don&apos;t earn tokens from your own
+            views.
           </p>
         </div>
 
-        {/* Redeem for subscription */}
         <div className="rounded-[20px] border border-edge bg-surface overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-edge">
             <Crown1 size={18} color="#E1761F" variant="Bold" />
@@ -464,7 +476,6 @@ export default function TokensPage() {
           </div>
         </div>
 
-        {/* Cash out */}
         <div className="rounded-[20px] border border-edge bg-surface overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-edge">
             <MoneyRecive size={18} color="#E1761F" variant="Bold" />
@@ -518,7 +529,6 @@ export default function TokensPage() {
 
             {showCashout && !hasPendingCashout && (
               <div className="space-y-4 rounded-xl border border-edge bg-page p-4">
-                {/* Amount */}
                 <Field label="Tokens to cash out">
                   <TextInput
                     type="number"
@@ -536,14 +546,21 @@ export default function TokensPage() {
                   )}
                 </Field>
 
-                {/* Method selector */}
                 <Field label="Payout method">
                   <div className="grid grid-cols-3 gap-2 mt-1">
                     {(
                       [
                         { key: "paypal", label: "PayPal", Icon: Wallet3 },
-                        { key: "mobile_money", label: "Mobile Money", Icon: Mobile },
-                        { key: "bank_transfer", label: "Bank Transfer", Icon: Bank },
+                        {
+                          key: "mobile_money",
+                          label: "Mobile Money",
+                          Icon: Mobile,
+                        },
+                        {
+                          key: "bank_transfer",
+                          label: "Bank Transfer",
+                          Icon: Bank,
+                        },
                       ] as const
                     ).map(({ key, label, Icon }) => (
                       <button
@@ -558,7 +575,9 @@ export default function TokensPage() {
                       >
                         <Icon
                           size={18}
-                          color={payoutMethod === key ? "#E1761F" : "var(--ink-3)"}
+                          color={
+                            payoutMethod === key ? "#E1761F" : "var(--ink-3)"
+                          }
                           variant={payoutMethod === key ? "Bold" : "Linear"}
                         />
                         {label}
@@ -567,7 +586,6 @@ export default function TokensPage() {
                   </div>
                 </Field>
 
-                {/* Method-specific fields */}
                 <PayoutDetailsForm
                   method={payoutMethod}
                   details={payoutDetails}
@@ -587,7 +605,6 @@ export default function TokensPage() {
           </div>
         </div>
 
-        {/* Cashout request history */}
         {cashouts.length > 0 && (
           <div className="rounded-[20px] border border-edge bg-surface overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-edge">
@@ -637,7 +654,6 @@ export default function TokensPage() {
           </div>
         )}
 
-        {/* Token transaction history */}
         <div className="rounded-[20px] border border-edge bg-surface overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-edge">
             <ArrowCircleDown2 size={18} color="#E1761F" variant="Bold" />
@@ -654,10 +670,6 @@ export default function TokensPage() {
               <Coin1 size={32} color="var(--ink-3)" variant="Bulk" />
               <p className="text-sm font-medium text-ink-2">
                 No transactions yet
-              </p>
-              <p className="text-xs text-ink-3 max-w-xs">
-                Once your posts cross {fmt(VIEW_THRESHOLD)} views, you&apos;ll
-                start earning 1 token per view.
               </p>
             </div>
           ) : (
