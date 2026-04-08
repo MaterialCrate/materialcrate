@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/app/lib/auth-client";
 
 type PdfThumbnailProps = {
   postId: string;
@@ -18,6 +19,9 @@ export default function PdfThumbnail({
   thumbnailUrl,
   title,
 }: PdfThumbnailProps) {
+  const { user, isLoading: authLoading } = useAuth();
+  const isAuthenticated = !authLoading && Boolean(user);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [thumbnailState, setThumbnailState] = useState<ThumbnailState>("idle");
   const [imageFailed, setImageFailed] = useState(false);
@@ -33,6 +37,12 @@ export default function PdfThumbnail({
   useEffect(() => {
     if (canUseStoredThumbnail) {
       setThumbnailState("ready");
+      return;
+    }
+
+    // Don't attempt PDF fetch for unauthenticated users — show fallback
+    if (!isAuthenticated) {
+      setThumbnailState("error");
       return;
     }
 
@@ -104,7 +114,7 @@ export default function PdfThumbnail({
       const context = canvas.getContext("2d");
       context?.clearRect(0, 0, canvas.width, canvas.height);
     };
-  }, [canUseStoredThumbnail, proxiedFileUrl]);
+  }, [canUseStoredThumbnail, isAuthenticated, proxiedFileUrl]);
 
   return (
     <div className="relative h-40 w-28 shrink-0 overflow-hidden rounded-sm bg-[#E8E8E8]">

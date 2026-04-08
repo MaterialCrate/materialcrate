@@ -605,7 +605,10 @@ export default function Post({
           <button
             type="button"
             aria-label={`Open ${post.title}`}
-            onClick={() => onFileClick?.(post)}
+            onClick={() => {
+              if (!ensureAuthenticated()) return;
+              onFileClick?.(post);
+            }}
             className="cursor-pointer group flex w-full items-start gap-4 rounded-[22px] bg-doc-card p-3 text-left transition-all duration-200 hover:bg-doc-card-hover active:scale-[0.98]"
           >
             <PdfThumbnail
