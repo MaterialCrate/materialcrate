@@ -27,11 +27,8 @@ export default function FeedAd() {
     }
   }, []);
 
-  // Don't render placeholder publisher IDs in production without real values
-  if (
-    ADSENSE_PUBLISHER_ID === "ca-pub-XXXXXXXXXXXXXXXX" ||
-    ADSENSE_SLOT_ID === "XXXXXXXXXX"
-  ) {
+  // Don't render until the ad slot ID is configured
+  if (ADSENSE_SLOT_ID === "XXXXXXXXXX") {
     return null;
   }
 
