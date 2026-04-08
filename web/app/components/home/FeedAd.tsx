@@ -2,11 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
-// Replace these with your actual Google AdSense values after approval:
-// ADSENSE_PUBLISHER_ID: Found in your AdSense account as "ca-pub-XXXXXXXXXXXXXXXX"
-// ADSENSE_SLOT_ID: Found in your AdSense account under Ads > By ad unit
 const ADSENSE_PUBLISHER_ID = "ca-pub-4938895869648539";
-const ADSENSE_SLOT_ID = "XXXXXXXXXX"; // Replace with your ad slot ID from AdSense
+const ADSENSE_SLOT_ID = "";
 
 declare global {
   interface Window {
@@ -27,17 +24,14 @@ export default function FeedAd() {
     }
   }, []);
 
-  // Don't render until the ad slot ID is configured
-  if (ADSENSE_SLOT_ID === "XXXXXXXXXX") {
+  if (!ADSENSE_SLOT_ID) {
     return null;
   }
 
   return (
     <article className="lg:rounded-xl lg:border lg:border-edge lg:mb-4 lg:bg-surface lg:shadow-sm">
-      {/* Header — mirrors post header layout */}
       <div className="flex items-center justify-between px-2 pt-2 pb-1">
         <div className="flex items-center gap-2 py-1 pl-1">
-          {/* Sponsored icon placeholder */}
           <div className="flex h-11 w-11 aspect-square items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
             <svg
               width="22"
@@ -70,7 +64,6 @@ export default function FeedAd() {
         </div>
       </div>
 
-      {/* Ad unit — wrapped in doc-card style to feel native */}
       <div className="px-2 pt-2 pb-4">
         <div className="overflow-hidden rounded-[22px] bg-doc-card p-3">
           <ins
