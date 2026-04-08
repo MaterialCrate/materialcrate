@@ -604,7 +604,7 @@ export default function TokensPage() {
                   bg: "bg-surface-high border-edge",
                   Icon: Clock,
                 };
-                const Icon = config.icon ?? config.Icon;
+                const Icon = config.Icon;
                 return (
                   <div key={req.id} className="px-5 py-3.5 space-y-1.5">
                     <div className="flex items-center justify-between gap-3">
