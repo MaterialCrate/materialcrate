@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DocumentUpload, More2, Notification } from "iconsax-reactjs";
 import { useAuth } from "./lib/auth-client";
@@ -9,6 +9,7 @@ import Post, {
   type HomePost,
   type PostOptionsAnchor,
 } from "./components/home/Post";
+import FeedAd from "./components/home/FeedAd";
 import UploadDrawer from "./components/home/UploadDrawer";
 import CommentDrawer from "./components/home/CommentDrawer";
 import OptionsDrawer from "./components/home/PostOptions";
@@ -76,6 +77,8 @@ export default function Home() {
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const notificationRefreshTimeoutRef = useRef<number | null>(null);
   const lastNotificationRefreshAtRef = useRef(0);
+  // Random ad interval between 3–5 posts, stable for the session
+  const adIntervalRef = useRef(3 + Math.floor(Math.random() * 3));
 
   const requireAuthenticatedAccess = useCallback(() => {
     if (isLoadingAuth) {
@@ -779,72 +782,79 @@ export default function Home() {
           <p className="px-6 py-8 text-sm text-ink-2">No posts yet.</p>
         ) : (
           <>
-            {posts.map((post) => (
-              <div key={post.id} data-scroll-item className="px-3">
-                <Post
-                  post={post}
-                  isArchived={Boolean(archiveSavedPostIdsByPostId[post.id])}
-                  isArchiveBusy={Boolean(archiveBusyPostIds[post.id])}
-                  onCommentClick={(selectedPost) => {
-                    setActiveCommentPostId(selectedPost.id);
-                    setActiveCommentPost(selectedPost);
-                    setIsCommentDrawerOpen(true);
-                    setMoreOptionsOpen(false);
-                    setIsUploadDrawerOpen(false);
-                    setEditingPost(null);
-                    setIsPostOptionsDrawerOpen(false);
-                    setIsArchiveDrawerOpen(false);
-                    setActiveOptionsPost(null);
-                    setActiveOptionsAnchor(null);
-                    setActiveArchivePost(null);
-                  }}
-                  onOptionsClick={(selectedPost, anchor) => {
-                    setActiveOptionsPost(selectedPost);
-                    setActiveOptionsAnchor(anchor);
-                    setIsPostOptionsDrawerOpen(true);
-                    setMoreOptionsOpen(false);
-                    setIsUploadDrawerOpen(false);
-                    setEditingPost(null);
-                    setIsCommentDrawerOpen(false);
-                    setIsArchiveDrawerOpen(false);
-                    setActiveCommentPostId(null);
-                    setActiveCommentPost(null);
-                    setActivePdfPost(null);
-                    setActiveArchivePost(null);
-                  }}
-                  onFileClick={(selectedPost) => {
-                    setActivePdfPost(selectedPost);
-                    setMoreOptionsOpen(false);
-                    setIsUploadDrawerOpen(false);
-                    setEditingPost(null);
-                    setIsCommentDrawerOpen(false);
-                    setActiveCommentPostId(null);
-                    setActiveCommentPost(null);
-                    setIsPostOptionsDrawerOpen(false);
-                    setActiveOptionsPost(null);
-                    setActiveOptionsAnchor(null);
-                    setIsArchiveDrawerOpen(false);
-                    setActiveArchivePost(null);
-                  }}
-                  onArchiveClick={(selectedPost) => {
-                    setActiveArchivePost(selectedPost);
-                    setIsArchiveDrawerOpen(true);
-                    setMoreOptionsOpen(false);
-                    setIsUploadDrawerOpen(false);
-                    setEditingPost(null);
-                    setIsCommentDrawerOpen(false);
-                    setActiveCommentPostId(null);
-                    setActiveCommentPost(null);
-                    setIsPostOptionsDrawerOpen(false);
-                    setActiveOptionsPost(null);
-                    setActiveOptionsAnchor(null);
-                    setActivePdfPost(null);
-                  }}
-                  onArchiveRemoveClick={(selectedPost) => {
-                    void handleArchiveRemove(selectedPost);
-                  }}
-                />
-              </div>
+            {posts.map((post, index) => (
+              <Fragment key={post.id}>
+                <div data-scroll-item className="px-3">
+                  <Post
+                    post={post}
+                    isArchived={Boolean(archiveSavedPostIdsByPostId[post.id])}
+                    isArchiveBusy={Boolean(archiveBusyPostIds[post.id])}
+                    onCommentClick={(selectedPost) => {
+                      setActiveCommentPostId(selectedPost.id);
+                      setActiveCommentPost(selectedPost);
+                      setIsCommentDrawerOpen(true);
+                      setMoreOptionsOpen(false);
+                      setIsUploadDrawerOpen(false);
+                      setEditingPost(null);
+                      setIsPostOptionsDrawerOpen(false);
+                      setIsArchiveDrawerOpen(false);
+                      setActiveOptionsPost(null);
+                      setActiveOptionsAnchor(null);
+                      setActiveArchivePost(null);
+                    }}
+                    onOptionsClick={(selectedPost, anchor) => {
+                      setActiveOptionsPost(selectedPost);
+                      setActiveOptionsAnchor(anchor);
+                      setIsPostOptionsDrawerOpen(true);
+                      setMoreOptionsOpen(false);
+                      setIsUploadDrawerOpen(false);
+                      setEditingPost(null);
+                      setIsCommentDrawerOpen(false);
+                      setIsArchiveDrawerOpen(false);
+                      setActiveCommentPostId(null);
+                      setActiveCommentPost(null);
+                      setActivePdfPost(null);
+                      setActiveArchivePost(null);
+                    }}
+                    onFileClick={(selectedPost) => {
+                      setActivePdfPost(selectedPost);
+                      setMoreOptionsOpen(false);
+                      setIsUploadDrawerOpen(false);
+                      setEditingPost(null);
+                      setIsCommentDrawerOpen(false);
+                      setActiveCommentPostId(null);
+                      setActiveCommentPost(null);
+                      setIsPostOptionsDrawerOpen(false);
+                      setActiveOptionsPost(null);
+                      setActiveOptionsAnchor(null);
+                      setIsArchiveDrawerOpen(false);
+                      setActiveArchivePost(null);
+                    }}
+                    onArchiveClick={(selectedPost) => {
+                      setActiveArchivePost(selectedPost);
+                      setIsArchiveDrawerOpen(true);
+                      setMoreOptionsOpen(false);
+                      setIsUploadDrawerOpen(false);
+                      setEditingPost(null);
+                      setIsCommentDrawerOpen(false);
+                      setActiveCommentPostId(null);
+                      setActiveCommentPost(null);
+                      setIsPostOptionsDrawerOpen(false);
+                      setActiveOptionsPost(null);
+                      setActiveOptionsAnchor(null);
+                      setActivePdfPost(null);
+                    }}
+                    onArchiveRemoveClick={(selectedPost) => {
+                      void handleArchiveRemove(selectedPost);
+                    }}
+                  />
+                </div>
+                {(index + 1) % adIntervalRef.current === 0 && (
+                  <div className="px-3">
+                    <FeedAd />
+                  </div>
+                )}
+              </Fragment>
             ))}
             {isLoadingMorePosts && (
               <div className="px-6 py-4">

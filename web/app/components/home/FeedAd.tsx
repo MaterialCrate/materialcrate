@@ -1,0 +1,91 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+// Replace these with your actual Google AdSense values after approval:
+// ADSENSE_PUBLISHER_ID: Found in your AdSense account as "ca-pub-XXXXXXXXXXXXXXXX"
+// ADSENSE_SLOT_ID: Found in your AdSense account under Ads > By ad unit
+const ADSENSE_PUBLISHER_ID = "ca-pub-XXXXXXXXXXXXXXXX";
+const ADSENSE_SLOT_ID = "XXXXXXXXXX";
+
+declare global {
+  interface Window {
+    adsbygoogle: unknown[];
+  }
+}
+
+export default function FeedAd() {
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch {
+      // AdSense blocked or not yet loaded — silent fail
+    }
+  }, []);
+
+  // Don't render placeholder publisher IDs in production without real values
+  if (
+    ADSENSE_PUBLISHER_ID === "ca-pub-XXXXXXXXXXXXXXXX" ||
+    ADSENSE_SLOT_ID === "XXXXXXXXXX"
+  ) {
+    return null;
+  }
+
+  return (
+    <article className="lg:rounded-xl lg:border lg:border-edge lg:mb-4 lg:bg-surface lg:shadow-sm">
+      {/* Header — mirrors post header layout */}
+      <div className="flex items-center justify-between px-2 pt-2 pb-1">
+        <div className="flex items-center gap-2 py-1 pl-1">
+          {/* Sponsored icon placeholder */}
+          <div className="flex h-11 w-11 aspect-square items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path
+                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H7l5-8v4h4l-5 8z"
+                fill="var(--ink-3)"
+              />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-ink">Sponsored</p>
+            <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-ink-3">
+              <span
+                className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]"
+                style={{
+                  background: "var(--edge)",
+                  color: "var(--ink-3)",
+                }}
+              >
+                Ad
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Ad unit — wrapped in doc-card style to feel native */}
+      <div className="px-2 pt-2 pb-4">
+        <div className="overflow-hidden rounded-[22px] bg-doc-card p-3">
+          <ins
+            className="adsbygoogle"
+            style={{ display: "block", minHeight: 100 }}
+            data-ad-client={ADSENSE_PUBLISHER_ID}
+            data-ad-slot={ADSENSE_SLOT_ID}
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
+        </div>
+      </div>
+    </article>
+  );
+}
