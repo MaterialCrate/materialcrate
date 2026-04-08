@@ -8,6 +8,10 @@ const USER_BY_USERNAME_QUERY = `
   query UserByUsername($username: String!) {
     me {
       username
+      blockedUserIds
+      mutedUsers {
+        username
+      }
     }
     userByUsername(username: $username) {
       id
@@ -40,6 +44,10 @@ const LEGACY_USER_BY_USERNAME_QUERY = `
   query UserByUsername($username: String!) {
     me {
       username
+      blockedUserIds
+      mutedUsers {
+        username
+      }
     }
     userByUsername(username: $username) {
       id
@@ -164,6 +172,27 @@ export async function GET(_: Request, context: RouteContext) {
       )
     : false;
 
+  const viewerBlockedUserIds: string[] = Array.isArray(
+    graphqlBody?.data?.me?.blockedUserIds,
+  )
+    ? graphqlBody.data.me.blockedUserIds
+    : [];
+  const viewerMutedUsernames = new Set<string>(
+    (Array.isArray(graphqlBody?.data?.me?.mutedUsers)
+      ? graphqlBody.data.me.mutedUsers
+      : []
+    )
+      .map((u: { username?: string | null }) =>
+        u.username?.trim().toLowerCase(),
+      )
+      .filter(Boolean),
+  );
+
+  const isBlockedByCurrentUser = viewerBlockedUserIds.includes(user.id);
+  const issMutedByCurrentUser = viewerMutedUsernames.has(
+    String(user.username || "").trim().toLowerCase(),
+  );
+
   const pendingFollowRequestId =
     graphqlBody?.data?.pendingFollowRequestId ?? null;
 
@@ -174,6 +203,8 @@ export async function GET(_: Request, context: RouteContext) {
       isFollowingCurrentUser,
       hasPendingFollowRequest: Boolean(pendingFollowRequestId),
       pendingFollowRequestId,
+      isBlockedByCurrentUser,
+      isMutedByCurrentUser: issMutedByCurrentUser,
     },
   });
 }

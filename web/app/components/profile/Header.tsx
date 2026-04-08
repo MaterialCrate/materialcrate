@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Edit2, Setting2, Verify, Cpu } from "iconsax-reactjs";
+import { Edit2, Setting2, Verify, Cpu, More } from "iconsax-reactjs";
 import proStar from "@/assets/icons/pro-star.svg";
 import {
   getProfileBackgroundPresentation,
@@ -35,6 +35,7 @@ type ProfileHeaderProps = {
   isFollowLoading?: boolean;
   onFollowClick?: () => void;
   onFollowListOpen?: (tab: "followers" | "following") => void;
+  onMoreClick?: () => void;
   selectedTab: ProfileTab;
   onTabChange: (tab: ProfileTab) => void;
 };
@@ -58,6 +59,7 @@ export default function Header({
   isFollowLoading = false,
   onFollowClick,
   onFollowListOpen,
+  onMoreClick,
   selectedTab,
   onTabChange,
 }: ProfileHeaderProps) {
@@ -257,18 +259,30 @@ export default function Header({
             </div>
           )
         ) : (
-          <button
-            type="button"
-            onClick={onFollowClick}
-            disabled={isFollowLoading}
-            className={`cursor-pointer rounded-full border px-5 py-2 text-sm font-medium ${
-              followLabel === "Following" || followLabel === "Requested"
-                ? followMutedClass
-                : followPrimaryClass
-            } disabled:cursor-not-allowed disabled:opacity-60`}
-          >
-            <p>{isFollowLoading ? "..." : followLabel}</p>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onFollowClick}
+              disabled={isFollowLoading}
+              className={`cursor-pointer rounded-full border px-5 py-2 text-sm font-medium ${
+                followLabel === "Following" || followLabel === "Requested"
+                  ? followMutedClass
+                  : followPrimaryClass
+              } disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              <p>{isFollowLoading ? "..." : followLabel}</p>
+            </button>
+            {onMoreClick && (
+              <button
+                type="button"
+                aria-label="More options"
+                onClick={onMoreClick}
+                className={iconButtonClass}
+              >
+                <More size={20} color={iconColor} />
+              </button>
+            )}
+          </div>
         )}
       </div>
       <div className="relative z-10 mt-8 -mx-4 grid grid-cols-2 px-4 sm:mt-10 sm:-mx-6 sm:px-6">

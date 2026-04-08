@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
+import { useSystemPopup } from "@/app/components/SystemPopup";
+import { Flag, Link21, Slash, VolumeMute } from "iconsax-reactjs";
 import { subscribeToFollowActivity } from "@/app/lib/post-activity-realtime";
 import Acheivement, { type AchievementData } from "@/app/components/profile/Acheivement";
 import Header, { type ProfileTab } from "@/app/components/profile/Header";
@@ -37,6 +39,8 @@ type ProfileUser = {
   isFollowedByCurrentUser?: boolean;
   isFollowingCurrentUser?: boolean;
   hasPendingFollowRequest?: boolean;
+  isBlockedByCurrentUser?: boolean;
+  isMutedByCurrentUser?: boolean;
 };
 
 type ProfilePageProps = {
@@ -91,6 +95,11 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const [selectedFollowList, setSelectedFollowList] = useState<
     "followers" | "following" | null
   >(null);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isUpdatingBlock, setIsUpdatingBlock] = useState(false);
+  const [isUpdatingMute, setIsUpdatingMute] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const popup = useSystemPopup();
 
   const handleFollowCountsChange = useCallback(
     ({
@@ -112,6 +121,82 @@ export default function ProfilePage({ username }: ProfilePageProps) {
     },
     [],
   );
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+      if (!(e.target instanceof Node)) return;
+      if (profileMenuRef.current?.contains(e.target)) return;
+      setIsProfileMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [isProfileMenuOpen]);
+
+  const handleBlockToggle = async () => {
+    if (!profile?.username) return;
+    const shouldUnblock = Boolean(profile.isBlockedByCurrentUser);
+    if (!shouldUnblock) {
+      const confirmed = await popup.confirm({
+        title: `Block @${profile.username}?`,
+        message: "They won't be able to find your profile or posts.",
+        confirmLabel: "Block",
+        cancelLabel: "Cancel",
+        isDestructive: true,
+      });
+      if (!confirmed) return;
+    }
+    setIsUpdatingBlock(true);
+    setIsProfileMenuOpen(false);
+    setProfile((c) => c ? { ...c, isBlockedByCurrentUser: !shouldUnblock } : c);
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(profile.username)}/block`, {
+        method: shouldUnblock ? "DELETE" : "POST",
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setProfile((c) => c ? { ...c, isBlockedByCurrentUser: shouldUnblock } : c);
+    } finally {
+      setIsUpdatingBlock(false);
+    }
+  };
+
+  const handleMuteToggle = async () => {
+    if (!profile?.username) return;
+    const shouldUnmute = Boolean(profile.isMutedByCurrentUser);
+    setIsUpdatingMute(true);
+    setIsProfileMenuOpen(false);
+    setProfile((c) => c ? { ...c, isMutedByCurrentUser: !shouldUnmute } : c);
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(profile.username)}/mute`, {
+        method: shouldUnmute ? "DELETE" : "POST",
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setProfile((c) => c ? { ...c, isMutedByCurrentUser: shouldUnmute } : c);
+    } finally {
+      setIsUpdatingMute(false);
+    }
+  };
+
+  const handleShareProfile = () => {
+    const url = `${window.location.origin}/u/${profile?.username}`;
+    if (navigator.share) {
+      void navigator.share({ title: profile?.displayName ?? "", url });
+    } else {
+      void navigator.clipboard.writeText(url);
+    }
+    setIsProfileMenuOpen(false);
+  };
+
+  const handleReportProfile = () => {
+    setIsProfileMenuOpen(false);
+    router.push(`/settings/support/guidelines?report=user&username=${encodeURIComponent(profile?.username ?? "")}`);
+  };
 
   useEffect(() => {
     let isCancelled = false;
@@ -612,28 +697,77 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         onClose={() => setActivePdfPost(null)}
       />
       <div className="mx-auto flex w-full max-w-140 flex-col gap-2 lg:px-4">
-        <Header
-          displayName={displayName}
-          username={profileUsername}
-          profilePictureUrl={profilePictureUrl}
-          profileBackground={profile?.profileBackground}
-          followers={followerCount}
-          following={followingCount}
-          subscriptionPlan={profile?.subscriptionPlan ?? "free"}
-          isBot={profile?.isBot ?? false}
-          institution={profile?.institution}
-          institutionVisible={showInstitution}
-          program={profile?.program}
-          programVisible={showProgram}
-          isOwner={isOwner}
-          postsLabel={postsHeading}
-          followLabel={followLabel}
-          isFollowLoading={isUpdatingFollow}
-          onFollowClick={handleFollowToggle}
-          onFollowListOpen={(tab) => setSelectedFollowList(tab)}
-          selectedTab={selectedTab}
-          onTabChange={setSelectedTab}
-        />
+        <div className="relative">
+          <Header
+            displayName={displayName}
+            username={profileUsername}
+            profilePictureUrl={profilePictureUrl}
+            profileBackground={profile?.profileBackground}
+            followers={followerCount}
+            following={followingCount}
+            subscriptionPlan={profile?.subscriptionPlan ?? "free"}
+            isBot={profile?.isBot ?? false}
+            institution={profile?.institution}
+            institutionVisible={showInstitution}
+            program={profile?.program}
+            programVisible={showProgram}
+            isOwner={isOwner}
+            postsLabel={postsHeading}
+            followLabel={followLabel}
+            isFollowLoading={isUpdatingFollow}
+            onFollowClick={handleFollowToggle}
+            onFollowListOpen={(tab) => setSelectedFollowList(tab)}
+            onMoreClick={!isOwner && user ? () => setIsProfileMenuOpen((v) => !v) : undefined}
+            selectedTab={selectedTab}
+            onTabChange={setSelectedTab}
+          />
+          {/* Profile options menu */}
+          {isProfileMenuOpen && (
+            <div
+              ref={profileMenuRef}
+              className="absolute right-4 top-14 z-200 w-52 rounded-[20px] border border-edge bg-surface p-2 shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
+            >
+              <div className="overflow-hidden rounded-2xl bg-page">
+                <button
+                  type="button"
+                  disabled={isUpdatingMute}
+                  onClick={handleMuteToggle}
+                  className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3 disabled:opacity-60"
+                >
+                  <VolumeMute size={18} color="#111111" variant="Bold" />
+                  {profile?.isMutedByCurrentUser ? "Unmute" : "Mute"} @{profileUsername}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareProfile}
+                  className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3"
+                >
+                  <Link21 size={18} color="#111111" variant="Bold" />
+                  Copy profile link
+                </button>
+                <button
+                  type="button"
+                  disabled={isUpdatingBlock}
+                  onClick={handleBlockToggle}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-[#D12F2F] transition-colors hover:bg-[#fff1f1] disabled:opacity-60"
+                >
+                  <Slash size={18} color="#D12F2F" variant="Bold" />
+                  {profile?.isBlockedByCurrentUser ? "Unblock" : "Block"} @{profileUsername}
+                </button>
+              </div>
+              <div className="mt-2 overflow-hidden rounded-2xl bg-[#FFF1F1]">
+                <button
+                  type="button"
+                  onClick={handleReportProfile}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-[#D12F2F] transition-colors hover:bg-[#ffe7e7]"
+                >
+                  <Flag size={18} color="#D12F2F" variant="Bold" />
+                  Report account
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {isLoadingProfile ? (
           <p className="px-6 py-8 text-sm text-ink-2">Loading profile...</p>
