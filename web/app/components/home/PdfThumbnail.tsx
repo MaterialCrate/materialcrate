@@ -64,19 +64,17 @@ export default function PdfThumbnail({
           import.meta.url,
         ).toString();
 
-        const response = await fetch(proxiedFileUrl, {
-          cache: "no-store",
-          headers: {
+        // Pass URL directly so pdfjs streams and parses concurrently —
+        // no arrayBuffer() wait. Range requests are disabled since the
+        // proxy returns Accept-Ranges: none.
+        const pdf = await pdfjs.getDocument({
+          url: proxiedFileUrl,
+          httpHeaders: {
             "x-materialcrate-pdf-request": "viewer",
           },
-        });
-        if (!response.ok) {
-          throw new Error("Failed to load PDF");
-        }
-
-        const buffer = await response.arrayBuffer();
-        const pdf = await pdfjs.getDocument({ data: new Uint8Array(buffer) })
-          .promise;
+          withCredentials: true,
+          disableRange: true,
+        }).promise;
         const page = await pdf.getPage(1);
 
         if (isCancelled) {

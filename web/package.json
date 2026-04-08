@@ -1,6 +1,6 @@
 {
   "name": "materialcrate",
-  "version": "0.2.5",
+  "version": "0.2.1",
   "private": true,
   "packageManager": "pnpm@10.21.0",
   "scripts": {

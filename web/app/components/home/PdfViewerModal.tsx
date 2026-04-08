@@ -13,12 +13,14 @@ type PdfViewerModalProps = {
 
 type PdfState = {
   isLoading: boolean;
+  isRendering: boolean;
   error: string;
   pageCount: number;
 };
 
 const INITIAL_STATE: PdfState = {
   isLoading: false,
+  isRendering: false,
   error: "",
   pageCount: 0,
 };
@@ -114,9 +116,10 @@ export default function PdfViewerModal({
     }
 
     let isCancelled = false;
+    let loadingTask: { destroy: () => void } | null = null;
 
     const renderPdf = async () => {
-      setPdfState({ isLoading: true, error: "", pageCount: 0 });
+      setPdfState({ isLoading: true, isRendering: false, error: "", pageCount: 0 });
 
       try {
         const pdfjs = await import("pdfjs-dist");
@@ -125,63 +128,80 @@ export default function PdfViewerModal({
           import.meta.url,
         ).toString();
 
-        const response = await fetch(proxiedFileUrl, {
-          cache: "no-store",
-          headers: {
+        // Pass URL directly so pdfjs streams and parses concurrently —
+        // no arrayBuffer() wait. Range requests are disabled since the
+        // proxy returns Accept-Ranges: none.
+        const task = pdfjs.getDocument({
+          url: proxiedFileUrl,
+          httpHeaders: {
             "x-materialcrate-pdf-request": "viewer",
           },
+          withCredentials: true,
+          disableRange: true,
         });
-        if (!response.ok) {
-          throw new Error("Failed to load PDF");
-        }
+        loadingTask = task;
 
-        const buffer = await response.arrayBuffer();
-        const loadingTask = pdfjs.getDocument({ data: new Uint8Array(buffer) });
-        const pdf = await loadingTask.promise;
+        const pdf = await task.promise;
 
         if (isCancelled) {
-          loadingTask.destroy();
+          task.destroy();
           return;
         }
 
         canvasContainer.innerHTML = "";
 
+        // Reveal the container and start showing pages as they render.
+        // isRendering stays true until the last page is done.
+        setPdfState({
+          isLoading: false,
+          isRendering: pdf.numPages > 1,
+          error: "",
+          pageCount: pdf.numPages,
+        });
+
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          if (isCancelled) break;
+
           const page = await pdf.getPage(pageNumber);
           const viewport = page.getViewport({ scale: 1.25 });
+
+          // Add placeholder with correct aspect ratio before rendering
+          // so layout doesn't reflow when the canvas appears.
           const wrapper = document.createElement("div");
           wrapper.className =
-            "relative overflow-hidden rounded bg-surface shadow-sm select-none";
+            "relative overflow-hidden rounded bg-surface-high shadow-sm select-none";
+          wrapper.style.aspectRatio = `${viewport.width} / ${viewport.height}`;
+          canvasContainer.appendChild(wrapper);
 
           const canvas = document.createElement("canvas");
           const context = canvas.getContext("2d");
 
           if (!context) {
-            throw new Error("Failed to prepare PDF canvas.");
+            continue;
           }
 
           canvas.width = viewport.width;
           canvas.height = viewport.height;
           canvas.className = "h-auto w-full pointer-events-none";
+
+          await page.render({ canvas, canvasContext: context, viewport }).promise;
+
+          if (isCancelled) break;
+
+          wrapper.style.aspectRatio = "";
+          wrapper.className =
+            "relative overflow-hidden rounded bg-surface shadow-sm select-none";
           wrapper.appendChild(canvas);
 
-          canvasContainer.appendChild(wrapper);
-
-          await page.render({ canvas, canvasContext: context, viewport })
-            .promise;
-        }
-
-        if (!isCancelled) {
-          setPdfState({
-            isLoading: false,
-            error: "",
-            pageCount: pdf.numPages,
-          });
+          if (pageNumber === pdf.numPages) {
+            setPdfState((prev) => ({ ...prev, isRendering: false }));
+          }
         }
       } catch {
         if (!isCancelled) {
           setPdfState({
             isLoading: false,
+            isRendering: false,
             error: "Unable to render this protected PDF right now.",
             pageCount: 0,
           });
@@ -193,6 +213,7 @@ export default function PdfViewerModal({
 
     return () => {
       isCancelled = true;
+      loadingTask?.destroy();
       canvasContainer.innerHTML = "";
     };
   }, [isOpen, proxiedFileUrl]);
@@ -224,7 +245,7 @@ export default function PdfViewerModal({
         <div className="flex-1 overflow-y-auto bg-[#E7E1D8] p-4">
           {pdfState.isLoading && (
             <div className="flex h-full items-center justify-center text-sm text-ink-2">
-              Rendering PDF...
+              Loading PDF...
             </div>
           )}
           {pdfState.error && (
@@ -240,6 +261,11 @@ export default function PdfViewerModal({
               pdfState.isLoading || (pdfState.error && "hidden")
             }`}
           />
+          {pdfState.isRendering && (
+            <div className="mt-4 flex justify-center text-xs text-ink-2">
+              Loading more pages...
+            </div>
+          )}
         </div>
       </div>
     </div>
