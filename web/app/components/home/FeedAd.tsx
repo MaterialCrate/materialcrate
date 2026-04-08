@@ -5,8 +5,8 @@ import { useEffect, useRef } from "react";
 // Replace these with your actual Google AdSense values after approval:
 // ADSENSE_PUBLISHER_ID: Found in your AdSense account as "ca-pub-XXXXXXXXXXXXXXXX"
 // ADSENSE_SLOT_ID: Found in your AdSense account under Ads > By ad unit
-const ADSENSE_PUBLISHER_ID = "ca-pub-XXXXXXXXXXXXXXXX";
-const ADSENSE_SLOT_ID = "XXXXXXXXXX";
+const ADSENSE_PUBLISHER_ID = "ca-pub-4938895869648539";
+const ADSENSE_SLOT_ID = "XXXXXXXXXX"; // Replace with your ad slot ID from AdSense
 
 declare global {
   interface Window {

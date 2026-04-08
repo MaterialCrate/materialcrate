@@ -2,7 +2,6 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Inter, Libre_Baskerville } from "next/font/google";
-import Script from "next/script";
 import AuthSplashGate from "./components/AuthSplashGate";
 import ConditionalNavbar from "./components/ConditionalNavbar";
 import DesktopSidebarOffset from "./components/DesktopSidebarOffset";
@@ -66,12 +65,11 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        {/* Google AdSense*/}
-        <Script
+        {/* Google AdSense */}
+        <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4938895869648539"
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
       </head>
       <body className="font-sans relative">
