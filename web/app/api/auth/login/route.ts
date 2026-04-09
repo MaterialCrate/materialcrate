@@ -97,6 +97,10 @@ export async function POST(req: Request) {
   }
 
   const token = graphqlBody?.data?.login?.token as string | undefined;
+  if (!token) {
+    return NextResponse.json({ error: "Login failed" }, { status: 502 });
+  }
+  const sessionToken: string = token;
   const user = graphqlBody?.data?.login?.user;
   const restoreRequired = Boolean(graphqlBody?.data?.login?.restoreRequired);
   const restoreDeadline =
@@ -119,7 +123,7 @@ export async function POST(req: Request) {
   });
   response.cookies.set(
     restoreRequired ? RESTORE_SESSION_COOKIE_NAME : SESSION_COOKIE_NAME,
-    token,
+    sessionToken,
     {
       ...SESSION_COOKIE_OPTIONS,
       maxAge: SESSION_MAX_AGE_SECONDS,
