@@ -256,7 +256,7 @@ export async function GET(
     if (!token) {
       throw new Error("Social authentication did not return a token");
     }
-    const sessionToken: string = token;
+    const sessionToken = token as string;
 
     const restoreRequired = Boolean(
       graphqlBody?.data?.socialAuth?.restoreRequired,

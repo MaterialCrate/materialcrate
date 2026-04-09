@@ -114,6 +114,12 @@ body {
   transition-timing-function: ease;
 }
 
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 @keyframes loading-bar {
   0% {
     transform: translateX(-100%);

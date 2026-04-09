@@ -100,7 +100,7 @@ export async function POST(req: Request) {
   if (!token) {
     return NextResponse.json({ error: "Login failed" }, { status: 502 });
   }
-  const sessionToken: string = token;
+  const sessionToken = token as string;
   const user = graphqlBody?.data?.login?.user;
   const restoreRequired = Boolean(graphqlBody?.data?.login?.restoreRequired);
   const restoreDeadline =

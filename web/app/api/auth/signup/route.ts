@@ -101,7 +101,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const token = graphqlBody?.data?.signup?.token as string | undefined;
+  const token = graphqlBody?.data?.signup?.token as string;
   const user = graphqlBody?.data?.signup?.user;
   const verificationEmailSent = Boolean(
     graphqlBody?.data?.signup?.verificationEmailSent,
