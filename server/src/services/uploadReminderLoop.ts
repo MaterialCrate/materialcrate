@@ -3,6 +3,7 @@ import { sendUploadReminderEmail } from "../email/uploadReminderEmail.js";
 
 const REMINDER_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // every 7 days
 const UPLOAD_INACTIVE_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000; // no upload in last 7 days
+const SEND_DELAY_MS = 300; // 300ms between emails (~3/sec, well under the 5/sec limit)
 
 export const sendUploadReminders = async () => {
   const inactiveSince = new Date(Date.now() - UPLOAD_INACTIVE_THRESHOLD_MS);
@@ -42,6 +43,7 @@ export const sendUploadReminders = async () => {
         error,
       );
     }
+    await new Promise((resolve) => setTimeout(resolve, SEND_DELAY_MS));
   }
 
   return { sent, failed, total: users.length };
