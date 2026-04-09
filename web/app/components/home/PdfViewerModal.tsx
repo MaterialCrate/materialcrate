@@ -225,6 +225,7 @@ export default function PdfViewerModal({
             iframe.style.cssText =
               "width:100%;min-height:120px;border:none;display:block;";
             iframe.scrolling = "no";
+            iframe.sandbox.add("allow-scripts", "allow-same-origin");
             adWrapper.appendChild(iframe);
             canvasContainer.appendChild(adWrapper);
 
