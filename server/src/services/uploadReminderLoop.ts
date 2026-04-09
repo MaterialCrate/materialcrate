@@ -42,23 +42,24 @@ export const sendUploadReminders = async () => {
   let sent = 0;
   let failed = 0;
 
-  for (const user of users) {
-    try {
-      await sendUploadReminderEmail(user.email, user.displayName);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { lastUploadReminderSentAt: new Date() },
-      });
-      sent++;
-    } catch (error) {
-      failed++;
-      console.error(
-        `[uploadReminder] Failed to send reminder to ${user.email}:`,
-        error,
-      );
-    }
-    await new Promise((resolve) => setTimeout(resolve, SEND_DELAY_MS));
-  }
+  // TODO: re-enable when ready to send upload reminder emails
+  // for (const user of users) {
+  //   try {
+  //     await sendUploadReminderEmail(user.email, user.displayName);
+  //     await prisma.user.update({
+  //       where: { id: user.id },
+  //       data: { lastUploadReminderSentAt: new Date() },
+  //     });
+  //     sent++;
+  //   } catch (error) {
+  //     failed++;
+  //     console.error(
+  //       `[uploadReminder] Failed to send reminder to ${user.email}:`,
+  //       error,
+  //     );
+  //   }
+  //   await new Promise((resolve) => setTimeout(resolve, SEND_DELAY_MS));
+  // }
 
   return { sent, failed, total: users.length };
 };

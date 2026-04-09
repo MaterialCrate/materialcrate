@@ -2,8 +2,9 @@
 
 import React from "react";
 import useScrollVisibility from "../useScrollVisibility";
-import { SearchNormal1 } from "iconsax-reactjs";
+import { SearchNormal1, Coin1 } from "iconsax-reactjs";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
 
@@ -28,7 +29,7 @@ export default function Header({
         isVisible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
-      <div className="flex items-start justify-between px-6 pb-3 pt-6">
+      <div className="flex items-center justify-between px-6 pb-3 pt-6">
         <button
           type="button"
           aria-label="MaterialCrate"
@@ -51,6 +52,17 @@ export default function Header({
             >
               Log in
             </button>
+          )}
+          {!authLoading && user && (
+            <Link
+              href="/tokens"
+              className="flex items-center gap-1.5 rounded-full bg-[#FFF3E7] px-3 py-1.5 transition-all duration-200 active:scale-95"
+            >
+              <Coin1 size={16} color="#E1761F" variant="Bold" />
+              <span className="text-sm font-semibold text-[#E1761F]">
+                {new Intl.NumberFormat("en-US").format(user.tokenBalance ?? 0)}
+              </span>
+            </Link>
           )}
           <button
             type="button"
