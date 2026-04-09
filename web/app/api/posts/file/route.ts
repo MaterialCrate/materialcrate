@@ -98,13 +98,25 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Invalid file URL" }, { status: 400 });
   }
 
-  const upstreamResponse = await fetch(fileUrl, {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      Accept: "application/pdf,*/*",
-    },
-  });
+  let upstreamResponse: Response;
+  try {
+    upstreamResponse = await fetch(fileUrl, {
+      method: "GET",
+      cache: "no-store",
+      headers: {
+        Accept: "application/pdf,*/*",
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+  } catch (err) {
+    const isTimeout =
+      err instanceof Error &&
+      (err.name === "TimeoutError" || err.name === "AbortError" || err.message.includes("Timeout"));
+    return NextResponse.json(
+      { error: isTimeout ? "File fetch timed out" : "Failed to reach file storage" },
+      { status: 504 },
+    );
+  }
 
   if (!upstreamResponse.ok || !upstreamResponse.body) {
     return NextResponse.json(

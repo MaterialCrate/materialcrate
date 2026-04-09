@@ -5,11 +5,73 @@ import { CloseCircle } from "iconsax-reactjs";
 import { trackFeedInteraction } from "@/app/lib/feed-tracking";
 import type { HomePost } from "./Post";
 
-// ─── Adsterra Native Banner ───────────────────────────────────────────────────
-// Fill these in after creating a Native Banner zone in your Adsterra dashboard.
-// Leave empty to disable ads.
-const ADSTERRA_INVOKE_SRC = "https://pl29107546.profitablecpmratenetwork.com/dca3faf47483a0c15be4506365e921d8/invoke.js";
-const ADSTERRA_CONTAINER_ID = "container-dca3faf47483a0c15be4506365e921d8";
+// ─── Adsterra Ad Zones (rotated per slot) ────────────────────────────────────
+type AdZone =
+  | { type: "native"; src: string; containerId: string }
+  | { type: "banner"; key: string; src: string; width: number; height: number }
+  | { type: "socialbar"; src: string };
+
+const AD_ZONES: AdZone[] = [
+  {
+    type: "native",
+    src: "https://pl29107546.profitablecpmratenetwork.com/dca3faf47483a0c15be4506365e921d8/invoke.js",
+    containerId: "container-dca3faf47483a0c15be4506365e921d8",
+  },
+  {
+    type: "banner",
+    key: "44be9916dcda20992159a6ccdf64c31e",
+    src: "https://www.highperformanceformat.com/44be9916dcda20992159a6ccdf64c31e/invoke.js",
+    width: 468,
+    height: 60,
+  },
+  {
+    type: "socialbar",
+    src: "https://pl29109074.profitablecpmratenetwork.com/c5/54/ee/c554ee202f818aef11daa36cba5961d3.js",
+  },
+];
+
+// Injected before every ad script — blocks redirects and makes popups safe.
+const AD_SANDBOX_SCRIPT = `<script>
+(function(){
+  var _open = window.open.bind(window);
+  window.open = function(url, name, features) {
+    var f = (features || '') + ',noopener,noreferrer';
+    return _open(url, '_blank', f);
+  };
+  // Block any attempt to navigate the parent frame
+  try { window.top.location; } catch(e) {}
+  Object.defineProperty(window, 'top', { get: function(){ return window; } });
+})();
+<\/script>`;
+
+function buildAdHtml(zone: AdZone, cacheBust: string): string {
+  const base =
+    `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;}</style></head><body>${AD_SANDBOX_SCRIPT}`;
+  const close = `</body></html>`;
+
+  if (zone.type === "native") {
+    return (
+      base +
+      `<script async="async" data-cfasync="false" src="${zone.src}?r=${cacheBust}"><\/script>` +
+      `<div id="${zone.containerId}"></div>` +
+      close
+    );
+  }
+  if (zone.type === "banner") {
+    return (
+      base +
+      `<script>atOptions={'key':'${zone.key}','format':'iframe','height':${zone.height},'width':${zone.width},'params':{}};<\/script>` +
+      `<script src="${zone.src}?r=${cacheBust}"><\/script>` +
+      close
+    );
+  }
+  // socialbar
+  return (
+    base +
+    `<script src="${zone.src}?r=${cacheBust}"><\/script>` +
+    close
+  );
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 type PdfViewerModalProps = {
@@ -168,6 +230,7 @@ export default function PdfViewerModal({
 
         // Randomise the ad interval (3–5 pages), stable for this render.
         const adInterval = 3 + Math.floor(Math.random() * 3);
+        let adSlotIndex = 0;
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           if (isCancelled) break;
@@ -207,13 +270,14 @@ export default function PdfViewerModal({
           // Each ad uses an isolated iframe so Adsterra runs fresh with no ID conflicts.
           if (
             pageNumber % adInterval === 0 &&
-            pageNumber < pdf.numPages &&
-            ADSTERRA_INVOKE_SRC &&
-            ADSTERRA_CONTAINER_ID
+            pageNumber < pdf.numPages
           ) {
+            const zone = AD_ZONES[adSlotIndex % AD_ZONES.length];
+            adSlotIndex += 1;
+
             const adWrapper = document.createElement("div");
             adWrapper.className =
-              "relative overflow-hidden rounded-xl bg-surface shadow-sm";
+              "relative rounded-xl bg-surface shadow-sm";
 
             const sponsored = document.createElement("span");
             sponsored.textContent = "Sponsored";
@@ -222,32 +286,47 @@ export default function PdfViewerModal({
             adWrapper.appendChild(sponsored);
 
             const iframe = document.createElement("iframe");
+            // Start with a sensible min-height per format so the slot isn't collapsed.
+            const minHeight = zone.type === "banner" ? zone.height : 120;
             iframe.style.cssText =
-              "width:100%;min-height:120px;border:none;display:block;";
+              `width:100%;height:${minHeight}px;border:none;display:block;`;
             iframe.scrolling = "no";
-            iframe.sandbox.add("allow-scripts", "allow-same-origin");
+            iframe.sandbox.add(
+              "allow-scripts",
+              "allow-same-origin",
+              "allow-popups",
+              "allow-popups-to-escape-sandbox",
+              "allow-forms",
+            );
             adWrapper.appendChild(iframe);
             canvasContainer.appendChild(adWrapper);
 
-            // Write Adsterra code into the isolated iframe so each slot
-            // gets its own fresh script execution and DOM — no duplicate IDs.
             const iframeDoc =
               iframe.contentDocument ?? iframe.contentWindow?.document;
             if (iframeDoc) {
               iframeDoc.open();
-              iframeDoc.write(
-                `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;overflow:hidden;}</style></head>` +
-                `<body><script async="async" data-cfasync="false" src="${ADSTERRA_INVOKE_SRC}"><\/script>` +
-                `<div id="${ADSTERRA_CONTAINER_ID}"></div></body></html>`,
-              );
+              const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+              iframeDoc.write(buildAdHtml(zone, cacheBust));
               iframeDoc.close();
 
-              // Resize the iframe to fit the ad content once it loads.
-              iframe.addEventListener("load", () => {
+              // Resize once the iframe settles — ad scripts inject content
+              // asynchronously so we watch with ResizeObserver instead of 'load'.
+              const resizeToContent = () => {
                 const body = iframe.contentDocument?.body;
-                if (body) {
+                if (body && body.scrollHeight > minHeight) {
                   iframe.style.height = `${body.scrollHeight}px`;
                 }
+              };
+
+              iframe.addEventListener("load", () => {
+                resizeToContent();
+                // Poll briefly for async ad injection finishing.
+                let attempts = 0;
+                const poll = setInterval(() => {
+                  resizeToContent();
+                  attempts += 1;
+                  if (attempts >= 10) clearInterval(poll);
+                }, 300);
               });
             }
           }

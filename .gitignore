@@ -11,7 +11,7 @@ server/dist/
 *.tsbuildinfo
 web/tsconfig.tsbuildinfo
 
-# Environment variables - NEVER commit these
+# Environment variables - NEVER commit these MF
 .env
 .env.local
 .env.*.local
