@@ -16,6 +16,9 @@ import Alert from "@/app/components/Alert";
 import { useSystemPopup } from "@/app/components/SystemPopup";
 import { refreshAuth } from "@/app/lib/auth-client";
 
+// TODO: re-enable tomorrow when email quota resets
+const TEMPORARILY_DISABLED = true;
+
 const formatRestoreDeadline = (value?: string | null) => {
   if (!value) return "within 30 days";
 
@@ -184,6 +187,36 @@ function LoginContent() {
     void handleRestorePrompt(restoreDeadline);
   }, [handleRestorePrompt, searchParams]);
 
+  if (TEMPORARILY_DISABLED) {
+    return (
+      <div className="min-h-dvh bg-surface-high px-4 py-4 sm:px-6 sm:py-6">
+        <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-130 flex-col rounded-[28px] bg-surface px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6">
+          <div className="mx-auto mt-8 flex w-full max-w-md flex-col items-center gap-4 px-2 text-center">
+            <Image src="/logo.svg" alt="MaterialCrate Logo" width={46} height={46} className="h-auto w-11.5 sm:w-12.5" />
+            <h1 className="font-serif text-3xl leading-tight">Welcome Back</h1>
+          </div>
+          <div className="mt-6 flex flex-1 flex-col justify-center">
+            <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
+              <div className="space-y-4 sm:space-y-5">
+                <button
+                  type="button"
+                  onClick={() => { window.location.assign("/api/auth/social/google?mode=login"); }}
+                  className="cursor-pointer flex w-full items-center justify-between rounded-2xl border border-edge-mid bg-surface px-4 py-3.5 text-left transition-all duration-200 hover:border-[#E1761F]/35 hover:bg-[#FFF9F4] active:scale-[0.98]"
+                >
+                  <p className="font-medium text-ink">Continue with Google</p>
+                  <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor" className="text-ink"><path d="M21.35 11.1c0-.67-.06-1.32-.16-1.94H11v3.67h5.8a4.96 4.96 0 0 1-2.15 3.25v2.7h3.48c2.04-1.88 3.22-4.64 3.22-7.68Z" fill="#4285F4"/><path d="M11 22c2.9 0 5.34-.96 7.12-2.6l-3.48-2.7c-.96.64-2.19 1.02-3.64 1.02-2.8 0-5.17-1.89-6.02-4.43H1.4v2.79A10.99 10.99 0 0 0 11 22Z" fill="#34A853"/><path d="M4.98 13.29A6.6 6.6 0 0 1 4.64 11c0-.8.14-1.57.34-2.29V5.92H1.4A11 11 0 0 0 0 11c0 1.77.42 3.45 1.4 4.08l3.58-1.79Z" fill="#FBBC05"/><path d="M11 4.38c1.58 0 3 .54 4.12 1.6l3.08-3.08A10.96 10.96 0 0 0 11 0 10.99 10.99 0 0 0 1.4 5.92l3.58 2.79C5.83 6.27 8.2 4.38 11 4.38Z" fill="#EA4335"/></svg>
+                </button>
+                <p className="text-center text-xs text-ink-2">
+                  Email sign-in is temporarily unavailable. Please check back tomorrow.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh bg-surface-high px-4 py-4 sm:px-6 sm:py-6">
       {searchParams.get("deleted") === "1" ? (
@@ -197,7 +230,7 @@ function LoginContent() {
       {error && <Alert type="error" message={error} />}
 
       <form
-        className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-[520px] flex-col rounded-[28px] bg-surface px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6"
+        className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-130 flex-col rounded-[28px] bg-surface px-4 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.04)] ring-1 ring-black/5 sm:px-6 sm:py-6"
         onSubmit={step < 2 ? handleNext : handleSubmit}
       >
         <div className="flex min-h-10 items-center">

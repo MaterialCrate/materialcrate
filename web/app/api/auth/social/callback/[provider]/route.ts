@@ -264,16 +264,21 @@ export async function GET(
       typeof graphqlBody?.data?.socialAuth?.restoreDeadline === "string"
         ? graphqlBody.data.socialAuth.restoreDeadline
         : null;
-    const nextPath = readNextPath(req, provider);
+    const hasCompletedProfile = Boolean(
+      graphqlBody?.data?.socialAuth?.user?.username,
+    );
+    // Regardless of which page they started from (login or register):
+    // - if the account is complete (has a username) → go home
+    // - if not (brand new account) → go through registration steps
     const destination = restoreRequired
       ? `/login?restore=1${
           restoreDeadline
             ? `&restoreDeadline=${encodeURIComponent(restoreDeadline)}`
             : ""
         }`
-      : nextPath.startsWith("/")
-        ? nextPath
-        : "/";
+      : hasCompletedProfile
+        ? "/"
+        : "/register?social=1";
     const response = NextResponse.redirect(new URL(destination, origin));
     response.cookies.set(
       restoreRequired ? RESTORE_SESSION_COOKIE_NAME : SESSION_COOKIE_NAME,
