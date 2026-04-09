@@ -166,9 +166,8 @@ export default function PdfViewerModal({
           pageCount: pdf.numPages,
         });
 
-        // Randomise which page the ad appears after (3–5), stable for this render.
-        const adTriggerPage = 3 + Math.floor(Math.random() * 3);
-        let adInserted = false;
+        // Randomise the ad interval (3–5 pages), stable for this render.
+        const adInterval = 3 + Math.floor(Math.random() * 3);
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           if (isCancelled) break;
@@ -204,16 +203,14 @@ export default function PdfViewerModal({
             "relative overflow-hidden rounded bg-surface shadow-sm select-none";
           wrapper.appendChild(canvas);
 
-          // Insert a native ad after the trigger page (not after the last page).
+          // Insert a native ad after every adInterval pages (not after the last page).
+          // Each ad uses an isolated iframe so Adsterra runs fresh with no ID conflicts.
           if (
-            !adInserted &&
-            pageNumber >= adTriggerPage &&
+            pageNumber % adInterval === 0 &&
             pageNumber < pdf.numPages &&
             ADSTERRA_INVOKE_SRC &&
             ADSTERRA_CONTAINER_ID
           ) {
-            adInserted = true;
-
             const adWrapper = document.createElement("div");
             adWrapper.className =
               "relative overflow-hidden rounded-xl bg-surface shadow-sm";
@@ -224,17 +221,34 @@ export default function PdfViewerModal({
               "position:absolute;top:8px;right:10px;font-size:10px;color:var(--ink-3);z-index:1;pointer-events:none;";
             adWrapper.appendChild(sponsored);
 
-            const adContainer = document.createElement("div");
-            adContainer.id = ADSTERRA_CONTAINER_ID;
-            adWrapper.appendChild(adContainer);
-
-            const adScript = document.createElement("script");
-            adScript.async = true;
-            adScript.setAttribute("data-cfasync", "false");
-            adScript.src = ADSTERRA_INVOKE_SRC;
-            adWrapper.appendChild(adScript);
-
+            const iframe = document.createElement("iframe");
+            iframe.style.cssText =
+              "width:100%;min-height:120px;border:none;display:block;";
+            iframe.scrolling = "no";
+            adWrapper.appendChild(iframe);
             canvasContainer.appendChild(adWrapper);
+
+            // Write Adsterra code into the isolated iframe so each slot
+            // gets its own fresh script execution and DOM — no duplicate IDs.
+            const iframeDoc =
+              iframe.contentDocument ?? iframe.contentWindow?.document;
+            if (iframeDoc) {
+              iframeDoc.open();
+              iframeDoc.write(
+                `<!DOCTYPE html><html><head><style>body{margin:0;padding:0;overflow:hidden;}</style></head>` +
+                `<body><script async="async" data-cfasync="false" src="${ADSTERRA_INVOKE_SRC}"><\/script>` +
+                `<div id="${ADSTERRA_CONTAINER_ID}"></div></body></html>`,
+              );
+              iframeDoc.close();
+
+              // Resize the iframe to fit the ad content once it loads.
+              iframe.addEventListener("load", () => {
+                const body = iframe.contentDocument?.body;
+                if (body) {
+                  iframe.style.height = `${body.scrollHeight}px`;
+                }
+              });
+            }
           }
 
           if (pageNumber === pdf.numPages) {
