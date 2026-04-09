@@ -23,6 +23,7 @@ model User {
   emailNotificationsProductUpdates  Boolean @default(true)
   emailNotificationsMarketing       Boolean @default(true)
   emailNotificationsUploadReminder  Boolean @default(true)
+  lastUploadReminderSentAt          DateTime?
   pushNotificationsLikes    Boolean @default(true)
   pushNotificationsComments Boolean @default(true)
   pushNotificationsFollows  Boolean @default(true)
