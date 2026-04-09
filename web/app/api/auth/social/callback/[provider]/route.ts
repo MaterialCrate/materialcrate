@@ -256,6 +256,7 @@ export async function GET(
     if (!token) {
       throw new Error("Social authentication did not return a token");
     }
+    const sessionToken: string = token;
 
     const restoreRequired = Boolean(
       graphqlBody?.data?.socialAuth?.restoreRequired,
@@ -282,7 +283,7 @@ export async function GET(
     const response = NextResponse.redirect(new URL(destination, origin));
     response.cookies.set(
       restoreRequired ? RESTORE_SESSION_COOKIE_NAME : SESSION_COOKIE_NAME,
-      token,
+      sessionToken,
       {
         ...SESSION_COOKIE_OPTIONS,
         maxAge: SESSION_MAX_AGE_SECONDS,
