@@ -5,6 +5,13 @@ import { CloseCircle } from "iconsax-reactjs";
 import { trackFeedInteraction } from "@/app/lib/feed-tracking";
 import type { HomePost } from "./Post";
 
+// ─── Adsterra Native Banner ───────────────────────────────────────────────────
+// Fill these in after creating a Native Banner zone in your Adsterra dashboard.
+// Leave empty to disable ads.
+const ADSTERRA_INVOKE_SRC = "https://pl29107546.profitablecpmratenetwork.com/dca3faf47483a0c15be4506365e921d8/invoke.js";
+const ADSTERRA_CONTAINER_ID = "container-dca3faf47483a0c15be4506365e921d8";
+// ─────────────────────────────────────────────────────────────────────────────
+
 type PdfViewerModalProps = {
   post: HomePost | null;
   isOpen: boolean;
@@ -159,6 +166,10 @@ export default function PdfViewerModal({
           pageCount: pdf.numPages,
         });
 
+        // Randomise which page the ad appears after (3–5), stable for this render.
+        const adTriggerPage = 3 + Math.floor(Math.random() * 3);
+        let adInserted = false;
+
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
           if (isCancelled) break;
 
@@ -192,6 +203,39 @@ export default function PdfViewerModal({
           wrapper.className =
             "relative overflow-hidden rounded bg-surface shadow-sm select-none";
           wrapper.appendChild(canvas);
+
+          // Insert a native ad after the trigger page (not after the last page).
+          if (
+            !adInserted &&
+            pageNumber >= adTriggerPage &&
+            pageNumber < pdf.numPages &&
+            ADSTERRA_INVOKE_SRC &&
+            ADSTERRA_CONTAINER_ID
+          ) {
+            adInserted = true;
+
+            const adWrapper = document.createElement("div");
+            adWrapper.className =
+              "relative overflow-hidden rounded-xl bg-surface shadow-sm";
+
+            const sponsored = document.createElement("span");
+            sponsored.textContent = "Sponsored";
+            sponsored.style.cssText =
+              "position:absolute;top:8px;right:10px;font-size:10px;color:var(--ink-3);z-index:1;pointer-events:none;";
+            adWrapper.appendChild(sponsored);
+
+            const adContainer = document.createElement("div");
+            adContainer.id = ADSTERRA_CONTAINER_ID;
+            adWrapper.appendChild(adContainer);
+
+            const adScript = document.createElement("script");
+            adScript.async = true;
+            adScript.setAttribute("data-cfasync", "false");
+            adScript.src = ADSTERRA_INVOKE_SRC;
+            adWrapper.appendChild(adScript);
+
+            canvasContainer.appendChild(adWrapper);
+          }
 
           if (pageNumber === pdf.numPages) {
             setPdfState((prev) => ({ ...prev, isRendering: false }));

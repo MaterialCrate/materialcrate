@@ -1,1 +1,41 @@
-node_modules
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.next/
+web/.next/
+server/dist/
+
+# TypeScript
+*.tsbuildinfo
+web/tsconfig.tsbuildinfo
+
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env.*.local
+server/.env
+web/.env
+web/.env.local
+
+# Prisma generated client (regenerated on install)
+server/node_modules/.prisma/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Render / deployment caches
+.render-buildinfo.json
