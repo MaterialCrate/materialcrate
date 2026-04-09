@@ -1341,11 +1341,13 @@ export const UserResolver = {
         emailNotificationsWeeklySummary,
         emailNotificationsProductUpdates,
         emailNotificationsMarketing,
+        emailNotificationsUploadReminder,
       }: {
         emailNotificationsAccountActivity: boolean;
         emailNotificationsWeeklySummary: boolean;
         emailNotificationsProductUpdates: boolean;
         emailNotificationsMarketing: boolean;
+        emailNotificationsUploadReminder: boolean;
       },
       ctx: any,
     ) => {
@@ -1360,6 +1362,7 @@ export const UserResolver = {
           emailNotificationsWeeklySummary,
           emailNotificationsProductUpdates,
           emailNotificationsMarketing,
+          emailNotificationsUploadReminder,
         },
       });
     },
@@ -2656,6 +2659,9 @@ export const UserResolver = {
     emailNotificationsMarketing: (user: {
       emailNotificationsMarketing?: boolean | null;
     }) => user.emailNotificationsMarketing ?? true,
+    emailNotificationsUploadReminder: (user: {
+      emailNotificationsUploadReminder?: boolean | null;
+    }) => user.emailNotificationsUploadReminder ?? true,
     profilePicture: async (user: { profilePicture?: string | null }) => {
       const rawProfilePicture = user.profilePicture?.trim();
       if (!rawProfilePicture) {

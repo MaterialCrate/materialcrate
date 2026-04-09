@@ -3,6 +3,7 @@ import { connectDB } from "./config/db.js";
 import { createHttpServer } from "./server.js";
 import { startDeletedPostPurgeLoop } from "./services/postDeletion.js";
 import { startUnverifiedUserPurgeLoop } from "./services/unverifiedUserPurge.js";
+import { startUploadReminderLoop } from "./services/uploadReminderLoop.js";
 
 const PORT = Number(process.env.PORT || 4000);
 const HOST = process.env.HOST || "0.0.0.0";
@@ -10,6 +11,7 @@ const HOST = process.env.HOST || "0.0.0.0";
 await connectDB();
 startDeletedPostPurgeLoop();
 startUnverifiedUserPurgeLoop();
+startUploadReminderLoop();
 
 const httpServer = await createHttpServer();
 

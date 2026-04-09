@@ -22,6 +22,7 @@ model User {
   emailNotificationsWeeklySummary   Boolean @default(true)
   emailNotificationsProductUpdates  Boolean @default(true)
   emailNotificationsMarketing       Boolean @default(true)
+  emailNotificationsUploadReminder  Boolean @default(true)
   pushNotificationsLikes    Boolean @default(true)
   pushNotificationsComments Boolean @default(true)
   pushNotificationsFollows  Boolean @default(true)

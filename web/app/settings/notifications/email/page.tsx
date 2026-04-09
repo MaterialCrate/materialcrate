@@ -13,6 +13,7 @@ type EmailNotificationSettings = {
   emailNotificationsWeeklySummary: boolean;
   emailNotificationsProductUpdates: boolean;
   emailNotificationsMarketing: boolean;
+  emailNotificationsUploadReminder: boolean;
 };
 
 type EmailOption = {
@@ -26,6 +27,7 @@ const DEFAULT_EMAIL_NOTIFICATION_SETTINGS: EmailNotificationSettings = {
   emailNotificationsWeeklySummary: true,
   emailNotificationsProductUpdates: true,
   emailNotificationsMarketing: true,
+  emailNotificationsUploadReminder: true,
 };
 
 const emailOptions: EmailOption[] = [
@@ -48,6 +50,11 @@ const emailOptions: EmailOption[] = [
     key: "emailNotificationsMarketing",
     label: "Marketing emails",
     description: "Occasional tips, promos, and campaigns.",
+  },
+  {
+    key: "emailNotificationsUploadReminder",
+    label: "Upload reminders",
+    description: "Weekly nudge to share materials and earn tokens when you haven't uploaded recently.",
   },
 ];
 
@@ -107,6 +114,10 @@ export default function Page() {
             typeof body.user.emailNotificationsMarketing === "boolean"
               ? body.user.emailNotificationsMarketing
               : DEFAULT_EMAIL_NOTIFICATION_SETTINGS.emailNotificationsMarketing,
+          emailNotificationsUploadReminder:
+            typeof body.user.emailNotificationsUploadReminder === "boolean"
+              ? body.user.emailNotificationsUploadReminder
+              : DEFAULT_EMAIL_NOTIFICATION_SETTINGS.emailNotificationsUploadReminder,
         });
       } catch (caughtError: unknown) {
         if (!mounted) return;

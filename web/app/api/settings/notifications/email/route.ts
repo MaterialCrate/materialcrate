@@ -10,18 +10,21 @@ const UPDATE_EMAIL_NOTIFICATION_SETTINGS_MUTATION = `
     $emailNotificationsWeeklySummary: Boolean!
     $emailNotificationsProductUpdates: Boolean!
     $emailNotificationsMarketing: Boolean!
+    $emailNotificationsUploadReminder: Boolean!
   ) {
     updateEmailNotificationSettings(
       emailNotificationsAccountActivity: $emailNotificationsAccountActivity
       emailNotificationsWeeklySummary: $emailNotificationsWeeklySummary
       emailNotificationsProductUpdates: $emailNotificationsProductUpdates
       emailNotificationsMarketing: $emailNotificationsMarketing
+      emailNotificationsUploadReminder: $emailNotificationsUploadReminder
     ) {
       id
       emailNotificationsAccountActivity
       emailNotificationsWeeklySummary
       emailNotificationsProductUpdates
       emailNotificationsMarketing
+      emailNotificationsUploadReminder
     }
   }
 `;
@@ -31,6 +34,7 @@ type UpdateEmailNotificationSettingsBody = {
   emailNotificationsWeeklySummary?: boolean;
   emailNotificationsProductUpdates?: boolean;
   emailNotificationsMarketing?: boolean;
+  emailNotificationsUploadReminder?: boolean;
 };
 
 export async function POST(req: Request) {
@@ -46,12 +50,13 @@ export async function POST(req: Request) {
     typeof body.emailNotificationsAccountActivity !== "boolean" ||
     typeof body.emailNotificationsWeeklySummary !== "boolean" ||
     typeof body.emailNotificationsProductUpdates !== "boolean" ||
-    typeof body.emailNotificationsMarketing !== "boolean"
+    typeof body.emailNotificationsMarketing !== "boolean" ||
+    typeof body.emailNotificationsUploadReminder !== "boolean"
   ) {
     return NextResponse.json(
       {
         error:
-          "emailNotificationsAccountActivity, emailNotificationsWeeklySummary, emailNotificationsProductUpdates, and emailNotificationsMarketing are required booleans",
+          "emailNotificationsAccountActivity, emailNotificationsWeeklySummary, emailNotificationsProductUpdates, emailNotificationsMarketing, and emailNotificationsUploadReminder are required booleans",
       },
       { status: 400 },
     );
@@ -78,6 +83,7 @@ export async function POST(req: Request) {
         emailNotificationsWeeklySummary: body.emailNotificationsWeeklySummary,
         emailNotificationsProductUpdates: body.emailNotificationsProductUpdates,
         emailNotificationsMarketing: body.emailNotificationsMarketing,
+        emailNotificationsUploadReminder: body.emailNotificationsUploadReminder,
       },
     }),
   });

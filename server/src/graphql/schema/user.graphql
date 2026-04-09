@@ -13,6 +13,7 @@ type User {
   emailNotificationsWeeklySummary: Boolean!
   emailNotificationsProductUpdates: Boolean!
   emailNotificationsMarketing: Boolean!
+  emailNotificationsUploadReminder: Boolean!
   pushNotificationsLikes: Boolean!
   pushNotificationsComments: Boolean!
   pushNotificationsFollows: Boolean!
@@ -137,6 +138,7 @@ type Mutation {
     emailNotificationsWeeklySummary: Boolean!
     emailNotificationsProductUpdates: Boolean!
     emailNotificationsMarketing: Boolean!
+    emailNotificationsUploadReminder: Boolean!
   ): User!
   updatePushNotificationSettings(
     pushNotificationsLikes: Boolean!
