@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import {
+  SESSION_COOKIE_NAME,
+  SESSION_COOKIE_OPTIONS,
+  SESSION_MAX_AGE_SECONDS,
+} from "../cookies";
 
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
@@ -45,12 +50,6 @@ type SignupBody = {
 };
 
 export async function POST(req: Request) {
-  // TODO: re-enable tomorrow when email quota resets
-  return NextResponse.json(
-    { error: "Sign-up is temporarily unavailable. Please try again tomorrow." },
-    { status: 503 },
-  );
-
   let body: SignupBody;
 
   try {
@@ -123,12 +122,9 @@ export async function POST(req: Request) {
     verificationEmailSent,
     verificationEmailError: verificationEmailError ?? null,
   });
-  response.cookies.set("mc_session", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+  response.cookies.set(SESSION_COOKIE_NAME, token, {
+    ...SESSION_COOKIE_OPTIONS,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   });
 
   return response;

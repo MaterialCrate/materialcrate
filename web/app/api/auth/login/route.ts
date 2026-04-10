@@ -33,12 +33,6 @@ type LoginBody = {
 };
 
 export async function POST(req: Request) {
-  // TODO: re-enable tomorrow when email quota resets
-  return NextResponse.json(
-    { error: "Sign-in is temporarily unavailable. Please try again tomorrow." },
-    { status: 503 },
-  );
-
   let body: LoginBody;
 
   try {
