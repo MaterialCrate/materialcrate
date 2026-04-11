@@ -1,0 +1,101 @@
+type ChatParticipant {
+  id: ID!
+  name: String!
+  username: String!
+  avatar: String
+  isOnline: Boolean!
+}
+
+type Conversation {
+  id: ID!
+  participant: ChatParticipant!
+  lastMessage: String
+  lastMessageTime: String
+  lastMessageSentByMe: Boolean!
+  lastMessageIsRead: Boolean!
+  unreadCount: Int!
+  updatedAt: String!
+}
+
+# Snapshot of the post attached to a message
+type AttachedPost {
+  id: ID!
+  title: String!
+  thumbnailUrl: String
+  categories: [String!]!
+  authorUsername: String
+}
+
+# A file/post attached to a message.
+# type: POST | IMAGE | VIDEO | DOCUMENT
+type ChatMessageAttachment {
+  id: ID!
+  type: String!
+  post: AttachedPost
+  url: String
+  fileName: String
+  fileSize: String
+}
+
+type ChatMessageEdit {
+  id: ID!
+  previousText: String!
+  editedAt: String!
+}
+
+# Minimal snapshot of the parent message shown inside a reply bubble
+type ReplyPreview {
+  id: ID!
+  text: String
+  isUnsent: Boolean!
+  senderName: String!
+  sentByMe: Boolean!
+  attachmentType: String
+}
+
+type ChatMessage {
+  id: ID!
+  text: String
+  sentByMe: Boolean!
+  timestamp: String!
+  status: String
+  isUnsent: Boolean!
+  editedAt: String
+  replyTo: ReplyPreview
+  attachments: [ChatMessageAttachment!]!
+  editHistory: [ChatMessageEdit!]!
+}
+
+input ChatAttachmentInput {
+  type: String!
+  postId: ID
+}
+
+type ChatUserSuggestion {
+  id: ID!
+  displayName: String!
+  username: String!
+  profilePicture: String
+  followersCount: Int!
+  isFollowing: Boolean!
+  hasExistingConversation: Boolean!
+}
+
+extend type Query {
+  conversations: [Conversation!]!
+  messages(conversationId: ID!, limit: Int = 50, before: String): [ChatMessage!]!
+  chatUserSuggestions(query: String): [ChatUserSuggestion!]!
+}
+
+extend type Mutation {
+  startConversation(userId: ID!): Conversation!
+  sendMessage(
+    conversationId: ID!
+    text: String
+    replyToId: ID
+    attachments: [ChatAttachmentInput!]
+  ): ChatMessage!
+  markMessagesRead(conversationId: ID!): Boolean!
+  editMessage(messageId: ID!, newText: String!): ChatMessage!
+  unsendMessage(messageId: ID!): Boolean!
+}

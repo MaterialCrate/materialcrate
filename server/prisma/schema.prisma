@@ -83,6 +83,9 @@ model User {
   reports       Report[]
   tokenTransactions TokenTransaction[]
   cashoutRequests   TokenCashoutRequest[]
+  conversationsAsA  Conversation[] @relation("ConversationParticipantA")
+  conversationsAsB  Conversation[] @relation("ConversationParticipantB")
+  sentChatMessages  ChatMessage[]  @relation("ChatMessageSender")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -203,6 +206,7 @@ model Post {
   hubChats   HubChat[]
   feedInteractions FeedInteraction[]
   tokenTransactions TokenTransaction[]
+  chatAttachments   ChatMessageAttachment[] @relation("PostChatAttachments")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -454,4 +458,73 @@ model Report {
 
   @@index([userId, createdAt])
   @@index([resolved])
+}
+
+// Ordered so participantAId < participantBId (sorted at write time) to enforce a single row per pair
+model Conversation {
+  id             String        @id @default(cuid())
+  participantAId String
+  participantBId String
+  participantA   User          @relation("ConversationParticipantA", fields: [participantAId], references: [id], onDelete: Cascade)
+  participantB   User          @relation("ConversationParticipantB", fields: [participantBId], references: [id], onDelete: Cascade)
+  messages       ChatMessage[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([participantAId, participantBId])
+  @@index([participantAId, updatedAt])
+  @@index([participantBId, updatedAt])
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  text           String?      // nullable — message may be attachment-only or unsent
+  parentId       String?      // reply-to
+  isUnsent       Boolean      @default(false)
+  status         String       @default("SENT") // SENT | DELIVERED | READ
+  editedAt       DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  conversation Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                  @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  parent       ChatMessage?          @relation("MessageReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies      ChatMessage[]         @relation("MessageReplies")
+  attachments  ChatMessageAttachment[]
+  edits        ChatMessageEdit[]
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@index([conversationId, status, senderId])
+  @@index([parentId])
+}
+
+model ChatMessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  type      String   // POST | IMAGE | VIDEO | DOCUMENT
+  postId    String?
+  url       String?
+  fileName  String?
+  fileSize  String?
+  createdAt DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  post    Post?       @relation("PostChatAttachments", fields: [postId], references: [id], onDelete: SetNull)
+
+  @@index([messageId])
+  @@index([postId])
+}
+
+model ChatMessageEdit {
+  id           String   @id @default(cuid())
+  messageId    String
+  previousText String
+  editedAt     DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId, editedAt])
 }

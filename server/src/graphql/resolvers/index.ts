@@ -9,6 +9,7 @@ import { ReportResolver } from "./report.resolver.js";
 import { SupportResolver } from "./support.resolver.js";
 import { AiUsageResolver } from "./ai-usage.resolver.js";
 import { AchievementResolver } from "./achievement.resolver.js";
+import { ChatResolver } from "./chat.resolver.js";
 
 export const resolvers = {
   Query: {
@@ -22,6 +23,7 @@ export const resolvers = {
     ...ReportResolver.Query,
     ...AdminResolver.Query,
     ...AchievementResolver.Query,
+    ...ChatResolver.Query,
   },
   Mutation: {
     ...UserResolver.Mutation,
@@ -34,6 +36,7 @@ export const resolvers = {
     ...SupportResolver.Mutation,
     ...AdminResolver.Mutation,
     ...AiUsageResolver.Mutation,
+    ...ChatResolver.Mutation,
   },
   Post: {
     ...PostResolver.Post,
