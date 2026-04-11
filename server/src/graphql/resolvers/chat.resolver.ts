@@ -355,16 +355,16 @@ export const ChatResolver = {
       const [priorityUsers, popularUsers] = await Promise.all([
         priorityIds.length
           ? prisma.user.findMany({
-              where: { id: { in: priorityIds }, ...baseWhere },
+              where: { ...baseWhere, id: { in: priorityIds } },
               select: userSelect,
             })
           : Promise.resolve([]),
         prisma.user.findMany({
           where: {
             ...baseWhere,
-            ...(priorityIds.length
-              ? { id: { notIn: priorityIds, not: viewerId } }
-              : {}),
+            id: priorityIds.length
+              ? { notIn: priorityIds, not: viewerId }
+              : { not: viewerId },
           },
           orderBy: { followerRelations: { _count: "desc" } },
           take: 20,
