@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 
 const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
-const ALLOWED_HOST_SUFFIX = ".amazonaws.com";
+const ALLOWED_HOST_SUFFIXES = [".amazonaws.com", ".cloudfront.net"];
 
 const THUMBNAIL_URL_QUERY = `
   query PostThumbnailUrl($id: ID!) {
@@ -20,7 +20,7 @@ const isAllowedThumbnailUrl = (value: string) => {
     const parsed = new URL(value);
     return (
       parsed.protocol === "https:" &&
-      parsed.hostname.endsWith(ALLOWED_HOST_SUFFIX)
+      ALLOWED_HOST_SUFFIXES.some((s) => parsed.hostname.endsWith(s))
     );
   } catch {
     return false;
