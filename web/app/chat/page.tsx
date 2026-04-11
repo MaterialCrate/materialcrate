@@ -593,7 +593,6 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-dvh flex-col bg-page">
-      {/* Header + search — slide up together on scroll down */}
       <div
         ref={topBarRef}
         className="shrink-0 bg-surface"

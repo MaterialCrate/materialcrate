@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -11,16 +11,34 @@ import {
   TickCircle,
   Paperclip2,
 } from "iconsax-reactjs";
+import { useAuth } from "../../lib/auth-client";
+import {
+  subscribeToChatMessages,
+  subscribeToChatTyping,
+  emitTyping,
+  type ChatMessageEvent,
+} from "../../lib/post-activity-realtime";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type MessageStatus = "sending" | "sent" | "delivered" | "read";
 
+type MessageAttachment = {
+  id: string;
+  type: string;
+  url?: string | null;
+  fileName?: string | null;
+  fileSize?: string | null;
+};
+
 type Message = {
   id: string;
-  text: string;
+  text: string | null;
   sentByMe: boolean;
   timestamp: Date;
   status?: MessageStatus;
-  attachment?: { name: string; size: string };
+  isUnsent?: boolean;
+  attachments?: MessageAttachment[];
 };
 
 type Participant = {
@@ -30,120 +48,6 @@ type Participant = {
   avatar: string | null;
   isOnline: boolean;
 };
-
-// ─── Mock data ────────────────────────────────────────────────────────────────
-
-const PARTICIPANTS: Record<string, Participant> = {
-  "1": {
-    id: "1",
-    name: "Amara Osei",
-    username: "amara.osei",
-    avatar: null,
-    isOnline: true,
-  },
-  "2": {
-    id: "2",
-    name: "Kofi Mensah",
-    username: "kofi.mensah",
-    avatar: null,
-    isOnline: true,
-  },
-  "3": {
-    id: "3",
-    name: "Fatima Al-Hassan",
-    username: "fatima_h",
-    avatar: null,
-    isOnline: false,
-  },
-  "4": {
-    id: "4",
-    name: "Daniel Kwame",
-    username: "dkwame",
-    avatar: null,
-    isOnline: false,
-  },
-  "5": {
-    id: "5",
-    name: "Naomi Abubakar",
-    username: "naomi_ab",
-    avatar: null,
-    isOnline: false,
-  },
-};
-
-const SEED_MESSAGES: Message[] = [
-  {
-    id: "m1",
-    text: "Hey! Did you check out the thermodynamics notes I uploaded?",
-    sentByMe: false,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    id: "m2",
-    text: "Yeah I did! Super helpful, the second law explanation was exactly what I needed.",
-    sentByMe: true,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2 + 1000 * 45),
-    status: "read",
-  },
-  {
-    id: "m3",
-    text: "Glad it helped! Are you also looking for the heat transfer chapter?",
-    sentByMe: false,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.5),
-  },
-  {
-    id: "m4",
-    text: "Yes please, I've been struggling with that section all week.",
-    sentByMe: true,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1.4),
-    status: "read",
-  },
-  {
-    id: "m5",
-    text: "I'll upload it tonight after my lab session. It has some great worked examples.",
-    sentByMe: false,
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 1),
-  },
-  {
-    id: "m6",
-    text: "Perfect, I'll keep an eye out for it. Also do you have the formula sheet from last semester's exam?",
-    sentByMe: true,
-    timestamp: new Date(Date.now() - 1000 * 60 * 50),
-    status: "read",
-  },
-  {
-    id: "m7",
-    text: "I do! One sec, let me find it.",
-    sentByMe: false,
-    timestamp: new Date(Date.now() - 1000 * 60 * 48),
-  },
-  {
-    id: "m8",
-    text: "Thermo Formula Sheet.pdf",
-    sentByMe: false,
-    timestamp: new Date(Date.now() - 1000 * 60 * 47),
-    attachment: { name: "Thermo Formula Sheet.pdf", size: "248 KB" },
-  },
-  {
-    id: "m9",
-    text: "This is amazing, thank you so much!",
-    sentByMe: true,
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    status: "delivered",
-  },
-  {
-    id: "m10",
-    text: "No worries! Good luck on the exam.",
-    sentByMe: false,
-    timestamp: new Date(Date.now() - 1000 * 60 * 28),
-  },
-  {
-    id: "m11",
-    text: "Hey, did you see the notes I uploaded for thermodynamics?",
-    sentByMe: false,
-    timestamp: new Date(Date.now() - 1000 * 60 * 2),
-  },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -215,6 +119,17 @@ function groupMessagesByDay(
   }));
 }
 
+function normaliseStatus(
+  raw: string | null | undefined,
+): MessageStatus | undefined {
+  if (!raw) return undefined;
+  const lower = raw.toLowerCase();
+  if (lower === "sent") return "sent";
+  if (lower === "delivered") return "delivered";
+  if (lower === "read") return "read";
+  return undefined;
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusTick({ status }: { status?: MessageStatus }) {
@@ -232,9 +147,12 @@ function AttachmentBubble({
   attachment,
   sentByMe,
 }: {
-  attachment: { name: string; size: string };
+  attachment: MessageAttachment;
   sentByMe: boolean;
 }) {
+  const name = attachment.fileName ?? attachment.type;
+  const size = attachment.fileSize ?? null;
+
   return (
     <div
       className={`flex items-center gap-2.5 rounded-2xl px-3 py-2.5 ${
@@ -258,21 +176,24 @@ function AttachmentBubble({
             sentByMe ? "text-white" : "text-ink"
           }`}
         >
-          {attachment.name}
+          {name}
         </p>
-        <p
-          className={`text-[10px] ${sentByMe ? "text-white/60" : "text-ink-3"}`}
-        >
-          {attachment.size}
-        </p>
+        {size && (
+          <p
+            className={`text-[10px] ${sentByMe ? "text-white/60" : "text-ink-3"}`}
+          >
+            {size}
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
 function MessageBubble({ message }: { message: Message }) {
-  const { sentByMe, text, timestamp, status, attachment } = message;
-  const isAttachmentOnly = attachment && text === attachment.name;
+  const { sentByMe, text, timestamp, status, isUnsent, attachments } = message;
+  const hasAttachments = attachments && attachments.length > 0;
+  const showText = !isUnsent && text;
 
   return (
     <div className={`flex ${sentByMe ? "justify-end" : "justify-start"}`}>
@@ -281,11 +202,16 @@ function MessageBubble({ message }: { message: Message }) {
           sentByMe ? "items-end" : "items-start"
         }`}
       >
-        {attachment && (
-          <AttachmentBubble attachment={attachment} sentByMe={sentByMe} />
-        )}
+        {hasAttachments &&
+          attachments.map((att) => (
+            <AttachmentBubble
+              key={att.id}
+              attachment={att}
+              sentByMe={sentByMe}
+            />
+          ))}
 
-        {text && !isAttachmentOnly && (
+        {showText && (
           <div
             className={`rounded-[18px] px-3.5 py-2.5 ${
               sentByMe
@@ -294,6 +220,12 @@ function MessageBubble({ message }: { message: Message }) {
             }`}
           >
             <p className="text-sm leading-relaxed">{text}</p>
+          </div>
+        )}
+
+        {isUnsent && (
+          <div className="rounded-[18px] rounded-bl-md bg-surface-high px-3.5 py-2.5">
+            <p className="text-sm italic text-ink-3">Message unsent</p>
           </div>
         )}
 
@@ -312,57 +244,182 @@ function MessageBubble({ message }: { message: Message }) {
   );
 }
 
+function HeaderSkeleton() {
+  return (
+    <header className="flex shrink-0 items-center gap-3 border-b border-edge bg-surface px-4 py-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+        <ArrowLeft size={22} color="var(--ink)" />
+      </div>
+      <div className="flex flex-1 items-center gap-3">
+        <div className="h-10 w-10 shrink-0 animate-pulse rounded-[14px] bg-surface-high" />
+        <div className="space-y-1.5">
+          <div className="h-3.5 w-32 animate-pulse rounded-full bg-surface-high" />
+          <div className="h-3 w-20 animate-pulse rounded-full bg-surface-high" />
+        </div>
+      </div>
+    </header>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ChatRoomPage() {
   const router = useRouter();
   const params = useParams();
-  const chatId = Array.isArray(params["chat-id"])
+  const { user } = useAuth();
+  const conversationId = Array.isArray(params["chat-id"])
     ? params["chat-id"][0]
     : params["chat-id"];
 
-  const participant: Participant = PARTICIPANTS[chatId ?? ""] ?? {
-    id: chatId ?? "unknown",
-    name: "Unknown",
-    username: "unknown",
-    avatar: null,
-    isOnline: false,
-  };
-
-  const [messages, setMessages] = useState<Message[]>(SEED_MESSAGES);
+  const [participant, setParticipant] = useState<Participant | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isTypingRemote, setIsTypingRemote] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const draftRef = useRef("");
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Scroll to bottom on mount + new messages
+  // Fetch conversation data on mount
+  const fetchConversation = useCallback(async () => {
+    if (!conversationId) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/chat/${encodeURIComponent(conversationId)}`,
+        {
+          cache: "no-store",
+        },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(body?.error || "Failed to load conversation");
+        return;
+      }
+      setParticipant(body.participant ?? null);
+      setMessages(
+        (body.messages ?? []).map(
+          (m: {
+            id: string;
+            text: string | null;
+            sentByMe: boolean;
+            timestamp: string;
+            status: string | null;
+            isUnsent: boolean;
+            attachments?: MessageAttachment[];
+          }) => ({
+            id: m.id,
+            text: m.text,
+            sentByMe: m.sentByMe,
+            timestamp: new Date(m.timestamp),
+            status: normaliseStatus(m.status),
+            isUnsent: m.isUnsent,
+            attachments: m.attachments ?? [],
+          }),
+        ),
+      );
+    } catch {
+      setError("Failed to load conversation");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [conversationId]);
+
+  useEffect(() => {
+    void fetchConversation();
+  }, [fetchConversation]);
+
+  // Mark messages as read once loaded
+  useEffect(() => {
+    if (!conversationId || isLoading) return;
+    void fetch(`/api/chat/${encodeURIComponent(conversationId)}`, {
+      method: "PATCH",
+    });
+  }, [conversationId, isLoading]);
+
+  // Subscribe to realtime chat events
+  useEffect(() => {
+    if (!conversationId || !user) return;
+
+    let unsubMessages: (() => void) | null = null;
+    let unsubTyping: (() => void) | null = null;
+    let remoteTypingTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const onMessage = (event: ChatMessageEvent) => {
+      // Skip messages we sent ourselves — already handled optimistically
+      if (event.senderId === user.id) return;
+
+      setMessages((prev) => {
+        // Deduplicate in case the message already arrived via REST
+        if (prev.some((m) => m.id === event.message.id)) return prev;
+        return [
+          ...prev,
+          {
+            id: event.message.id,
+            text: event.message.text,
+            sentByMe: false,
+            timestamp: new Date(event.message.timestamp),
+            status: normaliseStatus(event.message.status),
+            isUnsent: event.message.isUnsent,
+            attachments: event.message.attachments ?? [],
+          },
+        ];
+      });
+
+      // Mark the incoming message as read
+      void fetch(`/api/chat/${encodeURIComponent(conversationId)}`, {
+        method: "PATCH",
+      });
+    };
+
+    const onTyping = (e: { senderId: string; isTyping: boolean }) => {
+      if (e.senderId === user.id) return;
+      setIsTypingRemote(e.isTyping);
+      if (remoteTypingTimeout) clearTimeout(remoteTypingTimeout);
+      if (e.isTyping) {
+        // Auto-hide after 4 s as a safety net
+        remoteTypingTimeout = setTimeout(() => setIsTypingRemote(false), 4000);
+      }
+    };
+
+    void subscribeToChatMessages(conversationId, onMessage).then((unsub) => {
+      unsubMessages = unsub;
+    });
+    void subscribeToChatTyping(conversationId, onTyping).then((unsub) => {
+      unsubTyping = unsub;
+    });
+
+    return () => {
+      unsubMessages?.();
+      unsubTyping?.();
+      if (remoteTypingTimeout) clearTimeout(remoteTypingTimeout);
+    };
+  }, [conversationId, user]);
+
+  // Scroll to bottom on new messages / typing indicator
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, isTypingRemote]);
 
-  const draftRef = useRef("");
-
-  const triggerFakeTyping = () => {
-    setTimeout(() => {
-      setIsTyping(true);
-      setTimeout(() => setIsTyping(false), 2200);
-    }, 800);
-  };
-
-  const sendMessage = () => {
+  const sendMessage = async () => {
     const text = draftRef.current.trim();
-    if (!text) return;
+    if (!text || !conversationId) return;
 
-    const newMsg: Message = {
-      id: `m${Date.now()}`,
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: Message = {
+      id: tempId,
       text,
       sentByMe: true,
       timestamp: new Date(),
       status: "sending",
+      attachments: [],
     };
 
-    setMessages((prev) => [...prev, newMsg]);
+    setMessages((prev) => [...prev, optimistic]);
     draftRef.current = "";
     setDraft("");
 
@@ -370,22 +427,49 @@ export default function ChatRoomPage() {
       inputRef.current.style.height = "auto";
     }
 
-    setTimeout(() => {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === newMsg.id ? { ...m, status: "delivered" } : m,
-        ),
+    try {
+      const res = await fetch(
+        `/api/chat/${encodeURIComponent(conversationId)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        },
       );
-    }, 600);
+      const body = await res.json().catch(() => ({}));
+      const msg = body?.message;
 
-    triggerFakeTyping();
+      if (res.ok && msg) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === tempId
+              ? {
+                  id: msg.id,
+                  text: msg.text,
+                  sentByMe: true,
+                  timestamp: new Date(msg.timestamp),
+                  status: normaliseStatus(msg.status),
+                  isUnsent: msg.isUnsent,
+                  attachments: msg.attachments ?? [],
+                }
+              : m,
+          ),
+        );
+      } else {
+        // Remove optimistic message on failure
+        setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      }
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    }
+
     inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      void sendMessage();
     }
   };
 
@@ -394,79 +478,115 @@ export default function ChatRoomPage() {
   return (
     <div className="flex h-dvh flex-col bg-page">
       {/* ── Header ── */}
-      <header className="flex shrink-0 items-center gap-3 border-b border-edge bg-surface px-4 py-3">
-        <button
-          type="button"
-          aria-label="Back"
-          onClick={() => router.back()}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-high active:opacity-60"
-        >
-          <ArrowLeft size={22} color="var(--ink)" />
-        </button>
+      {isLoading || !participant ? (
+        <HeaderSkeleton />
+      ) : (
+        <header className="flex shrink-0 items-center gap-3 border-b border-edge bg-surface px-4 py-3">
+          <button
+            type="button"
+            aria-label="Back"
+            onClick={() => router.back()}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-high active:opacity-60"
+          >
+            <ArrowLeft size={22} color="var(--ink)" />
+          </button>
 
-        <button
-          type="button"
-          onClick={() =>
-            router.push(`/user/${encodeURIComponent(participant.username)}`)
-          }
-          className="flex flex-1 items-center gap-3 rounded-xl py-1 text-left transition-opacity active:opacity-60"
-        >
-          <div className="relative shrink-0">
-            <div
-              className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-[14px] text-xs font-semibold ${avatarColor(participant.id)}`}
-            >
-              {participant.avatar ? (
-                <Image
-                  src={participant.avatar}
-                  alt={participant.name}
-                  fill
-                  sizes="40px"
-                  unoptimized
-                  className="object-cover"
-                />
-              ) : (
-                getInitials(participant.name)
+          <button
+            type="button"
+            onClick={() =>
+              router.push(`/user/${encodeURIComponent(participant.username)}`)
+            }
+            className="flex flex-1 items-center gap-3 rounded-xl py-1 text-left transition-opacity active:opacity-60"
+          >
+            <div className="relative shrink-0">
+              <div
+                className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-[14px] text-xs font-semibold ${avatarColor(participant.id)}`}
+              >
+                {participant.avatar ? (
+                  <Image
+                    src={participant.avatar}
+                    alt={participant.name}
+                    fill
+                    sizes="40px"
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  getInitials(participant.name)
+                )}
+              </div>
+              {participant.isOnline && (
+                <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-surface bg-[#1F9D75]" />
               )}
             </div>
-            {participant.isOnline && (
-              <span className="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-surface bg-[#1F9D75]" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">
-              {participant.name}
-            </p>
-            <p className="text-[11px] text-ink-3">
-              {participant.isOnline ? "Active now" : `@${participant.username}`}
-            </p>
-          </div>
-        </button>
-      </header>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">
+                {participant.name}
+              </p>
+              <p className="text-[11px] text-ink-3">
+                {participant.isOnline
+                  ? "Active now"
+                  : `@${participant.username}`}
+              </p>
+            </div>
+          </button>
+        </header>
+      )}
 
       {/* ── Messages ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="mx-auto max-w-2xl space-y-5">
-          {groups.map((group) => (
-            <div key={group.label} className="space-y-2">
-              {/* Date separator */}
-              <div className="flex items-center gap-3 py-1">
-                <div className="h-px flex-1 bg-edge" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-3">
-                  {group.label}
-                </span>
-                <div className="h-px flex-1 bg-edge" />
-              </div>
-
-              <div className="space-y-1.5">
-                {group.messages.map((msg) => (
-                  <MessageBubble key={msg.id} message={msg} />
-                ))}
-              </div>
+          {error ? (
+            <div className="flex flex-col items-center justify-center pt-20 text-center">
+              <p className="text-sm font-semibold text-ink">
+                Something went wrong
+              </p>
+              <p className="mt-1 text-sm text-ink-2">{error}</p>
+              <button
+                type="button"
+                onClick={() => void fetchConversation()}
+                className="mt-4 rounded-full bg-[#E1761F] px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-80 active:scale-95"
+              >
+                Retry
+              </button>
             </div>
-          ))}
+          ) : isLoading ? (
+            <div className="space-y-4 pt-2">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`flex ${i % 3 === 2 ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`h-9 animate-pulse rounded-[18px] bg-surface-high ${
+                      i % 3 === 2 ? "w-48" : "w-64"
+                    }`}
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            groups.map((group) => (
+              <div key={group.label} className="space-y-2">
+                {/* Date separator */}
+                <div className="flex items-center gap-3 py-1">
+                  <div className="h-px flex-1 bg-edge" />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-3">
+                    {group.label}
+                  </span>
+                  <div className="h-px flex-1 bg-edge" />
+                </div>
 
-          {/* Typing indicator */}
-          {isTyping && (
+                <div className="space-y-1.5">
+                  {group.messages.map((msg) => (
+                    <MessageBubble key={msg.id} message={msg} />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+
+          {isTypingRemote && (
             <div className="flex justify-start">
               <div className="flex items-center gap-1.5 rounded-[18px] rounded-bl-md bg-surface-high px-4 py-3">
                 <span className="h-2 w-2 animate-bounce rounded-full bg-ink-3 [animation-delay:0ms]" />
@@ -504,6 +624,15 @@ export default function ChatRoomPage() {
                 setDraft(e.target.value);
                 e.target.style.height = "auto";
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+
+                if (conversationId && user) {
+                  if (typingTimeoutRef.current)
+                    clearTimeout(typingTimeoutRef.current);
+                  void emitTyping(conversationId, user.id, true);
+                  typingTimeoutRef.current = setTimeout(() => {
+                    void emitTyping(conversationId, user.id, false);
+                  }, 2000);
+                }
               }}
               onKeyDown={handleKeyDown}
               className="max-h-30 flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-3 outline-none"
@@ -521,7 +650,7 @@ export default function ChatRoomPage() {
           <button
             type="button"
             aria-label="Send message"
-            onClick={sendMessage}
+            onClick={() => void sendMessage()}
             disabled={!draft.trim()}
             className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E1761F] transition-all active:scale-95 disabled:opacity-35"
           >

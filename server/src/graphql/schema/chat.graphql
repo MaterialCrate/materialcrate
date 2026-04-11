@@ -83,6 +83,7 @@ type ChatUserSuggestion {
 
 extend type Query {
   conversations: [Conversation!]!
+  conversation(id: ID!): Conversation
   messages(conversationId: ID!, limit: Int = 50, before: String): [ChatMessage!]!
   chatUserSuggestions(query: String): [ChatUserSuggestion!]!
 }

@@ -34,6 +34,35 @@ export type FollowActivityEvent = {
   emittedAt?: string;
 };
 
+export type ChatMessageAttachment = {
+  id: string;
+  type: string;
+  url?: string | null;
+  fileName?: string | null;
+  fileSize?: string | null;
+};
+
+export type ChatMessageEvent = {
+  conversationId: string;
+  senderId: string;
+  message: {
+    id: string;
+    text: string | null;
+    timestamp: string;
+    status: string | null;
+    isUnsent: boolean;
+    attachments: ChatMessageAttachment[];
+  };
+  emittedAt?: string;
+};
+
+export type ChatTypingEvent = {
+  conversationId: string;
+  senderId: string;
+  isTyping: boolean;
+  emittedAt?: string;
+};
+
 type SocketConfigResponse = {
   enabled?: boolean;
   socketUrl?: string | null;
@@ -43,6 +72,8 @@ type SocketConfigResponse = {
 type ActivityHandler = (event: PostActivityEvent) => void;
 type NotificationActivityHandler = (event: NotificationActivityEvent) => void;
 type FollowActivityHandler = (event: FollowActivityEvent) => void;
+type ChatMessageHandler = (event: ChatMessageEvent) => void;
+type ChatTypingHandler = (event: ChatTypingEvent) => void;
 
 let socketPromise: Promise<Socket | null> | null = null;
 const handlersByPostId = new Map<string, Set<ActivityHandler>>();
@@ -54,6 +85,9 @@ const notificationHandlersByUserId = new Map<
 const notificationWatcherCountByUserId = new Map<string, number>();
 const followHandlersByUserId = new Map<string, Set<FollowActivityHandler>>();
 const followWatcherCountByUserId = new Map<string, number>();
+const chatMessageHandlersByConvId = new Map<string, Set<ChatMessageHandler>>();
+const chatTypingHandlersByConvId = new Map<string, Set<ChatTypingHandler>>();
+const chatWatcherCountByConvId = new Map<string, number>();
 
 const normalizePostId = (value: unknown) =>
   typeof value === "string" ? value.trim() : "";
@@ -96,6 +130,30 @@ const broadcastNotificationActivity = (event: NotificationActivityEvent) => {
       handler({ ...event, userId });
     } catch (error) {
       console.error("Failed to handle realtime notification activity", error);
+    }
+  });
+};
+
+const broadcastChatMessage = (event: ChatMessageEvent) => {
+  const convId = event.conversationId?.trim();
+  if (!convId) return;
+  chatMessageHandlersByConvId.get(convId)?.forEach((handler) => {
+    try {
+      handler(event);
+    } catch (error) {
+      console.error("Failed to handle realtime chat message", error);
+    }
+  });
+};
+
+const broadcastChatTyping = (event: ChatTypingEvent) => {
+  const convId = event.conversationId?.trim();
+  if (!convId) return;
+  chatTypingHandlersByConvId.get(convId)?.forEach((handler) => {
+    try {
+      handler(event);
+    } catch (error) {
+      console.error("Failed to handle realtime chat typing", error);
     }
   });
 };
@@ -164,6 +222,8 @@ const ensureSocket = async () => {
       socket.on("post:activity", broadcastActivity);
       socket.on("notification:activity", broadcastNotificationActivity);
       socket.on("follow:activity", broadcastFollowActivity);
+      socket.on("chat:message", broadcastChatMessage);
+      socket.on("chat:typing", broadcastChatTyping);
       return socket;
     })();
   }
@@ -313,4 +373,71 @@ export const subscribeToFollowActivity = async (
 
     followWatcherCountByUserId.set(normalizedUserId, nextWatcherCount);
   };
+};
+
+export const subscribeToChatMessages = async (
+  conversationId: string,
+  handler: ChatMessageHandler,
+) => {
+  const convId = conversationId.trim();
+  if (!convId) return () => {};
+
+  const handlers = chatMessageHandlersByConvId.get(convId) ?? new Set<ChatMessageHandler>();
+  handlers.add(handler);
+  chatMessageHandlersByConvId.set(convId, handlers);
+
+  const socket = await ensureSocket();
+  if (socket) {
+    const watcherCount = chatWatcherCountByConvId.get(convId) ?? 0;
+    if (watcherCount === 0) {
+      socket.emit("chat:join", convId);
+    }
+    chatWatcherCountByConvId.set(convId, watcherCount + 1);
+  }
+
+  return () => {
+    const currentHandlers = chatMessageHandlersByConvId.get(convId);
+    currentHandlers?.delete(handler);
+    if (currentHandlers?.size === 0) chatMessageHandlersByConvId.delete(convId);
+
+    if (!socket) return;
+
+    const nextWatcherCount = (chatWatcherCountByConvId.get(convId) ?? 1) - 1;
+    if (nextWatcherCount <= 0) {
+      chatWatcherCountByConvId.delete(convId);
+      socket.emit("chat:leave", convId);
+      return;
+    }
+    chatWatcherCountByConvId.set(convId, nextWatcherCount);
+  };
+};
+
+export const subscribeToChatTyping = async (
+  conversationId: string,
+  handler: ChatTypingHandler,
+) => {
+  const convId = conversationId.trim();
+  if (!convId) return () => {};
+
+  const handlers = chatTypingHandlersByConvId.get(convId) ?? new Set<ChatTypingHandler>();
+  handlers.add(handler);
+  chatTypingHandlersByConvId.set(convId, handlers);
+
+  // Typing events ride on the same chat room — no separate join needed.
+  // The room is joined/left by subscribeToChatMessages.
+  return () => {
+    const currentHandlers = chatTypingHandlersByConvId.get(convId);
+    currentHandlers?.delete(handler);
+    if (currentHandlers?.size === 0) chatTypingHandlersByConvId.delete(convId);
+  };
+};
+
+export const emitTyping = async (
+  conversationId: string,
+  senderId: string,
+  isTyping: boolean,
+) => {
+  const socket = await ensureSocket();
+  if (!socket) return;
+  socket.emit("chat:typing", { conversationId, senderId, isTyping });
 };

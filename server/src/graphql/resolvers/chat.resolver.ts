@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma.js";
+import { emitChatMessage } from "../../realtime/postActivity.js";
 
 type GraphQLContext = {
   user?: { sub?: string };
@@ -401,6 +402,24 @@ export const ChatResolver = {
       }));
     },
 
+    conversation: async (
+      _: unknown,
+      { id }: { id: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated");
+
+      const conv = await prisma.conversation.findUnique({
+        where: { id },
+        select: { id: true, participantAId: true, participantBId: true, updatedAt: true },
+      });
+      if (!conv) return null;
+      if (conv.participantAId !== viewerId && conv.participantBId !== viewerId) return null;
+
+      return toConversationGraphQL(conv, viewerId, null, 0);
+    },
+
     messages: async (
       _: unknown,
       {
@@ -560,7 +579,28 @@ export const ChatResolver = {
             )?.displayName ?? "Unknown")
         : null;
 
-      return formatMessage(message as any, viewerId, parentSenderName);
+      const formatted = formatMessage(message as any, viewerId, parentSenderName);
+
+      emitChatMessage({
+        conversationId,
+        senderId: viewerId,
+        message: {
+          id: formatted.id,
+          text: formatted.text,
+          timestamp: formatted.timestamp,
+          status: formatted.status ?? null,
+          isUnsent: formatted.isUnsent,
+          attachments: (formatted.attachments ?? []).map((a: any) => ({
+            id: a.id,
+            type: a.type,
+            url: a.url ?? null,
+            fileName: a.fileName ?? null,
+            fileSize: a.fileSize ?? null,
+          })),
+        },
+      });
+
+      return formatted;
     },
 
     markMessagesRead: async (

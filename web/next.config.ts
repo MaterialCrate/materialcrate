@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  optimizePackageImports: ["iconsax-reactjs"],
   turbopack: {
     root: path.join(__dirname),
   },

@@ -11,6 +11,35 @@ type FollowActivityReason =
   | "unfollowed"
   | "follow-request-accepted";
 
+export type ChatMessageAttachment = {
+  id: string;
+  type: string;
+  url?: string | null;
+  fileName?: string | null;
+  fileSize?: string | null;
+};
+
+export type ChatMessageEvent = {
+  conversationId: string;
+  senderId: string;
+  message: {
+    id: string;
+    text: string | null;
+    timestamp: string;
+    status: string | null;
+    isUnsent: boolean;
+    attachments: ChatMessageAttachment[];
+  };
+  emittedAt?: string;
+};
+
+export type ChatTypingEvent = {
+  conversationId: string;
+  senderId: string;
+  isTyping: boolean;
+  emittedAt?: string;
+};
+
 export type PostActivityEvent = {
   postId: string;
   reason: PostActivityReason;
@@ -74,6 +103,7 @@ const normalizeUserId = (value: unknown) =>
 const getPostRoomName = (postId: string) => `post:${postId}`;
 const getNotificationRoomName = (userId: string) => `notifications:${userId}`;
 const getFollowRoomName = (userId: string) => `follow:${userId}`;
+const getChatRoomName = (conversationId: string) => `chat:${conversationId}`;
 
 export const registerPostActivityRealtime = (httpServer: HttpServer) => {
   if (io) {
@@ -143,6 +173,46 @@ export const registerPostActivityRealtime = (httpServer: HttpServer) => {
 
       socket.leave(getFollowRoomName(userId));
     });
+
+    socket.on("chat:join", (incomingConversationId: unknown) => {
+      const conversationId = normalizePostId(incomingConversationId);
+      if (!conversationId) return;
+      socket.join(getChatRoomName(conversationId));
+    });
+
+    socket.on("chat:leave", (incomingConversationId: unknown) => {
+      const conversationId = normalizePostId(incomingConversationId);
+      if (!conversationId) return;
+      socket.leave(getChatRoomName(conversationId));
+    });
+
+    socket.on(
+      "chat:typing",
+      (payload: unknown) => {
+        if (
+          !payload ||
+          typeof payload !== "object" ||
+          !("conversationId" in payload) ||
+          !("senderId" in payload) ||
+          !("isTyping" in payload)
+        ) {
+          return;
+        }
+        const { conversationId, senderId, isTyping } = payload as ChatTypingEvent;
+        const normalizedConvId = normalizePostId(conversationId);
+        const normalizedSenderId = normalizeUserId(senderId);
+        if (!normalizedConvId || !normalizedSenderId) return;
+
+        const event: ChatTypingEvent = {
+          conversationId: normalizedConvId,
+          senderId: normalizedSenderId,
+          isTyping: Boolean(isTyping),
+          emittedAt: new Date().toISOString(),
+        };
+        // Broadcast to the room except the sender's own socket
+        socket.to(getChatRoomName(normalizedConvId)).emit("chat:typing", event);
+      },
+    );
   });
 
   return io;
@@ -236,6 +306,17 @@ export const emitFollowActivity = (event: FollowActivityEvent) => {
     timer,
     event: mergedEvent,
   });
+};
+
+export const emitChatMessage = (event: ChatMessageEvent) => {
+  const conversationId = normalizePostId(event.conversationId);
+  if (!io || !conversationId) return;
+
+  io.to(getChatRoomName(conversationId)).emit("chat:message", {
+    ...event,
+    conversationId,
+    emittedAt: new Date().toISOString(),
+  } satisfies ChatMessageEvent);
 };
 
 export { POST_ACTIVITY_SOCKET_PATH };
