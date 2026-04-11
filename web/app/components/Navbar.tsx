@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import {
   Profile,
   SearchNormal1,
   Coin1,
+  Messages2,
 } from "iconsax-reactjs";
 import type { Icon as IconsaxIcon } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
@@ -24,6 +25,7 @@ type NavItem = {
 const items: NavItem[] = [
   { label: "Home", href: "/", Icon: Home },
   { label: "AI Hub", href: "/hub", Icon: Clipboard },
+  { label: "Chat", href: "/chat", Icon: Messages2 },
   { label: "Saved", href: "/saved", Icon: Archive },
   { label: "Profile", href: "/user", Icon: Profile },
 ];
@@ -36,9 +38,45 @@ export default function Navbar() {
     ? `/user/${encodeURIComponent(user.username)}`
     : "/login";
 
+  const [rawUnreadCount, setRawUnreadCount] = useState(0);
+  // Derive 0 when logged out without needing a setState call in the effect
+  const unreadMessageCount = user?.id ? rawUnreadCount : 0;
+
+  // Fetch total unread message count whenever the route changes
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchUnread = async () => {
+      try {
+        const res = await fetch("/api/chat", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          conversations?: Array<{ unreadCount?: number }>;
+        };
+        if (Array.isArray(data?.conversations)) {
+          const total = data.conversations.reduce(
+            (sum, c) => sum + (c.unreadCount ?? 0),
+            0,
+          );
+          setRawUnreadCount(total);
+        }
+      } catch {}
+    };
+
+    void fetchUnread();
+  }, [user?.id, pathname]);
+
+  // Increment badge when a new message arrives in a chat the user isn't viewing
+  useEffect(() => {
+    const onNewChatMessage = () => setRawUnreadCount((n) => n + 1);
+    window.addEventListener("mc:chat:new-message", onNewChatMessage);
+    return () =>
+      window.removeEventListener("mc:chat:new-message", onNewChatMessage);
+  }, []);
+
   return (
     <>
-      <ul className="font-semibold text-xs flex w-full justify-between px-12 lg:hidden">
+      <ul className="font-semibold text-xs flex w-full justify-between px-6 lg:hidden">
         {items.map(({ label, href, Icon }) => {
           const isProfileItem = href === "/user";
           const isArchiveItem = href === "/saved";
@@ -62,11 +100,18 @@ export default function Navbar() {
                   router.push("/login");
                 }}
               >
-                <Icon
-                  size={24}
-                  color={color}
-                  variant={isActive ? "Bold" : "Linear"}
-                />
+                <div className="relative">
+                  <Icon
+                    size={24}
+                    color={color}
+                    variant={isActive ? "Bold" : "Linear"}
+                  />
+                  {href === "/chat" && unreadMessageCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white leading-none">
+                      {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                    </span>
+                  )}
+                </div>
                 <p className={isActive ? "text-[#E1761F]" : "text-[#959595]"}>
                   {label}
                 </p>
@@ -170,11 +215,18 @@ export default function Navbar() {
                     router.push("/login");
                   }}
                 >
-                  <Icon
-                    size={24}
-                    color={color}
-                    variant={isActive ? "Bold" : "Linear"}
-                  />
+                  <div className="relative shrink-0">
+                    <Icon
+                      size={24}
+                      color={color}
+                      variant={isActive ? "Bold" : "Linear"}
+                    />
+                    {href === "/chat" && unreadMessageCount > 0 && (
+                      <span className="absolute -top-1 -right-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white leading-none">
+                        {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
+                      </span>
+                    )}
+                  </div>
                   <span className="hidden xl:inline">{label}</span>
                 </Link>
               </li>

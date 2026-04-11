@@ -10,6 +10,10 @@ import {
   DocumentText,
   TickCircle,
   Paperclip2,
+  More,
+  Copy,
+  Trash,
+  ProfileDelete,
 } from "iconsax-reactjs";
 import { useAuth } from "../../lib/auth-client";
 import {
@@ -17,6 +21,7 @@ import {
   subscribeToChatTyping,
   emitTyping,
   type ChatMessageEvent,
+  type ChatTypingEvent,
 } from "../../lib/post-activity-realtime";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -92,7 +97,8 @@ function formatDateSeparator(date: Date): string {
     date.getDate(),
   );
   const diffDays = Math.floor(
-    (startOfToday.getTime() - startOfItemDay.getTime()) / (1000 * 60 * 60 * 24),
+    (startOfToday.getTime() - startOfItemDay.getTime()) /
+      (1000 * 60 * 60 * 24),
   );
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Yesterday";
@@ -190,13 +196,46 @@ function AttachmentBubble({
   );
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({
+  message,
+  onLongPress,
+}: {
+  message: Message;
+  onLongPress: (msg: Message) => void;
+}) {
   const { sentByMe, text, timestamp, status, isUnsent, attachments } = message;
   const hasAttachments = attachments && attachments.length > 0;
   const showText = !isUnsent && text;
 
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+
+  const startPress = () => {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      onLongPress(message);
+    }, 480);
+  };
+
+  const cancelPress = () => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+  };
+
   return (
-    <div className={`flex ${sentByMe ? "justify-end" : "justify-start"}`}>
+    <div
+      className={`flex ${sentByMe ? "justify-end" : "justify-start"}`}
+      onMouseDown={startPress}
+      onMouseUp={cancelPress}
+      onMouseLeave={cancelPress}
+      onTouchStart={startPress}
+      onTouchEnd={cancelPress}
+      onTouchMove={cancelPress}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onLongPress(message);
+      }}
+    >
       <div
         className={`flex max-w-[78%] flex-col gap-1 ${
           sentByMe ? "items-end" : "items-start"
@@ -219,12 +258,12 @@ function MessageBubble({ message }: { message: Message }) {
                 : "rounded-bl-md bg-surface-high text-ink"
             }`}
           >
-            <p className="text-sm leading-relaxed">{text}</p>
+            <p className="select-none text-sm leading-relaxed">{text}</p>
           </div>
         )}
 
         {isUnsent && (
-          <div className="rounded-[18px] rounded-bl-md bg-surface-high px-3.5 py-2.5">
+          <div className="rounded-[18px] rounded-bl-md border border-edge px-3.5 py-2.5">
             <p className="text-sm italic text-ink-3">Message unsent</p>
           </div>
         )}
@@ -234,15 +273,223 @@ function MessageBubble({ message }: { message: Message }) {
             sentByMe ? "flex-row-reverse" : "flex-row"
           }`}
         >
-          <span className="text-[10px] text-ink-3">
-            {formatTime(timestamp)}
-          </span>
+          <span className="text-[10px] text-ink-3">{formatTime(timestamp)}</span>
           {sentByMe && <StatusTick status={status} />}
         </div>
       </div>
     </div>
   );
 }
+
+// ─── Message action sheet ─────────────────────────────────────────────────────
+
+function MessageActionSheet({
+  message,
+  onClose,
+  onCopy,
+  onUnsend,
+}: {
+  message: Message;
+  onClose: () => void;
+  onCopy: () => void;
+  onUnsend: () => void;
+}) {
+  const preview =
+    message.isUnsent
+      ? "Message unsent"
+      : (message.text?.slice(0, 60) ?? null);
+
+  // Close on backdrop tap
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      {/* Sheet */}
+      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-10 rounded-full bg-edge" />
+        </div>
+
+        {/* Preview */}
+        {preview && (
+          <div className="border-b border-edge px-5 py-3">
+            <p className="line-clamp-2 text-sm text-ink-2 italic">
+              &ldquo;{preview}&rdquo;
+            </p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="px-3 py-2">
+          {!message.isUnsent && message.text && (
+            <button
+              type="button"
+              onClick={onCopy}
+              className="flex w-full items-center gap-3.5 rounded-2xl px-3 py-3.5 text-left transition-colors hover:bg-surface-high active:bg-surface-high active:opacity-70"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-surface-high">
+                <Copy size={18} color="var(--ink)" />
+              </div>
+              <span className="text-sm font-medium text-ink">Copy text</span>
+            </button>
+          )}
+
+          {message.sentByMe && !message.isUnsent && (
+            <button
+              type="button"
+              onClick={onUnsend}
+              className="flex w-full items-center gap-3.5 rounded-2xl px-3 py-3.5 text-left transition-colors hover:bg-red-50 active:opacity-70"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-red-50">
+                <Trash size={18} color="#e53e3e" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-red-600">
+                  Unsend message
+                </p>
+                <p className="text-xs text-red-400">Removes it for everyone</p>
+              </div>
+            </button>
+          )}
+        </div>
+
+        {/* Cancel */}
+        <div className="px-3 pb-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-2xl bg-surface-high py-3.5 text-sm font-semibold text-ink transition-opacity active:opacity-60"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Header options sheet ─────────────────────────────────────────────────────
+
+function HeaderOptionsSheet({
+  participantUsername,
+  onClose,
+  onDeleteConversation,
+}: {
+  participantUsername: string;
+  onClose: () => void;
+  onDeleteConversation: () => void;
+}) {
+  const router = useRouter();
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl">
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="h-1 w-10 rounded-full bg-edge" />
+        </div>
+
+        <div className="px-3 py-2">
+          <button
+            type="button"
+            onClick={() => {
+              onClose();
+              router.push(`/user/${encodeURIComponent(participantUsername)}`);
+            }}
+            className="flex w-full items-center gap-3.5 rounded-2xl px-3 py-3.5 text-left transition-colors hover:bg-surface-high active:opacity-70"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-surface-high">
+              <ProfileDelete size={18} color="var(--ink)" />
+            </div>
+            <span className="text-sm font-medium text-ink">View profile</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={onDeleteConversation}
+            className="flex w-full items-center gap-3.5 rounded-2xl px-3 py-3.5 text-left transition-colors hover:bg-red-50 active:opacity-70"
+          >
+            <div className="flex h-9 w-9 items-center justify-center rounded-[14px] bg-red-50">
+              <Trash size={18} color="#e53e3e" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-red-600">
+                Delete conversation
+              </p>
+              <p className="text-xs text-red-400">
+                Removes all messages for everyone
+              </p>
+            </div>
+          </button>
+        </div>
+
+        <div className="px-3 pb-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-2xl bg-surface-high py-3.5 text-sm font-semibold text-ink transition-opacity active:opacity-60"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Confirm dialog ───────────────────────────────────────────────────────────
+
+function ConfirmSheet({
+  title,
+  body,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  body: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
+        onClick={onCancel}
+      />
+      <div className="fixed inset-x-4 bottom-0 z-60 mb-8 flex flex-col gap-3 rounded-3xl bg-surface p-5 shadow-2xl">
+        <p className="text-base font-semibold text-ink">{title}</p>
+        <p className="text-sm text-ink-2">{body}</p>
+        <div className="flex gap-2.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex-1 rounded-2xl bg-surface-high py-3 text-sm font-semibold text-ink transition-opacity active:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-semibold text-white transition-opacity active:opacity-70"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Header skeleton ──────────────────────────────────────────────────────────
 
 function HeaderSkeleton() {
   return (
@@ -278,12 +525,24 @@ export default function ChatRoomPage() {
   const [draft, setDraft] = useState("");
   const [isTypingRemote, setIsTypingRemote] = useState(false);
 
+  // Overlay states
+  const [actionSheetMsg, setActionSheetMsg] = useState<Message | null>(null);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<
+    "conversation" | "message" | null
+  >(null);
+  const pendingDeleteRef = useRef<string | null>(null); // message id
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const draftRef = useRef("");
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remoteTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
-  // Fetch conversation data on mount
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+
   const fetchConversation = useCallback(async () => {
     if (!conversationId) return;
     setIsLoading(true);
@@ -291,9 +550,7 @@ export default function ChatRoomPage() {
     try {
       const res = await fetch(
         `/api/chat/${encodeURIComponent(conversationId)}`,
-        {
-          cache: "no-store",
-        },
+        { cache: "no-store" },
       );
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -341,20 +598,17 @@ export default function ChatRoomPage() {
     });
   }, [conversationId, isLoading]);
 
-  // Subscribe to realtime chat events
+  // ── Realtime subscriptions ─────────────────────────────────────────────────
+
   useEffect(() => {
     if (!conversationId || !user) return;
 
-    let unsubMessages: (() => void) | null = null;
-    let unsubTyping: (() => void) | null = null;
-    let remoteTypingTimeout: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+    const cleanups: Array<() => void> = [];
 
     const onMessage = (event: ChatMessageEvent) => {
-      // Skip messages we sent ourselves — already handled optimistically
       if (event.senderId === user.id) return;
-
       setMessages((prev) => {
-        // Deduplicate in case the message already arrived via REST
         if (prev.some((m) => m.id === event.message.id)) return prev;
         return [
           ...prev,
@@ -369,34 +623,38 @@ export default function ChatRoomPage() {
           },
         ];
       });
-
-      // Mark the incoming message as read
       void fetch(`/api/chat/${encodeURIComponent(conversationId)}`, {
         method: "PATCH",
       });
     };
 
-    const onTyping = (e: { senderId: string; isTyping: boolean }) => {
-      if (e.senderId === user.id) return;
-      setIsTypingRemote(e.isTyping);
-      if (remoteTypingTimeout) clearTimeout(remoteTypingTimeout);
-      if (e.isTyping) {
-        // Auto-hide after 4 s as a safety net
-        remoteTypingTimeout = setTimeout(() => setIsTypingRemote(false), 4000);
+    const onTyping = (event: ChatTypingEvent) => {
+      if (event.senderId === user.id) return;
+      setIsTypingRemote(event.isTyping);
+      if (remoteTypingTimeoutRef.current)
+        clearTimeout(remoteTypingTimeoutRef.current);
+      if (event.isTyping) {
+        remoteTypingTimeoutRef.current = setTimeout(
+          () => setIsTypingRemote(false),
+          4000,
+        );
       }
     };
 
     void subscribeToChatMessages(conversationId, onMessage).then((unsub) => {
-      unsubMessages = unsub;
+      if (cancelled) unsub();
+      else cleanups.push(unsub);
     });
     void subscribeToChatTyping(conversationId, onTyping).then((unsub) => {
-      unsubTyping = unsub;
+      if (cancelled) unsub();
+      else cleanups.push(unsub);
     });
 
     return () => {
-      unsubMessages?.();
-      unsubTyping?.();
-      if (remoteTypingTimeout) clearTimeout(remoteTypingTimeout);
+      cancelled = true;
+      cleanups.forEach((fn) => fn());
+      if (remoteTypingTimeoutRef.current)
+        clearTimeout(remoteTypingTimeoutRef.current);
     };
   }, [conversationId, user]);
 
@@ -405,9 +663,19 @@ export default function ChatRoomPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTypingRemote]);
 
+  // ── Send ───────────────────────────────────────────────────────────────────
+
+  const stopTypingSignal = useCallback(() => {
+    if (!conversationId || !user) return;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    void emitTyping(conversationId, user.id, false);
+  }, [conversationId, user]);
+
   const sendMessage = async () => {
     const text = draftRef.current.trim();
     if (!text || !conversationId) return;
+
+    stopTypingSignal();
 
     const tempId = `temp-${Date.now()}`;
     const optimistic: Message = {
@@ -422,10 +690,7 @@ export default function ChatRoomPage() {
     setMessages((prev) => [...prev, optimistic]);
     draftRef.current = "";
     setDraft("");
-
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-    }
+    if (inputRef.current) inputRef.current.style.height = "auto";
 
     try {
       const res = await fetch(
@@ -456,7 +721,6 @@ export default function ChatRoomPage() {
           ),
         );
       } else {
-        // Remove optimistic message on failure
         setMessages((prev) => prev.filter((m) => m.id !== tempId));
       }
     } catch {
@@ -473,6 +737,56 @@ export default function ChatRoomPage() {
     }
   };
 
+  // ── Message actions ────────────────────────────────────────────────────────
+
+  const handleCopy = useCallback(async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // clipboard not available (e.g. non-https) — silently fail
+    }
+    setActionSheetMsg(null);
+  }, []);
+
+  const handleUnsendConfirm = useCallback(
+    async (messageId: string) => {
+      if (!conversationId) return;
+      setConfirmDelete(null);
+      setActionSheetMsg(null);
+
+      // Optimistic mark as unsent
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, isUnsent: true, text: null } : m)),
+      );
+
+      try {
+        await fetch(
+          `/api/chat/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}`,
+          { method: "DELETE" },
+        );
+      } catch {
+        // Revert on failure by refetching
+        void fetchConversation();
+      }
+    },
+    [conversationId, fetchConversation],
+  );
+
+  const handleDeleteConversationConfirm = useCallback(async () => {
+    if (!conversationId) return;
+    setConfirmDelete(null);
+    setHeaderMenuOpen(false);
+
+    try {
+      await fetch(`/api/chat/${encodeURIComponent(conversationId)}`, {
+        method: "DELETE",
+      });
+      router.replace("/chat");
+    } catch {
+      // stay on page if it fails
+    }
+  }, [conversationId, router]);
+
   const groups = groupMessagesByDay(messages);
 
   return (
@@ -481,7 +795,7 @@ export default function ChatRoomPage() {
       {isLoading || !participant ? (
         <HeaderSkeleton />
       ) : (
-        <header className="flex shrink-0 items-center gap-3 border-b border-edge bg-surface px-4 py-3">
+        <header className="flex shrink-0 items-center gap-2 border-b border-edge bg-surface px-4 py-3">
           <button
             type="button"
             aria-label="Back"
@@ -500,7 +814,7 @@ export default function ChatRoomPage() {
           >
             <div className="relative shrink-0">
               <div
-                className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-[14px] text-xs font-semibold ${avatarColor(participant.id)}`}
+                className={`relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-[14px] text-xs font-semibold ${avatarColor(participant.id)}`}
               >
                 {participant.avatar ? (
                   <Image
@@ -529,6 +843,16 @@ export default function ChatRoomPage() {
                   : `@${participant.username}`}
               </p>
             </div>
+          </button>
+
+          {/* More options */}
+          <button
+            type="button"
+            aria-label="Conversation options"
+            onClick={() => setHeaderMenuOpen(true)}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-high active:opacity-60"
+          >
+            <More size={20} color="var(--ink)" />
           </button>
         </header>
       )}
@@ -568,7 +892,6 @@ export default function ChatRoomPage() {
           ) : (
             groups.map((group) => (
               <div key={group.label} className="space-y-2">
-                {/* Date separator */}
                 <div className="flex items-center gap-3 py-1">
                   <div className="h-px flex-1 bg-edge" />
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-ink-3">
@@ -576,16 +899,20 @@ export default function ChatRoomPage() {
                   </span>
                   <div className="h-px flex-1 bg-edge" />
                 </div>
-
                 <div className="space-y-1.5">
                   {group.messages.map((msg) => (
-                    <MessageBubble key={msg.id} message={msg} />
+                    <MessageBubble
+                      key={msg.id}
+                      message={msg}
+                      onLongPress={(m) => setActionSheetMsg(m)}
+                    />
                   ))}
                 </div>
               </div>
             ))
           )}
 
+          {/* Typing indicator */}
           {isTypingRemote && (
             <div className="flex justify-start">
               <div className="flex items-center gap-1.5 rounded-[18px] rounded-bl-md bg-surface-high px-4 py-3">
@@ -603,7 +930,6 @@ export default function ChatRoomPage() {
       {/* ── Input bar ── */}
       <div className="shrink-0 border-t border-edge bg-surface px-4 pb-4 pt-3">
         <div className="mx-auto flex max-w-2xl items-end gap-2.5">
-          {/* Attach */}
           <button
             type="button"
             aria-label="Add attachment"
@@ -612,7 +938,6 @@ export default function ChatRoomPage() {
             <Add size={22} color="var(--ink-2)" />
           </button>
 
-          {/* Input field */}
           <div className="flex flex-1 items-end gap-2 rounded-2xl bg-surface-high px-4 py-2.5">
             <textarea
               ref={inputRef}
@@ -629,11 +954,13 @@ export default function ChatRoomPage() {
                   if (typingTimeoutRef.current)
                     clearTimeout(typingTimeoutRef.current);
                   void emitTyping(conversationId, user.id, true);
-                  typingTimeoutRef.current = setTimeout(() => {
-                    void emitTyping(conversationId, user.id, false);
-                  }, 2000);
+                  typingTimeoutRef.current = setTimeout(
+                    () => void emitTyping(conversationId, user.id, false),
+                    2000,
+                  );
                 }
               }}
+              onBlur={() => stopTypingSignal()}
               onKeyDown={handleKeyDown}
               className="max-h-30 flex-1 resize-none bg-transparent text-sm text-ink placeholder:text-ink-3 outline-none"
             />
@@ -646,7 +973,6 @@ export default function ChatRoomPage() {
             </button>
           </div>
 
-          {/* Send */}
           <button
             type="button"
             aria-label="Send message"
@@ -658,6 +984,54 @@ export default function ChatRoomPage() {
           </button>
         </div>
       </div>
+
+      {/* ── Message action sheet ── */}
+      {actionSheetMsg && (
+        <MessageActionSheet
+          message={actionSheetMsg}
+          onClose={() => setActionSheetMsg(null)}
+          onCopy={() => void handleCopy(actionSheetMsg.text ?? "")}
+          onUnsend={() => {
+            pendingDeleteRef.current = actionSheetMsg.id;
+            setActionSheetMsg(null);
+            setConfirmDelete("message");
+          }}
+        />
+      )}
+
+      {/* ── Header options sheet ── */}
+      {headerMenuOpen && participant && (
+        <HeaderOptionsSheet
+          participantUsername={participant.username}
+          onClose={() => setHeaderMenuOpen(false)}
+          onDeleteConversation={() => {
+            setHeaderMenuOpen(false);
+            setConfirmDelete("conversation");
+          }}
+        />
+      )}
+
+      {/* ── Confirm dialogs ── */}
+      {confirmDelete === "message" && (
+        <ConfirmSheet
+          title="Unsend message?"
+          body="This removes the message for everyone in the conversation."
+          confirmLabel="Unsend"
+          onConfirm={() =>
+            void handleUnsendConfirm(pendingDeleteRef.current ?? "")
+          }
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+      {confirmDelete === "conversation" && (
+        <ConfirmSheet
+          title="Delete conversation?"
+          body="All messages will be permanently removed for everyone. This cannot be undone."
+          confirmLabel="Delete"
+          onConfirm={() => void handleDeleteConversationConfirm()}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }

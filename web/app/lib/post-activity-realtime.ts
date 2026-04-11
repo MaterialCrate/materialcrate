@@ -423,8 +423,10 @@ export const subscribeToChatTyping = async (
   handlers.add(handler);
   chatTypingHandlersByConvId.set(convId, handlers);
 
-  // Typing events ride on the same chat room — no separate join needed.
-  // The room is joined/left by subscribeToChatMessages.
+  // Ensure the socket is alive so its listeners (including chat:typing) are
+  // registered even if subscribeToChatMessages hasn't been called yet.
+  await ensureSocket();
+
   return () => {
     const currentHandlers = chatTypingHandlersByConvId.get(convId);
     currentHandlers?.delete(handler);

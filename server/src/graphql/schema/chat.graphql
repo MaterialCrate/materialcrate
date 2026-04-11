@@ -99,4 +99,5 @@ extend type Mutation {
   markMessagesRead(conversationId: ID!): Boolean!
   editMessage(messageId: ID!, newText: String!): ChatMessage!
   unsendMessage(messageId: ID!): Boolean!
+  deleteConversation(conversationId: ID!): Boolean!
 }

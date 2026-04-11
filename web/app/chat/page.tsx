@@ -117,7 +117,7 @@ function ConversationItem({
       >
         <div className="relative shrink-0">
           <div
-            className={`flex h-13 w-13 items-center justify-center overflow-hidden rounded-[18px] text-sm font-semibold ${avatarColor(chat.id)}`}
+            className={`relative flex h-13 w-13 items-center justify-center overflow-hidden rounded-[18px] text-sm font-semibold ${avatarColor(chat.id)}`}
           >
             {chat.avatar ? (
               <Image
@@ -216,7 +216,7 @@ function UserSuggestionItem({
         className="flex w-full items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-surface-high active:opacity-70 disabled:opacity-60"
       >
         <div
-          className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-sm font-semibold ${avatarColor(user.id)}`}
+          className={`relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-sm font-semibold ${avatarColor(user.id)}`}
         >
           {user.profilePicture ? (
             <Image

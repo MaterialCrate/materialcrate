@@ -62,6 +62,12 @@ const MARK_READ_MUTATION = `
   }
 `;
 
+const DELETE_CONVERSATION_MUTATION = `
+  mutation DeleteConversation($conversationId: ID!) {
+    deleteConversation(conversationId: $conversationId)
+  }
+`;
+
 const getAuthToken = async () => {
   const cookieStore = await cookies();
   return cookieStore.get("mc_session")?.value ?? null;
@@ -184,6 +190,33 @@ export async function PATCH(
   if (!res.ok || body?.errors?.length) {
     return NextResponse.json(
       { error: body?.errors?.[0]?.message || "Failed to mark as read" },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ "conversation-id": string }> },
+) {
+  const token = await getAuthToken();
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
+  const { "conversation-id": conversationId } = await params;
+
+  const { res, body } = await runGraphQL({
+    query: DELETE_CONVERSATION_MUTATION,
+    variables: { conversationId },
+    token,
+  });
+
+  if (!res.ok || body?.errors?.length) {
+    return NextResponse.json(
+      { error: body?.errors?.[0]?.message || "Failed to delete conversation" },
       { status: 400 },
     );
   }

@@ -704,5 +704,36 @@ export const ChatResolver = {
 
       return true;
     },
+
+    deleteConversation: async (
+      _: unknown,
+      { conversationId }: { conversationId: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated");
+
+      await assertParticipant(conversationId, viewerId);
+
+      // Delete all message attachments, edits, then messages, then the conversation
+      const messages = await prisma.chatMessage.findMany({
+        where: { conversationId },
+        select: { id: true },
+      });
+      const messageIds = (messages as any[]).map((m) => m.id);
+
+      await prisma.$transaction([
+        prisma.chatMessageAttachment.deleteMany({
+          where: { messageId: { in: messageIds } },
+        }),
+        prisma.chatMessageEdit.deleteMany({
+          where: { messageId: { in: messageIds } },
+        }),
+        prisma.chatMessage.deleteMany({ where: { conversationId } }),
+        prisma.conversation.delete({ where: { id: conversationId } }),
+      ]);
+
+      return true;
+    },
   },
 };

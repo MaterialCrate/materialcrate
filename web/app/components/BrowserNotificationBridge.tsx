@@ -6,7 +6,11 @@ import {
   getNotificationDescriptionPreview,
   getNotificationHref,
 } from "@/app/lib/notification-navigation";
-import { subscribeToNotificationActivity } from "@/app/lib/post-activity-realtime";
+import {
+  subscribeToNotificationActivity,
+  subscribeToChatMessages,
+  type ChatMessageEvent,
+} from "@/app/lib/post-activity-realtime";
 
 type NotificationItem = {
   id: string;
@@ -267,6 +271,95 @@ export default function BrowserNotificationBridge() {
       unsubscribe?.();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", onWindowFocus);
+    };
+  }, [canUseNotifications, isLoading, user?.id]);
+
+  // Browser notifications + badge counter for incoming chat messages
+  useEffect(() => {
+    if (!canUseNotifications || isLoading || !user?.id) return;
+
+    const userId = user.id;
+    const seenMsgIds = new Set<string>();
+    const unsubs: Array<() => void> = [];
+    let cancelled = false;
+
+    const setupChatSubscriptions = async (
+      convs: Array<{ id: string; name: string }>,
+    ) => {
+      // Clean up previous subscriptions
+      unsubs.forEach((fn) => fn());
+      unsubs.length = 0;
+
+      for (const { id: convId, name } of convs) {
+        if (cancelled) break;
+
+        const handler = (event: ChatMessageEvent) => {
+          if (event.senderId === userId) return;
+          if (seenMsgIds.has(event.message.id)) return;
+          seenMsgIds.add(event.message.id);
+
+          // Don't notify if user is already viewing this conversation
+          if (window.location.pathname === `/chat/${convId}`) return;
+
+          // Increment the Navbar badge
+          window.dispatchEvent(new CustomEvent("mc:chat:new-message"));
+
+          // Fire browser notification if permission granted
+          if (window.Notification.permission !== "granted") return;
+          const body = event.message.text?.trim() || "Sent a message";
+          const notif = new window.Notification(name, {
+            body,
+            tag: `mc-chat-${event.message.id}`,
+          });
+          notif.onclick = () => {
+            notif.close();
+            try {
+              window.focus();
+            } catch {}
+            window.location.assign(`/chat/${convId}`);
+          };
+        };
+
+        const unsub = await subscribeToChatMessages(convId, handler);
+        if (cancelled) {
+          unsub();
+          break;
+        }
+        unsubs.push(unsub);
+      }
+    };
+
+    const fetchAndSubscribe = async () => {
+      try {
+        const res = await fetch("/api/chat", { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as {
+          conversations?: Array<{
+            id: string;
+            participant: { name?: string | null; username: string };
+          }>;
+        };
+        if (cancelled) return;
+        const convs = (data?.conversations ?? []).map((c) => ({
+          id: c.id,
+          name: c.participant.name ?? c.participant.username,
+        }));
+        await setupChatSubscriptions(convs);
+      } catch {}
+    };
+
+    void fetchAndSubscribe();
+
+    // Refresh every 5 min to pick up new conversations started while online
+    const refreshInterval = window.setInterval(
+      () => void fetchAndSubscribe(),
+      5 * 60 * 1000,
+    );
+
+    return () => {
+      cancelled = true;
+      unsubs.forEach((fn) => fn());
+      window.clearInterval(refreshInterval);
     };
   }, [canUseNotifications, isLoading, user?.id]);
 
