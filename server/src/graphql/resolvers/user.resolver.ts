@@ -4,10 +4,8 @@ import jwt from "jsonwebtoken";
 import { randomBytes, randomUUID } from "crypto";
 import {
   DeleteObjectCommand,
-  GetObjectCommand,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import sharp from "sharp";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma.js";
@@ -351,15 +349,14 @@ const emitFollowActivityForUser = async ({
 const sanitizeFileName = (name: string) =>
   name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_");
 
-const buildS3FileUrl = (bucket: string, region: string, key: string) =>
-  `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+const buildCloudFrontUrl = (key: string) =>
+  `${(process.env.CLOUDFRONT_URL ?? "").replace(/\/$/, "")}/${key}`;
 const MAX_PROFILE_PICTURE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PROFILE_PICTURE_MIME_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
 ]);
-const PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 const PROFILE_PICTURE_MAX_DIMENSION = 512;
 const PROFILE_PICTURE_WEBP_QUALITY = 82;
 const DEFAULT_PROFILE_BACKGROUND =
@@ -372,18 +369,9 @@ const ALLOWED_PROFILE_BACKGROUND_MIME_TYPES = new Set([
   "image/gif",
 ]);
 
-const extractS3KeyFromUrl = (
-  fileUrl: string,
-  bucket: string,
-  region: string,
-) => {
+const extractS3Key = (fileUrl: string) => {
   try {
     const parsed = new URL(fileUrl);
-    const expectedHost = `${bucket}.s3.${region}.amazonaws.com`;
-    if (parsed.hostname !== expectedHost) {
-      return null;
-    }
-
     const key = parsed.pathname.replace(/^\/+/, "");
     return key ? decodeURIComponent(key) : null;
   } catch {
@@ -2123,9 +2111,8 @@ export const UserResolver = {
             throw new Error("Profile background must be 5MB or smaller");
           }
 
-          const bucket = process.env.AWS_S3_BUCKET_NAME;
-          const region = process.env.AWS_REGION;
-          if (!bucket || !region) {
+          const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
+          if (!publicBucket) {
             throw new Error("S3 bucket configuration is missing");
           }
 
@@ -2145,14 +2132,14 @@ export const UserResolver = {
           const key = `profileBackgrounds/${Date.now()}-${randomUUID()}-${sanitizedBaseName || "profile-background"}.${extension}`;
           await s3.send(
             new PutObjectCommand({
-              Bucket: bucket,
+              Bucket: publicBucket,
               Key: key,
               Body: backgroundBuffer,
               ContentType: normalizedBackgroundMime,
             }),
           );
 
-          uploadedProfileBackgroundUrl = buildS3FileUrl(bucket, region, key);
+          uploadedProfileBackgroundUrl = buildCloudFrontUrl(key);
           updateData.profileBackground = uploadedProfileBackgroundUrl;
         } else if (hasProfileBackgroundArg) {
           if (
@@ -2203,9 +2190,8 @@ export const UserResolver = {
             throw new Error("Failed to process profile picture");
           }
 
-          const bucket = process.env.AWS_S3_BUCKET_NAME;
-          const region = process.env.AWS_REGION;
-          if (!bucket || !region) {
+          const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
+          if (!publicBucket) {
             throw new Error("S3 bucket configuration is missing");
           }
 
@@ -2217,14 +2203,14 @@ export const UserResolver = {
           const key = `profilePictures/${Date.now()}-${randomUUID()}-${sanitizedBaseName || "profile"}.webp`;
           await s3.send(
             new PutObjectCommand({
-              Bucket: bucket,
+              Bucket: publicBucket,
               Key: key,
               Body: processedImageBuffer,
               ContentType: "image/webp",
             }),
           );
 
-          uploadedProfilePictureUrl = buildS3FileUrl(bucket, region, key);
+          uploadedProfilePictureUrl = buildCloudFrontUrl(key);
           updateData.profilePicture = uploadedProfilePictureUrl;
         } else if (hasProfilePictureArg) {
           updateData.profilePicture = profilePicture || null;
@@ -2236,22 +2222,18 @@ export const UserResolver = {
         });
 
         if (hasProfilePictureFile && existingUser.profilePicture) {
-          const previousPictureKey = extractS3KeyFromUrl(
-            existingUser.profilePicture,
-            process.env.AWS_S3_BUCKET_NAME ?? "",
-            process.env.AWS_REGION ?? "",
-          );
-          const bucket = process.env.AWS_S3_BUCKET_NAME;
+          const previousPictureKey = extractS3Key(existingUser.profilePicture);
+          const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
 
           if (
             previousPictureKey &&
-            bucket &&
+            publicBucket &&
             existingUser.profilePicture !== uploadedProfilePictureUrl
           ) {
             void s3
               .send(
                 new DeleteObjectCommand({
-                  Bucket: bucket,
+                  Bucket: publicBucket,
                   Key: previousPictureKey,
                 }),
               )
@@ -2265,22 +2247,20 @@ export const UserResolver = {
           existingUser.profileBackground &&
           existingUser.profileBackground !== DEFAULT_PROFILE_BACKGROUND
         ) {
-          const previousBackgroundKey = extractS3KeyFromUrl(
+          const previousBackgroundKey = extractS3Key(
             existingUser.profileBackground,
-            process.env.AWS_S3_BUCKET_NAME ?? "",
-            process.env.AWS_REGION ?? "",
           );
-          const bucket = process.env.AWS_S3_BUCKET_NAME;
+          const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
 
           if (
             previousBackgroundKey &&
-            bucket &&
+            publicBucket &&
             existingUser.profileBackground !== uploadedProfileBackgroundUrl
           ) {
             void s3
               .send(
                 new DeleteObjectCommand({
-                  Bucket: bucket,
+                  Bucket: publicBucket,
                   Key: previousBackgroundKey,
                 }),
               )
@@ -2292,19 +2272,14 @@ export const UserResolver = {
         return updatedUser;
       } catch (error) {
         if (uploadedProfilePictureUrl) {
-          const bucket = process.env.AWS_S3_BUCKET_NAME;
-          const region = process.env.AWS_REGION;
-          if (bucket && region) {
-            const uploadedPictureKey = extractS3KeyFromUrl(
-              uploadedProfilePictureUrl,
-              bucket,
-              region,
-            );
+          const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
+          if (publicBucket) {
+            const uploadedPictureKey = extractS3Key(uploadedProfilePictureUrl);
             if (uploadedPictureKey) {
               void s3
                 .send(
                   new DeleteObjectCommand({
-                    Bucket: bucket,
+                    Bucket: publicBucket,
                     Key: uploadedPictureKey,
                   }),
                 )
@@ -2314,19 +2289,16 @@ export const UserResolver = {
         }
 
         if (uploadedProfileBackgroundUrl) {
-          const bucket = process.env.AWS_S3_BUCKET_NAME;
-          const region = process.env.AWS_REGION;
-          if (bucket && region) {
-            const uploadedBackgroundKey = extractS3KeyFromUrl(
+          const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
+          if (publicBucket) {
+            const uploadedBackgroundKey = extractS3Key(
               uploadedProfileBackgroundUrl,
-              bucket,
-              region,
             );
             if (uploadedBackgroundKey) {
               void s3
                 .send(
                   new DeleteObjectCommand({
-                    Bucket: bucket,
+                    Bucket: publicBucket,
                     Key: uploadedBackgroundKey,
                   }),
                 )
@@ -2551,19 +2523,14 @@ export const UserResolver = {
         data: { profilePicture: null },
       });
 
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION;
-      if (bucket && region) {
-        const previousPictureKey = extractS3KeyFromUrl(
-          existingUser.profilePicture,
-          bucket,
-          region,
-        );
+      const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
+      if (publicBucket) {
+        const previousPictureKey = extractS3Key(existingUser.profilePicture);
         if (previousPictureKey) {
           void s3
             .send(
               new DeleteObjectCommand({
-                Bucket: bucket,
+                Bucket: publicBucket,
                 Key: previousPictureKey,
               }),
             )
@@ -2663,70 +2630,10 @@ export const UserResolver = {
     emailNotificationsUploadReminder: (user: {
       emailNotificationsUploadReminder?: boolean | null;
     }) => user.emailNotificationsUploadReminder ?? true,
-    profilePicture: async (user: { profilePicture?: string | null }) => {
-      const rawProfilePicture = user.profilePicture?.trim();
-      if (!rawProfilePicture) {
-        return null;
-      }
-
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION;
-      if (!bucket || !region) {
-        return rawProfilePicture;
-      }
-
-      const key = extractS3KeyFromUrl(rawProfilePicture, bucket, region);
-      if (!key) {
-        return rawProfilePicture;
-      }
-
-      try {
-        return await getSignedUrl(
-          s3,
-          new GetObjectCommand({
-            Bucket: bucket,
-            Key: key,
-          }),
-          { expiresIn: PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS },
-        );
-      } catch {
-        return rawProfilePicture;
-      }
-    },
-    profileBackground: async (user: { profileBackground?: string | null }) => {
-      const rawProfileBackground = user.profileBackground?.trim();
-      if (!rawProfileBackground) {
-        return DEFAULT_PROFILE_BACKGROUND;
-      }
-
-      if (rawProfileBackground === DEFAULT_PROFILE_BACKGROUND) {
-        return rawProfileBackground;
-      }
-
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION;
-      if (!bucket || !region) {
-        return rawProfileBackground;
-      }
-
-      const key = extractS3KeyFromUrl(rawProfileBackground, bucket, region);
-      if (!key) {
-        return rawProfileBackground;
-      }
-
-      try {
-        return await getSignedUrl(
-          s3,
-          new GetObjectCommand({
-            Bucket: bucket,
-            Key: key,
-          }),
-          { expiresIn: PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS },
-        );
-      } catch {
-        return rawProfileBackground;
-      }
-    },
+    profilePicture: (user: { profilePicture?: string | null }) =>
+      user.profilePicture?.trim() || null,
+    profileBackground: (user: { profileBackground?: string | null }) =>
+      user.profileBackground?.trim() || DEFAULT_PROFILE_BACKGROUND,
     followers: async (user: { id: string }) => {
       const follows = await (prisma as any).follow.findMany({
         where: { followingId: user.id },

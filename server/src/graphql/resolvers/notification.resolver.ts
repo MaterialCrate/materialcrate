@@ -1,7 +1,4 @@
-import { GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { prisma } from "../../config/prisma.js";
-import { s3 } from "../../config/s3.js";
 import {
   createNotification,
   NOTIFICATION_ICON,
@@ -15,59 +12,8 @@ type GraphQLContext = {
   };
 };
 
-const PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS = 60 * 60;
-
-const extractS3KeyFromUrl = (
-  fileUrl: string,
-  bucket: string,
-  region: string,
-) => {
-  try {
-    const parsed = new URL(fileUrl);
-    const expectedHost = `${bucket}.s3.${region}.amazonaws.com`;
-    if (parsed.hostname !== expectedHost) {
-      return null;
-    }
-
-    const key = parsed.pathname.replace(/^\/+/, "");
-    return key ? decodeURIComponent(key) : null;
-  } catch {
-    return null;
-  }
-};
-
-const resolveNotificationProfilePicture = async (
-  profilePicture?: string | null,
-) => {
-  const rawProfilePicture = profilePicture?.trim();
-  if (!rawProfilePicture) {
-    return null;
-  }
-
-  const bucket = process.env.AWS_S3_BUCKET_NAME;
-  const region = process.env.AWS_REGION;
-  if (!bucket || !region) {
-    return rawProfilePicture;
-  }
-
-  const key = extractS3KeyFromUrl(rawProfilePicture, bucket, region);
-  if (!key) {
-    return rawProfilePicture;
-  }
-
-  try {
-    return await getSignedUrl(
-      s3,
-      new GetObjectCommand({
-        Bucket: bucket,
-        Key: key,
-      }),
-      { expiresIn: PROFILE_PICTURE_SIGNED_URL_TTL_SECONDS },
-    );
-  } catch {
-    return rawProfilePicture;
-  }
-};
+const resolveNotificationProfilePicture = (profilePicture?: string | null) =>
+  profilePicture?.trim() || null;
 
 const resolveNotificationActorUsername = async (actorId?: string | null) => {
   const normalizedActorId = actorId?.trim();

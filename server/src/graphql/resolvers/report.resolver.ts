@@ -31,8 +31,8 @@ const ALLOWED_IMAGE_MIME_TYPES = new Set([
 const sanitizeFileName = (name: string) =>
   name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_");
 
-const buildS3FileUrl = (bucket: string, region: string, key: string) =>
-  `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+const buildCloudFrontUrl = (key: string) =>
+  `${(process.env.CLOUDFRONT_URL ?? "").replace(/\/$/, "")}/${key}`;
 
 export const ReportResolver = {
   Query: {
@@ -116,12 +116,11 @@ export const ReportResolver = {
         throw new Error("Image data arrays must be the same length.");
       }
 
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION;
+      const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
       const uploadedImageUrls: string[] = [];
 
       if (imageBase64s.length > 0) {
-        if (!bucket || !region) {
+        if (!publicBucket) {
           throw new Error("File storage is not configured.");
         }
 
@@ -145,14 +144,14 @@ export const ReportResolver = {
 
           await s3.send(
             new PutObjectCommand({
-              Bucket: bucket,
+              Bucket: publicBucket,
               Key: key,
               Body: buffer,
               ContentType: mimeType,
             }),
           );
 
-          uploadedImageUrls.push(buildS3FileUrl(bucket, region, key));
+          uploadedImageUrls.push(buildCloudFrontUrl(key));
         }
       }
 

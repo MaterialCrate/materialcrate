@@ -70,10 +70,11 @@ const normalizeCategories = (categories: unknown): string[] => {
   return Array.from(new Set(normalized));
 };
 
-const buildS3FileUrl = (bucket: string, region: string, key: string) =>
-  `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+const buildPrivateS3Url = (key: string) =>
+  `https://${process.env.AWS_S3_PRIVATE_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+const buildCloudFrontUrl = (key: string) =>
+  `${(process.env.CLOUDFRONT_URL ?? "").replace(/\/$/, "")}/${key}`;
 const POST_FILE_SIGNED_URL_TTL_SECONDS = 60 * 60;
-const POST_THUMBNAIL_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
 const MAX_POST_THUMBNAIL_BYTES = 2 * 1024 * 1024;
 const FEED_INTERACTION_SIGNAL_WEIGHTS: Record<
   string,
@@ -163,18 +164,9 @@ const recordFeedInteraction = async (
   return true;
 };
 
-const extractS3KeyFromUrl = (
-  fileUrl: string,
-  bucket: string,
-  region: string,
-) => {
+const extractS3Key = (fileUrl: string) => {
   try {
     const parsed = new URL(fileUrl);
-    const expectedHost = `${bucket}.s3.${region}.amazonaws.com`;
-    if (parsed.hostname !== expectedHost) {
-      return null;
-    }
-
     const key = parsed.pathname.replace(/^\/+/, "");
     return key ? decodeURIComponent(key) : null;
   } catch {
@@ -1167,10 +1159,11 @@ export const PostResolver = {
         throw new Error("Not authenticated");
       }
 
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
+      const privateBucket = process.env.AWS_S3_PRIVATE_BUCKET;
+      const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
       const region = process.env.AWS_REGION;
 
-      if (!bucket || !region) {
+      if (!privateBucket || !publicBucket || !region) {
         throw new Error("S3 bucket configuration is missing");
       }
 
@@ -1212,14 +1205,14 @@ export const PostResolver = {
 
       await s3.send(
         new PutObjectCommand({
-          Bucket: bucket,
+          Bucket: privateBucket,
           Key: key,
           Body: fileBuffer,
           ContentType: "application/pdf",
         }),
       );
 
-      const fileUrl = buildS3FileUrl(bucket, region, key);
+      const fileUrl = buildPrivateS3Url(key);
       let thumbnailUrl: string | null = null;
 
       if (typeof thumbnailBase64 === "string" && thumbnailBase64.trim()) {
@@ -1249,14 +1242,14 @@ export const PostResolver = {
 
             await s3.send(
               new PutObjectCommand({
-                Bucket: bucket,
+                Bucket: publicBucket,
                 Key: thumbnailKey,
                 Body: thumbnailBuffer,
                 ContentType: thumbnailContentType,
               }),
             );
 
-            thumbnailUrl = buildS3FileUrl(bucket, region, thumbnailKey);
+            thumbnailUrl = buildCloudFrontUrl(thumbnailKey);
           }
         } catch {
           thumbnailUrl = null;
@@ -2132,13 +2125,12 @@ export const PostResolver = {
         return rawFileUrl;
       }
 
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION;
-      if (!bucket || !region) {
+      const privateBucket = process.env.AWS_S3_PRIVATE_BUCKET;
+      if (!privateBucket) {
         return rawFileUrl;
       }
 
-      const key = extractS3KeyFromUrl(rawFileUrl, bucket, region);
+      const key = extractS3Key(rawFileUrl);
       if (!key) {
         return rawFileUrl;
       }
@@ -2147,7 +2139,7 @@ export const PostResolver = {
         return await getSignedUrl(
           s3,
           new GetObjectCommand({
-            Bucket: bucket,
+            Bucket: privateBucket,
             Key: key,
           }),
           { expiresIn: POST_FILE_SIGNED_URL_TTL_SECONDS },
@@ -2156,36 +2148,7 @@ export const PostResolver = {
         return rawFileUrl;
       }
     },
-    thumbnailUrl: async (post: any) => {
-      const rawThumbnailUrl = post.thumbnailUrl?.trim();
-      if (!rawThumbnailUrl) {
-        return rawThumbnailUrl;
-      }
-
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION;
-      if (!bucket || !region) {
-        return rawThumbnailUrl;
-      }
-
-      const key = extractS3KeyFromUrl(rawThumbnailUrl, bucket, region);
-      if (!key) {
-        return rawThumbnailUrl;
-      }
-
-      try {
-        return await getSignedUrl(
-          s3,
-          new GetObjectCommand({
-            Bucket: bucket,
-            Key: key,
-          }),
-          { expiresIn: POST_THUMBNAIL_SIGNED_URL_TTL_SECONDS },
-        );
-      } catch {
-        return rawThumbnailUrl;
-      }
-    },
+    thumbnailUrl: (post: any) => post.thumbnailUrl?.trim() || null,
     likeCount: (post: any) => post.likeCount ?? post?._count?.likes ?? 0,
     commentCount: (post: any) =>
       post.commentCount ?? post?._count?.comments ?? 0,

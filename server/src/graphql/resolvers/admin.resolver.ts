@@ -32,8 +32,10 @@ type CreatePostAsBotArgs = {
 const sanitizeFileName = (name: string) =>
   name.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/_+/g, "_");
 
-const buildS3FileUrl = (bucket: string, region: string, key: string) =>
-  `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+const buildPrivateS3Url = (key: string) =>
+  `https://${process.env.AWS_S3_PRIVATE_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+const buildCloudFrontUrl = (key: string) =>
+  `${(process.env.CLOUDFRONT_URL ?? "").replace(/\/$/, "")}/${key}`;
 
 const MAX_POST_THUMBNAIL_BYTES = 2 * 1024 * 1024;
 
@@ -243,10 +245,10 @@ export const AdminResolver = {
         throw new Error("Bot not found");
       }
 
-      const bucket = process.env.AWS_S3_BUCKET_NAME;
-      const region = process.env.AWS_REGION;
+      const privateBucket = process.env.AWS_S3_PRIVATE_BUCKET;
+      const publicBucket = process.env.AWS_S3_PUBLIC_BUCKET;
 
-      if (!bucket || !region) {
+      if (!privateBucket || !publicBucket) {
         throw new Error("S3 bucket configuration is missing");
       }
 
@@ -282,14 +284,14 @@ export const AdminResolver = {
 
       await s3.send(
         new PutObjectCommand({
-          Bucket: bucket,
+          Bucket: privateBucket,
           Key: key,
           Body: fileBuffer,
           ContentType: "application/pdf",
         }),
       );
 
-      const fileUrl = buildS3FileUrl(bucket, region, key);
+      const fileUrl = buildPrivateS3Url(key);
       let thumbnailUrl: string | null = null;
 
       if (typeof thumbnailBase64 === "string" && thumbnailBase64.trim()) {
@@ -305,14 +307,14 @@ export const AdminResolver = {
 
             await s3.send(
               new PutObjectCommand({
-                Bucket: bucket,
+                Bucket: publicBucket,
                 Key: thumbnailKey,
                 Body: thumbnailBuffer,
                 ContentType: "image/webp",
               }),
             );
 
-            thumbnailUrl = buildS3FileUrl(bucket, region, thumbnailKey);
+            thumbnailUrl = buildCloudFrontUrl(thumbnailKey);
           }
         } catch {
           thumbnailUrl = null;

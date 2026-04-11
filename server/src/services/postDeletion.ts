@@ -6,18 +6,9 @@ import { s3 } from "../config/s3.js";
 const POST_HARD_DELETE_AFTER_DAYS = 30;
 const DEFAULT_PURGE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
-const extractS3KeyFromUrl = (
-  fileUrl: string,
-  bucket: string,
-  region: string,
-) => {
+const extractS3Key = (fileUrl: string) => {
   try {
     const parsed = new URL(fileUrl);
-    const expectedHost = `${bucket}.s3.${region}.amazonaws.com`;
-    if (parsed.hostname !== expectedHost) {
-      return null;
-    }
-
     const key = parsed.pathname.replace(/^\/+/, "");
     return key ? decodeURIComponent(key) : null;
   } catch {
@@ -25,35 +16,39 @@ const extractS3KeyFromUrl = (
   }
 };
 
-const collectPostAssetKeys = (
-  post: {
+const bucketForKey = (key: string) =>
+  key.startsWith("documents/")
+    ? process.env.AWS_S3_PRIVATE_BUCKET
+    : process.env.AWS_S3_PUBLIC_BUCKET;
+
+const collectPostAssets = (post: {
+  fileUrl?: string | null;
+  thumbnailUrl?: string | null;
+  versions?: Array<{
     fileUrl?: string | null;
     thumbnailUrl?: string | null;
-    versions?: Array<{
-      fileUrl?: string | null;
-      thumbnailUrl?: string | null;
-    }>;
-  },
-  bucket: string,
-  region: string,
-) => {
+  }>;
+}): Array<{ key: string; bucket: string }> => {
   const urls = [
     post.fileUrl,
     post.thumbnailUrl,
-    ...(post.versions ?? []).flatMap((version) => [
-      version.fileUrl,
-      version.thumbnailUrl,
-    ]),
+    ...(post.versions ?? []).flatMap((v) => [v.fileUrl, v.thumbnailUrl]),
   ];
 
-  return Array.from(
-    new Set(
-      urls
-        .filter((value): value is string => Boolean(value?.trim()))
-        .map((value) => extractS3KeyFromUrl(value, bucket, region))
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
+  const seen = new Set<string>();
+  const assets: Array<{ key: string; bucket: string }> = [];
+
+  for (const url of urls) {
+    if (!url?.trim()) continue;
+    const key = extractS3Key(url);
+    if (!key || seen.has(key)) continue;
+    const bucket = bucketForKey(key);
+    if (!bucket) continue;
+    seen.add(key);
+    assets.push({ key, bucket });
+  }
+
+  return assets;
 };
 
 export const purgeExpiredDeletedPosts = async () => {
@@ -111,24 +106,19 @@ export const purgeExpiredDeletedPosts = async () => {
     return { purgedCount: 0 };
   }
 
-  const bucket = process.env.AWS_S3_BUCKET_NAME;
-  const region = process.env.AWS_REGION;
-
   for (const post of expiredPosts) {
-    if (bucket && region) {
-      const keys = collectPostAssetKeys(post, bucket, region);
+    const assets = collectPostAssets(post);
 
-      for (const key of keys) {
-        try {
-          await s3.send(
-            new DeleteObjectCommand({
-              Bucket: bucket,
-              Key: key,
-            }),
-          );
-        } catch (error) {
-          console.error(`Failed to delete S3 object for post ${post.id}:`, error);
-        }
+    for (const { key, bucket } of assets) {
+      try {
+        await s3.send(
+          new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: key,
+          }),
+        );
+      } catch (error) {
+        console.error(`Failed to delete S3 object for post ${post.id}:`, error);
       }
     }
 
