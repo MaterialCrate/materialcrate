@@ -1028,7 +1028,7 @@ export default function HubPage() {
             onClick={() => setIsPickerOpen(false)}
             className="fixed inset-0 z-40 bg-black/30"
           />
-          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-4xl bg-page px-4 pb-6 pt-4 shadow-[0_-18px_40px_rgba(0,0,0,0.14)]">
+          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-4xl bg-page px-4 pb-6 pt-4 shadow-[0_-18px_40px_rgba(0,0,0,0.14)] lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-2">
@@ -1113,7 +1113,7 @@ export default function HubPage() {
             onClick={() => setIsHistoryOpen(false)}
             className="fixed inset-0 z-40 bg-black/30"
           />
-          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-4xl bg-surface px-4 pb-6 pt-4 shadow-[0_-18px_40px_rgba(0,0,0,0.14)]">
+          <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-4xl bg-surface px-4 pb-6 pt-4 shadow-[0_-18px_40px_rgba(0,0,0,0.14)] lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-ink-2">
@@ -1362,7 +1362,7 @@ export default function HubPage() {
       </main>
 
       <div
-        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-surface px-6 py-6 transition-all duration-300 ease-out ${
+        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-surface px-6 py-6 transition-all duration-300 ease-out lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2 ${
           isLimitDrawerOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-[110%] opacity-0 pointer-events-none"

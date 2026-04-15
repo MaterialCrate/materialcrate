@@ -370,7 +370,8 @@ function ComposeView({ onClose }: { onClose: () => void }) {
   );
 
   return (
-    <div className="flex h-dvh flex-col bg-page">
+    <div className="flex h-dvh overflow-hidden bg-page lg:items-center lg:justify-center lg:p-6">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-surface lg:h-full lg:max-w-2xl lg:rounded-2xl lg:border lg:border-edge lg:shadow-sm">
       {/* Header */}
       <header className="flex shrink-0 items-center gap-3 border-b border-edge bg-surface px-4 py-3">
         <button
@@ -454,6 +455,7 @@ function ComposeView({ onClose }: { onClose: () => void }) {
           </ul>
         )}
       </div>
+    </div>
     </div>
   );
 }
@@ -592,7 +594,8 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-page">
+    <div className="flex h-dvh overflow-hidden bg-page lg:items-center lg:justify-center lg:p-6">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-surface lg:h-full lg:max-w-2xl lg:rounded-2xl lg:border lg:border-edge lg:shadow-sm">
       <div
         ref={topBarRef}
         className="shrink-0 bg-surface"
@@ -717,6 +720,7 @@ export default function ChatPage() {
           )}
         </div>
       </main>
+    </div>
     </div>
   );
 }

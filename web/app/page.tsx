@@ -696,7 +696,7 @@ export default function Home() {
           setActivePdfPost(null);
         }}
       />
-      <div className="fixed right-6 bottom-28 z-50 lg:bottom-8">
+      <div className="fixed right-6 bottom-28 z-50 lg:bottom-8 lg:right-[calc(50%-16rem)] 2xl:right-[calc(50%-13.5rem)]">
         <button
           aria-label="Upload button"
           type="button"

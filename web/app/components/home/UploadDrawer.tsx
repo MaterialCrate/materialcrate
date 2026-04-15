@@ -278,7 +278,7 @@ export default function UploadDrawer({
         />
       )}
       <div
-        className={`fixed inset-x-0 top-[15%] bottom-0 bg-surface z-100 rounded-t-3xl transition-all duration-300 ease-out overflow-hidden flex flex-col ${
+        className={`fixed inset-x-0 top-[15%] bottom-0 bg-surface z-100 rounded-t-3xl transition-all duration-300 ease-out overflow-hidden flex flex-col lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2 ${
           isOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-[110%] opacity-0 pointer-events-none"

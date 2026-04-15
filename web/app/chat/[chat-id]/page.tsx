@@ -5,11 +5,10 @@ import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Add,
   Send2,
   DocumentText,
   TickCircle,
-  Paperclip2,
+  Link21,
   More,
   Copy,
   Trash,
@@ -196,6 +195,123 @@ function AttachmentBubble({
   );
 }
 
+// ─── Post link helpers ────────────────────────────────────────────────────────
+
+const POST_URL_RE = /\/post\/([a-zA-Z0-9_-]+)\s*$/;
+
+function extractPostId(text: string | null): string | null {
+  if (!text) return null;
+  const trimmed = text.trim();
+  const match = trimmed.match(POST_URL_RE);
+  return match?.[1] ?? null;
+}
+
+type PostPreviewData = {
+  id: string;
+  title: string;
+  thumbnailUrl: string | null;
+};
+
+const postPreviewCache = new Map<string, PostPreviewData | null>();
+
+function PostLinkPreview({
+  postId,
+  sentByMe,
+}: {
+  postId: string;
+  sentByMe: boolean;
+}) {
+  const router = useRouter();
+  const cached = postPreviewCache.get(postId);
+  const [data, setData] = useState<PostPreviewData | null | "loading">(
+    cached !== undefined ? cached : "loading",
+  );
+
+  useEffect(() => {
+    if (data !== "loading") return;
+    let cancelled = false;
+    fetch(`/api/posts/${encodeURIComponent(postId)}`)
+      .then((r) => r.json())
+      .then((body) => {
+        if (cancelled) return;
+        const post = body?.post ?? null;
+        const result: PostPreviewData | null = post
+          ? { id: post.id, title: post.title, thumbnailUrl: post.thumbnailUrl ?? null }
+          : null;
+        postPreviewCache.set(postId, result);
+        setData(result);
+      })
+      .catch(() => {
+        if (!cancelled) setData(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [postId, data]);
+
+  if (data === "loading") {
+    return (
+      <div
+        className={`flex items-center gap-2.5 rounded-2xl p-2.5 ${
+          sentByMe ? "bg-white/20" : "border border-edge bg-surface"
+        }`}
+      >
+        <div className="h-14 w-10 shrink-0 animate-pulse rounded-lg bg-surface-high" />
+        <div className="flex-1 space-y-1.5 pt-1">
+          <div className="h-3 w-3/4 animate-pulse rounded-full bg-surface-high" />
+          <div className="h-3 w-1/2 animate-pulse rounded-full bg-surface-high" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => router.push(`/post/${encodeURIComponent(data.id)}`)}
+      className={`flex w-full items-center gap-2.5 rounded-2xl p-2.5 text-left transition-opacity active:opacity-70 ${
+        sentByMe ? "bg-white/20" : "border border-edge bg-surface"
+      }`}
+    >
+      <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-lg bg-[#E8E8E8]">
+        {data.thumbnailUrl ? (
+          <Image
+            src={`/api/posts/thumbnail?postId=${encodeURIComponent(data.id)}`}
+            alt={data.title}
+            fill
+            sizes="40px"
+            unoptimized
+            className="object-cover object-top"
+            onError={() => {}}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <DocumentText size={16} color="#B76217" variant="Bulk" />
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p
+          className={`line-clamp-2 text-xs font-semibold ${
+            sentByMe ? "text-white" : "text-ink"
+          }`}
+        >
+          {data.title}
+        </p>
+        <p
+          className={`mt-0.5 text-[10px] ${
+            sentByMe ? "text-white/60" : "text-ink-3"
+          }`}
+        >
+          View document
+        </p>
+      </div>
+    </button>
+  );
+}
+
 function MessageBubble({
   message,
   onLongPress,
@@ -205,7 +321,9 @@ function MessageBubble({
 }) {
   const { sentByMe, text, timestamp, status, isUnsent, attachments } = message;
   const hasAttachments = attachments && attachments.length > 0;
-  const showText = !isUnsent && text;
+  const postId = !isUnsent ? extractPostId(text) : null;
+  // If the entire message is a post link, show only the preview (not raw URL)
+  const showText = !isUnsent && text && !postId;
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
@@ -249,6 +367,8 @@ function MessageBubble({
               sentByMe={sentByMe}
             />
           ))}
+
+        {postId && <PostLinkPreview postId={postId} sentByMe={sentByMe} />}
 
         {showText && (
           <div
@@ -308,7 +428,7 @@ function MessageActionSheet({
         onClick={onClose}
       />
       {/* Sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl">
+      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2">
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-edge" />
@@ -391,7 +511,7 @@ function HeaderOptionsSheet({
         className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
         onClick={onClose}
       />
-      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl">
+      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2">
         <div className="flex justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-edge" />
         </div>
@@ -465,7 +585,7 @@ function ConfirmSheet({
         className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]"
         onClick={onCancel}
       />
-      <div className="fixed inset-x-4 bottom-0 z-60 mb-8 flex flex-col gap-3 rounded-3xl bg-surface p-5 shadow-2xl">
+      <div className="fixed inset-x-4 bottom-0 z-60 mb-8 flex flex-col gap-3 rounded-3xl bg-surface p-5 shadow-2xl lg:left-1/2 lg:right-auto lg:inset-x-auto lg:w-full lg:max-w-lg lg:-translate-x-1/2">
         <p className="text-base font-semibold text-ink">{title}</p>
         <p className="text-sm text-ink-2">{body}</p>
         <div className="flex gap-2.5">
@@ -483,6 +603,202 @@ function ConfirmSheet({
           >
             {confirmLabel}
           </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Post link picker ─────────────────────────────────────────────────────────
+
+type PostPickerItem = {
+  id: string;
+  title: string;
+  thumbnailUrl: string | null;
+  authorName: string;
+};
+
+function PostLinkPickerSheet({
+  currentUsername,
+  onClose,
+  onSelect,
+}: {
+  currentUsername: string;
+  onClose: () => void;
+  onSelect: (url: string) => void;
+}) {
+  const [tab, setTab] = useState<"mine" | "saved">("mine");
+  const [myPosts, setMyPosts] = useState<PostPickerItem[]>([]);
+  const [savedPosts, setSavedPosts] = useState<PostPickerItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchBoth = async () => {
+      try {
+        const [postsRes, archiveRes] = await Promise.all([
+          fetch(
+            `/api/posts?author=${encodeURIComponent(currentUsername)}&limit=30`,
+          ),
+          fetch("/api/archive"),
+        ]);
+
+        if (cancelled) return;
+
+        if (postsRes.ok) {
+          const data = (await postsRes.json()) as {
+            posts?: Array<{
+              id: string;
+              title: string;
+              thumbnailUrl?: string | null;
+              author?: { displayName?: string | null } | null;
+            }>;
+          };
+          setMyPosts(
+            (data.posts ?? []).map((p) => ({
+              id: p.id,
+              title: p.title,
+              thumbnailUrl: p.thumbnailUrl ?? null,
+              authorName: p.author?.displayName ?? "",
+            })),
+          );
+        }
+
+        if (archiveRes.ok) {
+          const data = (await archiveRes.json()) as {
+            archive?: {
+              savedPosts?: Array<{
+                post: {
+                  id: string;
+                  title: string;
+                  thumbnailUrl?: string | null;
+                  author?: { displayName?: string | null } | null;
+                };
+              }>;
+            } | null;
+          };
+          setSavedPosts(
+            (data.archive?.savedPosts ?? []).map((sp) => ({
+              id: sp.post.id,
+              title: sp.post.title,
+              thumbnailUrl: sp.post.thumbnailUrl ?? null,
+              authorName: sp.post.author?.displayName ?? "",
+            })),
+          );
+        }
+      } catch {
+        // silently fail — list stays empty
+      }
+      if (!cancelled) setLoading(false);
+    };
+
+    void fetchBoth();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUsername]);
+
+  const items = tab === "mine" ? myPosts : savedPosts;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+      <div
+        className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2"
+        style={{ maxHeight: "70dvh" }}
+      >
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="h-1 w-10 rounded-full bg-edge" />
+        </div>
+
+        <p className="px-5 pb-3 text-sm font-semibold text-ink">Share a post</p>
+
+        {/* Tabs */}
+        <div className="flex gap-1.5 px-4 pb-3">
+          {(["mine", "saved"] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTab(t)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                tab === t
+                  ? "bg-[#E1761F] text-white"
+                  : "bg-surface-high text-ink-2"
+              }`}
+            >
+              {t === "mine" ? "My Posts" : "Saved"}
+            </button>
+          ))}
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto overscroll-none px-4 pb-4">
+          {loading ? (
+            <div className="space-y-3 pt-1">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 px-2 py-2">
+                  <div className="h-14 w-10 shrink-0 animate-pulse rounded-lg bg-surface-high" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3 w-3/4 animate-pulse rounded-full bg-surface-high" />
+                    <div className="h-3 w-1/2 animate-pulse rounded-full bg-surface-high" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : items.length === 0 ? (
+            <p className="pt-8 text-center text-sm text-ink-3">
+              {tab === "mine" ? "No posts yet" : "No saved posts"}
+            </p>
+          ) : (
+            <div className="space-y-0.5">
+              {items.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    onSelect(
+                      `${window.location.origin}/post/${encodeURIComponent(item.id)}`,
+                    );
+                    onClose();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-left transition-colors hover:bg-surface-high active:opacity-70"
+                >
+                  <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-lg bg-[#E8E8E8]">
+                    {item.thumbnailUrl ? (
+                      <Image
+                        src={`/api/posts/thumbnail?postId=${encodeURIComponent(item.id)}`}
+                        alt={item.title}
+                        fill
+                        sizes="40px"
+                        unoptimized
+                        className="object-cover object-top"
+                        onError={() => {}}
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <DocumentText size={16} color="#B76217" variant="Bulk" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-xs font-semibold text-ink">
+                      {item.title}
+                    </p>
+                    {item.authorName && (
+                      <p className="mt-0.5 text-[10px] text-ink-3">
+                        {item.authorName}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -528,6 +844,7 @@ export default function ChatRoomPage() {
   // Overlay states
   const [actionSheetMsg, setActionSheetMsg] = useState<Message | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [linkPickerOpen, setLinkPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<
     "conversation" | "message" | null
   >(null);
@@ -790,7 +1107,8 @@ export default function ChatRoomPage() {
   const groups = groupMessagesByDay(messages);
 
   return (
-    <div className="flex h-dvh flex-col bg-page">
+    <div className="flex h-dvh overflow-hidden bg-page lg:items-center lg:justify-center lg:p-6">
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-surface lg:h-full lg:max-w-2xl lg:rounded-2xl lg:border lg:border-edge lg:shadow-sm">
       {/* ── Header ── */}
       {isLoading || !participant ? (
         <HeaderSkeleton />
@@ -858,7 +1176,7 @@ export default function ChatRoomPage() {
       )}
 
       {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto overscroll-none px-4 py-4">
         <div className="mx-auto max-w-2xl space-y-5">
           {error ? (
             <div className="flex flex-col items-center justify-center pt-20 text-center">
@@ -930,14 +1248,6 @@ export default function ChatRoomPage() {
       {/* ── Input bar ── */}
       <div className="shrink-0 border-t border-edge bg-surface px-4 pb-4 pt-3">
         <div className="mx-auto flex max-w-2xl items-end gap-2.5">
-          <button
-            type="button"
-            aria-label="Add attachment"
-            className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-surface-high active:scale-95 active:opacity-60"
-          >
-            <Add size={22} color="var(--ink-2)" />
-          </button>
-
           <div className="flex flex-1 items-end gap-2 rounded-2xl bg-surface-high px-4 py-2.5">
             <textarea
               ref={inputRef}
@@ -966,10 +1276,11 @@ export default function ChatRoomPage() {
             />
             <button
               type="button"
-              aria-label="Attach file"
+              aria-label="Share a post"
+              onClick={() => setLinkPickerOpen(true)}
               className="mb-0.5 shrink-0 transition-opacity hover:opacity-60 active:scale-95 active:opacity-40"
             >
-              <Paperclip2 size={18} color="var(--ink-3)" />
+              <Link21 size={18} color="var(--ink-3)" />
             </button>
           </div>
 
@@ -995,6 +1306,23 @@ export default function ChatRoomPage() {
             pendingDeleteRef.current = actionSheetMsg.id;
             setActionSheetMsg(null);
             setConfirmDelete("message");
+          }}
+        />
+      )}
+
+      {/* ── Post link picker ── */}
+      {linkPickerOpen && user?.username && (
+        <PostLinkPickerSheet
+          currentUsername={user.username}
+          onClose={() => setLinkPickerOpen(false)}
+          onSelect={(url) => {
+            draftRef.current = url;
+            setDraft(url);
+            if (inputRef.current) {
+              inputRef.current.style.height = "auto";
+              inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 120)}px`;
+              inputRef.current.focus();
+            }
           }}
         />
       )}
@@ -1032,6 +1360,7 @@ export default function ChatRoomPage() {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+    </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth-client";
 import { useSystemPopup } from "@/app/components/SystemPopup";
-import { Flag, Link21, Slash, VolumeMute } from "iconsax-reactjs";
+import { Flag, Link21, Slash, VolumeMute, UserRemove } from "iconsax-reactjs";
 import { subscribeToFollowActivity } from "@/app/lib/post-activity-realtime";
 import Acheivement, { type AchievementData } from "@/app/components/profile/Acheivement";
 import Header, { type ProfileTab } from "@/app/components/profile/Header";
@@ -196,6 +196,25 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const handleReportProfile = () => {
     setIsProfileMenuOpen(false);
     router.push(`/settings/support/guidelines?report=user&username=${encodeURIComponent(profile?.username ?? "")}`);
+  };
+
+  const handleMessageClick = async () => {
+    if (!profile?.id) return;
+    if (!user) { router.push("/login"); return; }
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: profile.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      const conversationId = body?.conversation?.id;
+      if (conversationId) {
+        router.push(`/chat/${encodeURIComponent(conversationId)}`);
+      }
+    } catch {
+      // silently fail
+    }
   };
 
   useEffect(() => {
@@ -716,6 +735,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
             followLabel={followLabel}
             isFollowLoading={isUpdatingFollow}
             onFollowClick={handleFollowToggle}
+            onMessageClick={() => void handleMessageClick()}
             onFollowListOpen={(tab) => setSelectedFollowList(tab)}
             onMoreClick={!isOwner && user ? () => setIsProfileMenuOpen((v) => !v) : undefined}
             selectedTab={selectedTab}
@@ -728,6 +748,20 @@ export default function ProfilePage({ username }: ProfilePageProps) {
               className="absolute right-4 top-14 z-200 w-52 rounded-[20px] border border-edge bg-surface p-2 shadow-[0_24px_80px_rgba(0,0,0,0.18)]"
             >
               <div className="overflow-hidden rounded-2xl bg-page">
+                {isFollower && (
+                  <button
+                    type="button"
+                    disabled={isUpdatingFollow}
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      void handleFollowToggle();
+                    }}
+                    className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3 disabled:opacity-60"
+                  >
+                    <UserRemove size={18} color="#111111" variant="Bold" />
+                    Unfollow @{profile?.username}
+                  </button>
+                )}
                 <button
                   type="button"
                   disabled={isUpdatingMute}
@@ -735,7 +769,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                   className="flex w-full items-center gap-3 border-b border-edge px-4 py-3.5 text-left text-sm text-ink transition-colors hover:bg-black/3 disabled:opacity-60"
                 >
                   <VolumeMute size={18} color="#111111" variant="Bold" />
-                  {profile?.isMutedByCurrentUser ? "Unmute" : "Mute"} @{profileUsername}
+                  {profile?.isMutedByCurrentUser ? "Unmute" : "Mute"} @{profile?.username}
                 </button>
                 <button
                   type="button"
@@ -752,7 +786,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                   className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-sm text-[#D12F2F] transition-colors hover:bg-[#fff1f1] disabled:opacity-60"
                 >
                   <Slash size={18} color="#D12F2F" variant="Bold" />
-                  {profile?.isBlockedByCurrentUser ? "Unblock" : "Block"} @{profileUsername}
+                  {profile?.isBlockedByCurrentUser ? "Unblock" : "Block"} @{profile?.username}
                 </button>
               </div>
               <div className="mt-2 overflow-hidden rounded-2xl bg-[#FFF1F1]">

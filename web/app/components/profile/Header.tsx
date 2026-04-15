@@ -34,6 +34,7 @@ type ProfileHeaderProps = {
   followLabel?: "Follow" | "Following" | "Follow back" | "Requested";
   isFollowLoading?: boolean;
   onFollowClick?: () => void;
+  onMessageClick?: () => void;
   onFollowListOpen?: (tab: "followers" | "following") => void;
   onMoreClick?: () => void;
   selectedTab: ProfileTab;
@@ -58,6 +59,7 @@ export default function Header({
   followLabel = "Follow",
   isFollowLoading = false,
   onFollowClick,
+  onMessageClick,
   onFollowListOpen,
   onMoreClick,
   selectedTab,
@@ -260,18 +262,26 @@ export default function Header({
           )
         ) : (
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onFollowClick}
-              disabled={isFollowLoading}
-              className={`cursor-pointer rounded-full border px-5 py-2 text-sm font-medium ${
-                followLabel === "Following" || followLabel === "Requested"
-                  ? followMutedClass
-                  : followPrimaryClass
-              } disabled:cursor-not-allowed disabled:opacity-60`}
-            >
-              <p>{isFollowLoading ? "..." : followLabel}</p>
-            </button>
+            {followLabel === "Following" ? (
+              <button
+                type="button"
+                onClick={onMessageClick}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-sm font-medium ${followPrimaryClass}`}
+              >
+                Message
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onFollowClick}
+                disabled={isFollowLoading}
+                className={`cursor-pointer rounded-full border px-5 py-2 text-sm font-medium ${
+                  followLabel === "Requested" ? followMutedClass : followPrimaryClass
+                } disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                <p>{isFollowLoading ? "..." : followLabel}</p>
+              </button>
+            )}
             {onMoreClick && (
               <button
                 type="button"

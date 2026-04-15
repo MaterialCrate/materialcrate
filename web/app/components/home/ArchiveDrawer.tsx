@@ -192,7 +192,7 @@ export default function ArchiveDrawer({
     <>
       <Alert type={feedbackType} message={feedbackMessage} />
       <div
-        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-surface px-6 py-6 transition-all duration-300 ease-out ${
+        className={`fixed inset-x-0 bottom-0 z-100 rounded-t-3xl bg-surface px-6 py-6 transition-all duration-300 ease-out lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2 ${
           isOpen
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-[110%] opacity-0 pointer-events-none"
