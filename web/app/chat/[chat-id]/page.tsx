@@ -197,13 +197,16 @@ function AttachmentBubble({
 
 // ─── Post link helpers ────────────────────────────────────────────────────────
 
-const POST_URL_RE = /\/post\/([a-zA-Z0-9_-]+)\s*$/;
+const POST_URL_RE = /(?:https?:\/\/[^\s]*)?\/post\/([a-zA-Z0-9_-]+)/;
 
 function extractPostId(text: string | null): string | null {
   if (!text) return null;
-  const trimmed = text.trim();
-  const match = trimmed.match(POST_URL_RE);
+  const match = text.match(POST_URL_RE);
   return match?.[1] ?? null;
+}
+
+function stripPostUrl(text: string): string {
+  return text.replace(/(?:https?:\/\/[^\s]*)?\/post\/[a-zA-Z0-9_-]+/g, "").trim();
 }
 
 type PostPreviewData = {
@@ -252,14 +255,14 @@ function PostLinkPreview({
   if (data === "loading") {
     return (
       <div
-        className={`flex items-center gap-2.5 rounded-2xl p-2.5 ${
-          sentByMe ? "bg-white/20" : "border border-edge bg-surface"
+        className={`flex items-center gap-2.5 rounded-[18px] rounded-br-md p-2.5 ${
+          sentByMe ? "bg-[#E1761F]" : "border border-edge bg-surface-high"
         }`}
       >
-        <div className="h-14 w-10 shrink-0 animate-pulse rounded-lg bg-surface-high" />
+        <div className={`h-20 w-14 shrink-0 animate-pulse rounded-xl ${sentByMe ? "bg-white/20" : "bg-surface"}`} />
         <div className="flex-1 space-y-1.5 pt-1">
-          <div className="h-3 w-3/4 animate-pulse rounded-full bg-surface-high" />
-          <div className="h-3 w-1/2 animate-pulse rounded-full bg-surface-high" />
+          <div className={`h-3 w-3/4 animate-pulse rounded-full ${sentByMe ? "bg-white/20" : "bg-surface"}`} />
+          <div className={`h-3 w-1/2 animate-pulse rounded-full ${sentByMe ? "bg-white/20" : "bg-surface"}`} />
         </div>
       </div>
     );
@@ -271,38 +274,38 @@ function PostLinkPreview({
     <button
       type="button"
       onClick={() => router.push(`/post/${encodeURIComponent(data.id)}`)}
-      className={`flex w-full items-center gap-2.5 rounded-2xl p-2.5 text-left transition-opacity active:opacity-70 ${
-        sentByMe ? "bg-white/20" : "border border-edge bg-surface"
+      className={`flex w-full items-center gap-2.5 rounded-[18px] rounded-br-md p-2.5 text-left transition-opacity active:opacity-70 ${
+        sentByMe ? "bg-[#E1761F]" : "border border-edge bg-surface-high"
       }`}
     >
-      <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-lg bg-[#E8E8E8]">
+      <div className="relative h-20 w-14 shrink-0 overflow-hidden rounded-xl bg-black/10">
         {data.thumbnailUrl ? (
           <Image
             src={`/api/posts/thumbnail?postId=${encodeURIComponent(data.id)}`}
             alt={data.title}
             fill
-            sizes="40px"
+            sizes="56px"
             unoptimized
             className="object-cover object-top"
             onError={() => {}}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <DocumentText size={16} color="#B76217" variant="Bulk" />
+            <DocumentText size={20} color={sentByMe ? "#fff" : "#B76217"} variant="Bulk" />
           </div>
         )}
       </div>
       <div className="min-w-0 flex-1">
         <p
-          className={`line-clamp-2 text-xs font-semibold ${
+          className={`line-clamp-2 text-sm font-semibold ${
             sentByMe ? "text-white" : "text-ink"
           }`}
         >
           {data.title}
         </p>
         <p
-          className={`mt-0.5 text-[10px] ${
-            sentByMe ? "text-white/60" : "text-ink-3"
+          className={`mt-1 text-xs ${
+            sentByMe ? "text-white/70" : "text-ink-3"
           }`}
         >
           View document
@@ -322,8 +325,8 @@ function MessageBubble({
   const { sentByMe, text, timestamp, status, isUnsent, attachments } = message;
   const hasAttachments = attachments && attachments.length > 0;
   const postId = !isUnsent ? extractPostId(text) : null;
-  // If the entire message is a post link, show only the preview (not raw URL)
-  const showText = !isUnsent && text && !postId;
+  const textWithoutLink = postId && text ? stripPostUrl(text) : null;
+  const showText = !isUnsent && text && (!postId || !!textWithoutLink);
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
@@ -378,7 +381,7 @@ function MessageBubble({
                 : "rounded-bl-md bg-surface-high text-ink"
             }`}
           >
-            <p className="select-none text-sm leading-relaxed">{text}</p>
+            <p className="select-none break-all text-sm leading-relaxed">{textWithoutLink ?? text}</p>
           </div>
         )}
 
