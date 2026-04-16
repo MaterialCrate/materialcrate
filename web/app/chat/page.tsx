@@ -478,47 +478,6 @@ export default function ChatPage() {
   const [filter, setFilter] = useState<ChatFilter>("all");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const listRef = useRef<HTMLElement>(null);
-  const topBarRef = useRef<HTMLDivElement>(null);
-  const [topBarVisible, setTopBarVisible] = useState(true);
-  const [topBarHeight, setTopBarHeight] = useState(0);
-  const lastScrollY = useRef(0);
-  const accumulatedDelta = useRef(0);
-  const HIDE_THRESHOLD = 60;
-  const SHOW_THRESHOLD = 30;
-
-  useEffect(() => {
-    if (topBarRef.current) setTopBarHeight(topBarRef.current.offsetHeight);
-  }, []);
-
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-
-    const onScroll = () => {
-      const raw = el.scrollTop;
-      const delta = raw - lastScrollY.current;
-      lastScrollY.current = raw;
-
-      if (raw <= 8) {
-        accumulatedDelta.current = 0;
-        setTopBarVisible(true);
-        return;
-      }
-
-      accumulatedDelta.current += delta;
-
-      if (accumulatedDelta.current > HIDE_THRESHOLD) {
-        accumulatedDelta.current = 0;
-        setTopBarVisible(false);
-      } else if (accumulatedDelta.current < -SHOW_THRESHOLD) {
-        accumulatedDelta.current = 0;
-        setTopBarVisible(true);
-      }
-    };
-
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, []);
 
   const fetchConversations = useCallback(async () => {
     setIsLoading(true);
@@ -593,15 +552,7 @@ export default function ChatPage() {
   return (
     <div className="flex h-dvh overflow-hidden bg-page lg:items-center lg:justify-center lg:p-6">
     <div className="flex h-dvh w-full flex-col overflow-hidden bg-surface lg:h-full lg:max-w-2xl lg:rounded-2xl lg:border lg:border-edge lg:shadow-sm">
-      <div
-        ref={topBarRef}
-        className="shrink-0 bg-surface"
-        style={{
-          transform: topBarVisible ? "translateY(0)" : `translateY(-${topBarHeight}px)`,
-          marginBottom: topBarVisible ? 0 : -topBarHeight,
-          transition: "transform 300ms ease-out, margin-bottom 300ms ease-out",
-        }}
-      >
+      <div className="shrink-0 bg-surface">
         <header className="flex items-center justify-between px-5 py-3">
           <div className="flex items-center gap-2">
             <button
