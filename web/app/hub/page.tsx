@@ -1343,6 +1343,12 @@ export default function HubPage() {
               ref={promptTextareaRef}
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && navigator.maxTouchPoints === 0) {
+                  e.preventDefault();
+                  void handleSendPrompt();
+                }
+              }}
               rows={1}
               placeholder="Message Ju Intelli about this document..."
               className="min-h-12 max-h-28 flex-1 resize-none rounded-3xl border border-edge bg-surface shadow-sm px-4 py-3 text-sm placeholder:text-sm text-ink outline-none lg:rounded-2xl lg:border-0 lg:shadow-none lg:bg-transparent"

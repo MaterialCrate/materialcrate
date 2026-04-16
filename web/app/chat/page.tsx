@@ -460,8 +460,6 @@ function ComposeView({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
-
 export default function ChatPage() {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
@@ -473,28 +471,23 @@ export default function ChatPage() {
     }
   }, [isLoadingAuth, user, router]);
 
-  // Conversation list state
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Search / filter state
+  const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ChatFilter>("all");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
-
-  // Scroll-hide search bar refs
-  const [searchVisible, setSearchVisible] = useState(true);
-  const lastScrollY = useRef(0);
   const listRef = useRef<HTMLElement>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
+  const [topBarVisible, setTopBarVisible] = useState(true);
   const [topBarHeight, setTopBarHeight] = useState(0);
-  const lastBottomHitAt = useRef(0);
+  const lastScrollY = useRef(0);
+  const accumulatedDelta = useRef(0);
+  const HIDE_THRESHOLD = 60;
+  const SHOW_THRESHOLD = 30;
 
   useEffect(() => {
-    if (topBarRef.current) {
-      setTopBarHeight(topBarRef.current.offsetHeight);
-    }
+    if (topBarRef.current) setTopBarHeight(topBarRef.current.offsetHeight);
   }, []);
 
   useEffect(() => {
@@ -502,19 +495,24 @@ export default function ChatPage() {
     if (!el) return;
 
     const onScroll = () => {
-      const maxScroll = el.scrollHeight - el.clientHeight;
-      if (maxScroll <= 0) return;
       const raw = el.scrollTop;
       const delta = raw - lastScrollY.current;
       lastScrollY.current = raw;
-      if (Math.abs(delta) < 4) return;
-      if (raw >= maxScroll - 8) lastBottomHitAt.current = Date.now();
+
       if (raw <= 8) {
-        setSearchVisible(true);
-      } else if (delta > 0) {
-        setSearchVisible(false);
-      } else if (Date.now() - lastBottomHitAt.current > 250) {
-        setSearchVisible(true);
+        accumulatedDelta.current = 0;
+        setTopBarVisible(true);
+        return;
+      }
+
+      accumulatedDelta.current += delta;
+
+      if (accumulatedDelta.current > HIDE_THRESHOLD) {
+        accumulatedDelta.current = 0;
+        setTopBarVisible(false);
+      } else if (accumulatedDelta.current < -SHOW_THRESHOLD) {
+        accumulatedDelta.current = 0;
+        setTopBarVisible(true);
       }
     };
 
@@ -522,7 +520,6 @@ export default function ChatPage() {
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Fetch conversations
   const fetchConversations = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -600,12 +597,9 @@ export default function ChatPage() {
         ref={topBarRef}
         className="shrink-0 bg-surface"
         style={{
-          transform: searchVisible
-            ? "translateY(0)"
-            : `translateY(-${topBarHeight}px)`,
-          marginBottom: searchVisible ? 0 : -topBarHeight,
-          transition:
-            "transform 280ms cubic-bezier(0.4,0,0.2,1), margin-bottom 280ms cubic-bezier(0.4,0,0.2,1)",
+          transform: topBarVisible ? "translateY(0)" : `translateY(-${topBarHeight}px)`,
+          marginBottom: topBarVisible ? 0 : -topBarHeight,
+          transition: "transform 300ms ease-out, margin-bottom 300ms ease-out",
         }}
       >
         <header className="flex items-center justify-between px-5 py-3">
