@@ -68,13 +68,6 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="font-sans relative">
-        {/* Google AdSense */}
-        <Script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4938895869648539"
-          crossOrigin="anonymous"
-          strategy="afterInteractive"
-        />
         <SystemPopupProvider>
           <Suspense>
             <ScrollRestoration />

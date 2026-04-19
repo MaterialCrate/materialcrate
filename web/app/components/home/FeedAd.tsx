@@ -15,6 +15,7 @@ export default function FeedAd() {
   const initialized = useRef(false);
 
   useEffect(() => {
+    if (!ADSENSE_SLOT_ID) return;
     if (initialized.current) return;
     initialized.current = true;
     try {
