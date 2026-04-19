@@ -3,28 +3,34 @@ import { NextResponse } from "next/server";
 const GIPHY_API_KEY = process.env.GIPHY_API_KEY ?? "";
 const BASE = "https://api.giphy.com/v1/gifs";
 
-type GiphyImage = { url: string; width: string; height: string };
+type GiphyImage = { url: string; width: string; height: string; mp4?: string };
 type GiphyResult = {
   id: string;
-  title: string;
   images: {
-    fixed_width_small?: GiphyImage;
-    fixed_width?: GiphyImage;
+    fixed_width_small_still?: GiphyImage; // static JPEG — fast picker thumbnail
+    fixed_width_small?: GiphyImage;       // animated, for hover
+    fixed_width?: GiphyImage;             // animated GIF + mp4
   };
 };
 
-type GifItem = { id: string; previewUrl: string; url: string; width: number; height: number };
+export type GifItem = {
+  id: string;
+  stillUrl: string;   // static preview for picker grid
+  mp4Url: string;     // MP4 for sent messages (5-10x smaller than GIF)
+  width: number;
+  height: number;
+};
 
 function toGifItem(r: GiphyResult): GifItem | null {
-  const preview = r.images.fixed_width_small ?? r.images.fixed_width;
-  const full = r.images.fixed_width ?? r.images.fixed_width_small;
-  if (!preview || !full) return null;
+  const still = r.images.fixed_width_small_still ?? r.images.fixed_width_small;
+  const animated = r.images.fixed_width ?? r.images.fixed_width_small;
+  if (!still || !animated?.mp4) return null;
   return {
     id: r.id,
-    previewUrl: preview.url,
-    url: full.url,
-    width: parseInt(preview.width) || 200,
-    height: parseInt(preview.height) || 150,
+    stillUrl: still.url,
+    mp4Url: animated.mp4,
+    width: parseInt(still.width) || 200,
+    height: parseInt(still.height) || 150,
   };
 }
 

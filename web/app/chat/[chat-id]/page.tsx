@@ -321,6 +321,10 @@ function extractGifUrl(text: string | null): string | null {
   return m ? m[0] : null;
 }
 
+function isGifMp4(url: string): boolean {
+  return url.endsWith(".mp4");
+}
+
 function MessageBubble({
   message,
   onLongPress,
@@ -384,13 +388,19 @@ function MessageBubble({
 
         {gifUrl && (
           <div className="overflow-hidden rounded-2xl">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={gifUrl}
-              alt="GIF"
-              className="max-w-55 rounded-2xl"
-              loading="lazy"
-            />
+            {isGifMp4(gifUrl) ? (
+              <video
+                src={gifUrl}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="max-w-55 rounded-2xl"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={gifUrl} alt="GIF" className="max-w-55 rounded-2xl" loading="lazy" />
+            )}
           </div>
         )}
 
@@ -831,7 +841,36 @@ function PostLinkPickerSheet({
 
 // ─── GIF picker ───────────────────────────────────────────────────────────────
 
-type GifItem = { id: string; previewUrl: string; url: string; width: number; height: number };
+type GifItem = { id: string; stillUrl: string; mp4Url: string; width: number; height: number };
+
+function GifTile({ gif, onSelect, onClose }: { gif: GifItem; onSelect: (url: string) => void; onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  return (
+    <button
+      type="button"
+      onClick={() => { onSelect(gif.mp4Url); onClose(); }}
+      onMouseEnter={() => videoRef.current?.play()}
+      onMouseLeave={() => { if (videoRef.current) { videoRef.current.pause(); videoRef.current.currentTime = 0; } }}
+      className="relative block w-full overflow-hidden rounded-xl active:opacity-70"
+    >
+      {/* Static thumbnail — loads instantly */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={gif.stillUrl} alt="" loading="lazy" className="w-full object-cover" />
+      {/* MP4 overlaid — only plays on hover/tap */}
+      <video
+        ref={videoRef}
+        src={gif.mp4Url}
+        loop
+        muted
+        playsInline
+        preload="none"
+        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-150 [&[data-playing]]:opacity-100"
+        onPlay={(e) => e.currentTarget.setAttribute("data-playing", "")}
+        onPause={(e) => e.currentTarget.removeAttribute("data-playing")}
+      />
+    </button>
+  );
+}
 
 function GifPickerSheet({
   onClose,
@@ -915,20 +954,7 @@ function GifPickerSheet({
           ) : (
             <div className="columns-3 gap-1.5 space-y-1.5">
               {gifs.map((gif) => (
-                <button
-                  key={gif.id}
-                  type="button"
-                  onClick={() => { onSelect(gif.url); onClose(); }}
-                  className="block w-full overflow-hidden rounded-xl active:opacity-70"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={gif.previewUrl}
-                    alt=""
-                    loading="lazy"
-                    className="w-full object-cover"
-                  />
-                </button>
+                <GifTile key={gif.id} gif={gif} onSelect={onSelect} onClose={onClose} />
               ))}
             </div>
           )}
