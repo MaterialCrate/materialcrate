@@ -315,6 +315,12 @@ function PostLinkPreview({
   );
 }
 
+function extractGifUrl(text: string | null): string | null {
+  if (!text) return null;
+  const m = text.match(/https:\/\/media\d*\.giphy\.com\/\S+/);
+  return m ? m[0] : null;
+}
+
 function MessageBubble({
   message,
   onLongPress,
@@ -324,9 +330,12 @@ function MessageBubble({
 }) {
   const { sentByMe, text, timestamp, status, isUnsent, attachments } = message;
   const hasAttachments = attachments && attachments.length > 0;
-  const postId = !isUnsent ? extractPostId(text) : null;
+  const gifUrl = !isUnsent ? extractGifUrl(text) : null;
+  const textWithoutGif = gifUrl && text ? text.replace(gifUrl, "").trim() : null;
+  const postId = !isUnsent && !gifUrl ? extractPostId(text) : null;
   const textWithoutLink = postId && text ? stripPostUrl(text) : null;
-  const showText = !isUnsent && text && (!postId || !!textWithoutLink);
+  const displayText = textWithoutGif || (!gifUrl ? (textWithoutLink ?? text) : null);
+  const showText = !isUnsent && !!displayText;
 
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress = useRef(false);
@@ -373,6 +382,18 @@ function MessageBubble({
 
         {postId && <PostLinkPreview postId={postId} sentByMe={sentByMe} />}
 
+        {gifUrl && (
+          <div className="overflow-hidden rounded-2xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={gifUrl}
+              alt="GIF"
+              className="max-w-55 rounded-2xl"
+              loading="lazy"
+            />
+          </div>
+        )}
+
         {showText && (
           <div
             className={`rounded-[18px] px-3.5 py-2.5 ${
@@ -381,7 +402,7 @@ function MessageBubble({
                 : "rounded-bl-md bg-surface-high text-ink"
             }`}
           >
-            <p className="select-none break-all text-sm leading-relaxed">{textWithoutLink ?? text}</p>
+            <p className="select-none break-all text-sm leading-relaxed">{displayText}</p>
           </div>
         )}
 
@@ -808,6 +829,115 @@ function PostLinkPickerSheet({
   );
 }
 
+// ─── GIF picker ───────────────────────────────────────────────────────────────
+
+type GifItem = { id: string; previewUrl: string; url: string; width: number; height: number };
+
+function GifPickerSheet({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void;
+  onSelect: (url: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [gifs, setGifs] = useState<GifItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const load = useCallback(async (q: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/gif${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+      const body = (await res.json()) as { gifs?: GifItem[] };
+      setGifs(body.gifs ?? []);
+    } catch {
+      setGifs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load("");
+  }, [load]);
+
+  const handleSearch = (value: string) => {
+    setQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => void load(value.trim()), 400);
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
+      <div
+        className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2"
+        style={{ maxHeight: "70dvh" }}
+      >
+        <div className="flex justify-center pt-3 pb-2">
+          <div className="h-1 w-10 rounded-full bg-edge" />
+        </div>
+
+        <div className="flex items-center justify-between px-5 pb-3">
+          <p className="text-sm font-semibold text-ink">GIFs</p>
+          <span className="text-[10px] font-medium text-ink-3">Powered by GIPHY</span>
+        </div>
+
+        <div className="px-4 pb-3">
+          <div className="flex items-center gap-2 rounded-2xl bg-surface-high px-4 py-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="11" cy="11" r="8" stroke="var(--ink-3)" strokeWidth="2" />
+              <path d="m21 21-4.35-4.35" stroke="var(--ink-3)" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            <input
+              type="search"
+              placeholder="Search GIFs…"
+              value={query}
+              onChange={(e) => handleSearch(e.target.value)}
+              autoFocus
+              className="flex-1 bg-transparent text-sm text-ink placeholder:text-ink-3 outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto overscroll-none px-3 pb-4">
+          {loading ? (
+            <div className="grid grid-cols-3 gap-1.5">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="aspect-video animate-pulse rounded-xl bg-surface-high" />
+              ))}
+            </div>
+          ) : gifs.length === 0 ? (
+            <p className="pt-10 text-center text-sm text-ink-3">
+              {query ? "No GIFs found" : "GIFs unavailable"}
+            </p>
+          ) : (
+            <div className="columns-3 gap-1.5 space-y-1.5">
+              {gifs.map((gif) => (
+                <button
+                  key={gif.id}
+                  type="button"
+                  onClick={() => { onSelect(gif.url); onClose(); }}
+                  className="block w-full overflow-hidden rounded-xl active:opacity-70"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={gif.previewUrl}
+                    alt=""
+                    loading="lazy"
+                    className="w-full object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Header skeleton ──────────────────────────────────────────────────────────
 
 function HeaderSkeleton() {
@@ -848,6 +978,7 @@ export default function ChatRoomPage() {
   const [actionSheetMsg, setActionSheetMsg] = useState<Message | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
   const [linkPickerOpen, setLinkPickerOpen] = useState(false);
+  const [gifPickerOpen, setGifPickerOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<
     "conversation" | "message" | null
   >(null);
@@ -1277,6 +1408,14 @@ export default function ChatRoomPage() {
             />
             <button
               type="button"
+              aria-label="Send a GIF"
+              onClick={() => setGifPickerOpen(true)}
+              className="mb-0.5 shrink-0 transition-opacity hover:opacity-60 active:scale-95 active:opacity-40"
+            >
+              <span className="text-[11px] font-bold leading-none tracking-wide text-ink-3">GIF</span>
+            </button>
+            <button
+              type="button"
               aria-label="Share a post"
               onClick={() => setLinkPickerOpen(true)}
               className="mb-0.5 shrink-0 transition-opacity hover:opacity-60 active:scale-95 active:opacity-40"
@@ -1307,6 +1446,17 @@ export default function ChatRoomPage() {
             pendingDeleteRef.current = actionSheetMsg.id;
             setActionSheetMsg(null);
             setConfirmDelete("message");
+          }}
+        />
+      )}
+
+      {/* ── GIF picker ── */}
+      {gifPickerOpen && (
+        <GifPickerSheet
+          onClose={() => setGifPickerOpen(false)}
+          onSelect={(url) => {
+            draftRef.current = url;
+            setDraft(url);
           }}
         />
       )}

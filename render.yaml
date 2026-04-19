@@ -95,5 +95,7 @@ services:
         sync: false
       - key: FACEBOOK_APP_SECRET
         sync: false
+      - key: GIPHY_API_KEY
+        sync: false
       - key: ADMIN_SECRET
         sync: false
