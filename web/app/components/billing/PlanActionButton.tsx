@@ -89,7 +89,7 @@ export default function PlanActionButton({
     setError(null);
 
     if (plan === "free") {
-      router.push(user ? "/feed" : "/register");
+      router.push(user ? "/" : "/register");
       return;
     }
 

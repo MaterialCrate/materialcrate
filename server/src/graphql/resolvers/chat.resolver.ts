@@ -163,17 +163,15 @@ async function assertParticipant(conversationId: string, viewerId: string) {
 
 // ─── Conversation helpers ─────────────────────────────────────────────────────
 
-async function getOtherParticipant(
+function getOtherParticipant(
   conv: { participantAId: string; participantBId: string },
   viewerId: string,
+  userMap: Map<string, { id: string; displayName: string; username: string; profilePicture: string | null }>,
 ) {
   const otherId =
     conv.participantAId === viewerId ? conv.participantBId : conv.participantAId;
 
-  const user = await prisma.user.findUnique({
-    where: { id: otherId },
-    select: { id: true, displayName: true, username: true, profilePicture: true },
-  });
+  const user = userMap.get(otherId);
   if (!user) return null;
 
   return {
@@ -185,13 +183,14 @@ async function getOtherParticipant(
   };
 }
 
-async function toConversationGraphQL(
+function toConversationGraphQL(
   conv: any,
   viewerId: string,
   lastMessage: any | null,
   unreadCount: number,
+  userMap: Map<string, { id: string; displayName: string; username: string; profilePicture: string | null }>,
 ) {
-  const participant = await getOtherParticipant(conv, viewerId);
+  const participant = getOtherParticipant(conv, viewerId, userMap);
   if (!participant) return null;
 
   // Derive a text preview for the last message
@@ -222,49 +221,60 @@ async function toConversationGraphQL(
 
 export const ChatResolver = {
   Query: {
-    conversations: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
+    conversations: async (
+      _: unknown,
+      args: { limit?: number; cursor?: string },
+      ctx: GraphQLContext,
+    ) => {
       const viewerId = ctx.user?.sub;
       if (!viewerId) throw new Error("Not authenticated");
+
+      const limit = Math.min(args.limit ?? 15, 50);
+      const cursorDate = args.cursor ? new Date(args.cursor) : undefined;
 
       const conversations = await prisma.conversation.findMany({
         where: {
           OR: [{ participantAId: viewerId }, { participantBId: viewerId }],
+          ...(cursorDate ? { updatedAt: { lt: cursorDate } } : {}),
         },
         orderBy: { updatedAt: "desc" },
+        take: limit + 1, // fetch one extra to determine if there's a next page
       });
 
-      if (!conversations.length) return [];
+      const hasMore = conversations.length > limit;
+      const page = hasMore ? conversations.slice(0, limit) : conversations;
 
-      const conversationIds = (conversations as any[]).map((c) => c.id);
+      if (!page.length) return { items: [], nextCursor: null };
 
-      // Fetch the latest message per conversation in one round-trip
-      const lastMessages = await prisma.chatMessage.findMany({
-        where: { conversationId: { in: conversationIds } },
-        orderBy: { createdAt: "desc" },
-        distinct: ["conversationId"],
-        select: {
-          id: true,
-          conversationId: true,
-          senderId: true,
-          text: true,
-          isUnsent: true,
-          status: true,
-          createdAt: true,
-          _count: { select: { attachments: true } },
-        },
-      });
+      const conversationIds = (page as any[]).map((c) => c.id);
 
-      // Count unread messages per conversation (from the other person, not yet READ)
-      const unreadCounts = await prisma.chatMessage.groupBy({
-        by: ["conversationId"],
-        where: {
-          conversationId: { in: conversationIds },
-          senderId: { not: viewerId },
-          status: { not: "READ" },
-          isUnsent: false,
-        },
-        _count: { id: true },
-      });
+      const [lastMessages, unreadCounts] = await Promise.all([
+        prisma.chatMessage.findMany({
+          where: { conversationId: { in: conversationIds } },
+          orderBy: { createdAt: "desc" },
+          distinct: ["conversationId"],
+          select: {
+            id: true,
+            conversationId: true,
+            senderId: true,
+            text: true,
+            isUnsent: true,
+            status: true,
+            createdAt: true,
+            _count: { select: { attachments: true } },
+          },
+        }),
+        prisma.chatMessage.groupBy({
+          by: ["conversationId"],
+          where: {
+            conversationId: { in: conversationIds },
+            senderId: { not: viewerId },
+            status: { not: "READ" },
+            isUnsent: false,
+          },
+          _count: { id: true },
+        }),
+      ]);
 
       const lastMsgByConvId = new Map(
         (lastMessages as any[]).map((m) => [m.conversationId, m]),
@@ -273,18 +283,33 @@ export const ChatResolver = {
         (unreadCounts as any[]).map((r) => [r.conversationId, r._count.id]),
       );
 
-      const results = await Promise.all(
-        (conversations as any[]).map((conv) =>
+      // Batch-load all participants in one query instead of one per conversation
+      const otherParticipantIds = (page as any[]).map((c) =>
+        c.participantAId === viewerId ? c.participantBId : c.participantAId,
+      );
+      const participants = await prisma.user.findMany({
+        where: { id: { in: otherParticipantIds } },
+        select: { id: true, displayName: true, username: true, profilePicture: true },
+      });
+      const userMap = new Map(participants.map((u) => [u.id, u]));
+
+      const items = (page as any[])
+        .map((conv) =>
           toConversationGraphQL(
             conv,
             viewerId,
             lastMsgByConvId.get(conv.id) ?? null,
             unreadByConvId.get(conv.id) ?? 0,
+            userMap,
           ),
-        ),
-      );
+        )
+        .filter(Boolean);
 
-      return results.filter(Boolean);
+      const nextCursor = hasMore
+        ? toISOString((page[page.length - 1] as any).updatedAt)
+        : null;
+
+      return { items, nextCursor };
     },
 
     chatUserSuggestions: async (
@@ -417,7 +442,14 @@ export const ChatResolver = {
       if (!conv) return null;
       if (conv.participantAId !== viewerId && conv.participantBId !== viewerId) return null;
 
-      return toConversationGraphQL(conv, viewerId, null, 0);
+      const otherId = conv.participantAId === viewerId ? conv.participantBId : conv.participantAId;
+      const otherUser = await prisma.user.findUnique({
+        where: { id: otherId },
+        select: { id: true, displayName: true, username: true, profilePicture: true },
+      });
+      const userMap = new Map(otherUser ? [[otherUser.id, otherUser]] : []);
+
+      return toConversationGraphQL(conv, viewerId, null, 0, userMap);
     },
 
     messages: async (

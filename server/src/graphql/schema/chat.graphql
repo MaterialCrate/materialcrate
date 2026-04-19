@@ -81,8 +81,13 @@ type ChatUserSuggestion {
   hasExistingConversation: Boolean!
 }
 
+type ConversationsPage {
+  items: [Conversation!]!
+  nextCursor: String
+}
+
 extend type Query {
-  conversations: [Conversation!]!
+  conversations(limit: Int, cursor: String): ConversationsPage!
   conversation(id: ID!): Conversation
   messages(conversationId: ID!, limit: Int = 50, before: String): [ChatMessage!]!
   chatUserSuggestions(query: String): [ChatUserSuggestion!]!

@@ -128,7 +128,7 @@ export default function Navbar() {
             type="button"
             aria-label="MaterialCrate"
             onClick={() => {
-              router.push("/feed");
+              router.push("/");
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             className="cursor-pointer transition-opacity duration-200 hover:opacity-80 active:opacity-60"

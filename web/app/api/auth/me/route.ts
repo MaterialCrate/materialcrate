@@ -49,40 +49,6 @@ const ME_QUERY = `
   }
 `;
 
-const LEGACY_ME_QUERY = `
-  query Me {
-    me {
-      id
-      email
-      username
-      displayName
-      profilePicture
-      profileBackground
-      visibilityPublicProfile
-      visibilityPublicPosts
-      visibilityPublicComments
-      visibilityOnlineStatus
-      emailNotificationsAccountActivity
-      emailNotificationsWeeklySummary
-      emailNotificationsProductUpdates
-      emailNotificationsMarketing
-      pushNotificationsLikes
-      pushNotificationsComments
-      pushNotificationsFollows
-      pushNotificationsMentions
-      linkedSEOs
-      subscriptionPlan
-      subscriptionStartedAt
-      subscriptionEndsAt
-      createdAt
-      followersCount
-      followingCount
-      institution
-      program
-      theme
-    }
-  }
-`;
 
 const fetchMe = async (token: string, query: string) => {
   const response = await fetch(GRAPHQL_ENDPOINT, {
@@ -106,61 +72,6 @@ export async function GET() {
   }
 
   const primary = await fetchMe(token, ME_QUERY);
-  const missingFieldError = Array.isArray(primary.body?.errors)
-    ? primary.body.errors.some((error: { message?: string }) =>
-        /Cannot query field "(pendingEmail|emailVerified|visibilityPublicProfile|visibilityPublicPosts|visibilityPublicComments|visibilityOnlineStatus|emailNotificationsAccountActivity|emailNotificationsWeeklySummary|emailNotificationsProductUpdates|emailNotificationsMarketing|pendingSubscriptionPlan|pendingSubscriptionAction|pendingSubscriptionEffectiveAt|institutionVisibility|programVisibility|tokenBalance|tokensEarned|tokensRedeemed)"/.test(
-          error?.message ?? "",
-        ),
-      )
-    : false;
-
-  if (
-    (!primary.response.ok || primary.body?.errors?.length) &&
-    missingFieldError
-  ) {
-    console.warn("[auth/me] Falling back to legacy query", {
-      status: primary.response.status,
-      errors: primary.body?.errors ?? null,
-    });
-
-    const legacy = await fetchMe(token, LEGACY_ME_QUERY);
-    if (!legacy.response.ok || legacy.body?.errors?.length) {
-      console.error("[auth/me] Legacy query failed", {
-        status: legacy.response.status,
-        errors: legacy.body?.errors ?? null,
-      });
-      return NextResponse.json({ user: null }, { status: 401 });
-    }
-
-    return NextResponse.json({
-      user: {
-        ...legacy.body?.data?.me,
-        pendingEmail: null,
-        emailVerified: true,
-        visibilityPublicProfile: true,
-        visibilityPublicPosts: true,
-        visibilityPublicComments: true,
-        visibilityOnlineStatus: true,
-        emailNotificationsAccountActivity: true,
-        emailNotificationsWeeklySummary: true,
-        emailNotificationsProductUpdates: true,
-        emailNotificationsMarketing: true,
-        pushNotificationsLikes: true,
-        pushNotificationsComments: true,
-        pushNotificationsFollows: true,
-        pushNotificationsMentions: true,
-        pendingSubscriptionPlan: null,
-        pendingSubscriptionAction: null,
-        pendingSubscriptionEffectiveAt: null,
-        institutionVisibility: "everyone",
-        programVisibility: "everyone",
-        theme: "light",
-        tokenBalance: 0,
-        tokensEarned: 0,
-        tokensRedeemed: 0,
-      },
-    });
-  }
 
   if (!primary.response.ok || primary.body?.errors?.length) {
     console.error("[auth/me] Query failed", {

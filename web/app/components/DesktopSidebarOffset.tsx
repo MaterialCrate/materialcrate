@@ -1,9 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-
-const HIDDEN_PATHS = new Set(["/"]);
-const NAV_PATHS = new Set(["/feed", "/hub", "/saved"]);
+const NAV_PATHS = new Set(["/", "/hub", "/saved"]);
 
 export default function DesktopSidebarOffset({
   children,
@@ -13,10 +11,9 @@ export default function DesktopSidebarOffset({
   const pathname = usePathname();
 
   const hasSidebar =
-    !HIDDEN_PATHS.has(pathname) &&
-    (NAV_PATHS.has(pathname) ||
-      pathname.startsWith("/saved/folder/") ||
-      pathname.startsWith("/user/"));
+    NAV_PATHS.has(pathname) ||
+    pathname.startsWith("/saved/folder/") ||
+    pathname.startsWith("/user/");
 
   return (
     <div

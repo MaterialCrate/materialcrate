@@ -5,22 +5,25 @@ const GRAPHQL_ENDPOINT =
   process.env.GRAPHQL_ENDPOINT ?? "http://localhost:4000/graphql";
 
 const CONVERSATIONS_QUERY = `
-  query Conversations {
-    conversations {
-      id
-      participant {
+  query Conversations($limit: Int, $cursor: String) {
+    conversations(limit: $limit, cursor: $cursor) {
+      items {
         id
-        name
-        username
-        avatar
-        isOnline
+        participant {
+          id
+          name
+          username
+          avatar
+          isOnline
+        }
+        lastMessage
+        lastMessageTime
+        lastMessageSentByMe
+        lastMessageIsRead
+        unreadCount
+        updatedAt
       }
-      lastMessage
-      lastMessageTime
-      lastMessageSentByMe
-      lastMessageIsRead
-      unreadCount
-      updatedAt
+      nextCursor
     }
   }
 `;
@@ -72,14 +75,19 @@ const runGraphQL = async ({
   return { res, body };
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   const token = await getAuthToken();
   if (!token) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const cursor = searchParams.get("cursor") ?? undefined;
+  const limit = 15;
+
   const { res, body } = await runGraphQL({
     query: CONVERSATIONS_QUERY,
+    variables: { limit, cursor },
     token,
   });
 
@@ -91,7 +99,8 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    conversations: body?.data?.conversations ?? [],
+    conversations: body?.data?.conversations?.items ?? [],
+    nextCursor: body?.data?.conversations?.nextCursor ?? null,
   });
 }
 

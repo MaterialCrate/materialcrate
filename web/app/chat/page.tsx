@@ -460,6 +460,31 @@ function ComposeView({ onClose }: { onClose: () => void }) {
   );
 }
 
+type RawConversation = {
+  id: string;
+  participant: { id: string; name: string; username: string; avatar: string | null; isOnline: boolean };
+  lastMessage: string | null;
+  lastMessageTime: string | null;
+  lastMessageSentByMe: boolean;
+  lastMessageIsRead: boolean;
+  unreadCount: number;
+};
+
+function toConversation(c: RawConversation): ChatConversation {
+  return {
+    id: c.id,
+    name: c.participant.name,
+    username: c.participant.username,
+    avatar: c.participant.avatar,
+    lastMessage: c.lastMessage,
+    lastMessageTime: c.lastMessageTime,
+    unreadCount: c.unreadCount,
+    isOnline: c.participant.isOnline,
+    isSentByMe: c.lastMessageSentByMe,
+    isRead: c.lastMessageIsRead,
+  };
+}
+
 export default function ChatPage() {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
@@ -473,11 +498,14 @@ export default function ChatPage() {
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null)
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<ChatFilter>("all");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const listRef = useRef<HTMLElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const fetchConversations = useCallback(async () => {
     setIsLoading(true);
@@ -489,36 +517,9 @@ export default function ChatPage() {
         setError(body?.error || "Failed to load conversations");
         return;
       }
-      const raw: {
-        id: string;
-        participant: {
-          id: string;
-          name: string;
-          username: string;
-          avatar: string | null;
-          isOnline: boolean;
-        };
-        lastMessage: string | null;
-        lastMessageTime: string | null;
-        lastMessageSentByMe: boolean;
-        lastMessageIsRead: boolean;
-        unreadCount: number;
-      }[] = Array.isArray(body?.conversations) ? body.conversations : [];
-
-      setConversations(
-        raw.map((c) => ({
-          id: c.id,
-          name: c.participant.name,
-          username: c.participant.username,
-          avatar: c.participant.avatar,
-          lastMessage: c.lastMessage,
-          lastMessageTime: c.lastMessageTime,
-          unreadCount: c.unreadCount,
-          isOnline: c.participant.isOnline,
-          isSentByMe: c.lastMessageSentByMe,
-          isRead: c.lastMessageIsRead,
-        })),
-      );
+      const raw: RawConversation[] = Array.isArray(body?.conversations) ? body.conversations : [];
+      setConversations(raw.map(toConversation));
+      setNextCursor(body?.nextCursor ?? null);
     } catch {
       setError("Failed to load conversations");
     } finally {
@@ -526,9 +527,35 @@ export default function ChatPage() {
     }
   }, []);
 
+  const fetchMore = useCallback(async () => {
+    if (!nextCursor || isFetchingMore) return;
+    setIsFetchingMore(true);
+    try {
+      const res = await fetch(`/api/chat?cursor=${encodeURIComponent(nextCursor)}`, { cache: "no-store" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return;
+      const raw: RawConversation[] = Array.isArray(body?.conversations) ? body.conversations : [];
+      setConversations((prev) => [...prev, ...raw.map(toConversation)]);
+      setNextCursor(body?.nextCursor ?? null);
+    } finally {
+      setIsFetchingMore(false);
+    }
+  }, [nextCursor, isFetchingMore]);
+
   useEffect(() => {
     void fetchConversations();
   }, [fetchConversations]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) void fetchMore(); },
+      { threshold: 0.1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [fetchMore]);
 
   const filtered = conversations.filter((chat) => {
     const matchesFilter =
@@ -651,17 +678,30 @@ export default function ChatPage() {
           ) : filtered.length === 0 ? (
             <EmptyState search={search} filter={filter} />
           ) : (
-            <ul className="divide-y divide-edge">
-              {filtered.map((chat) => (
-                <ConversationItem
-                  key={chat.id}
-                  chat={chat}
-                  onClick={() =>
-                    router.push(`/chat/${encodeURIComponent(chat.id)}`)
-                  }
-                />
-              ))}
-            </ul>
+            <>
+              <ul className="divide-y divide-edge">
+                {filtered.map((chat) => (
+                  <ConversationItem
+                    key={chat.id}
+                    chat={chat}
+                    onClick={() =>
+                      router.push(`/chat/${encodeURIComponent(chat.id)}`)
+                    }
+                  />
+                ))}
+              </ul>
+              {nextCursor && !deferredSearch && filter === "all" && (
+                <div ref={sentinelRef} className="py-2">
+                  {isFetchingMore && (
+                    <ul>
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <SkeletonRow key={i} />
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
