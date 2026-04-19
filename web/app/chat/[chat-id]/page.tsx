@@ -845,18 +845,46 @@ type GifItem = { id: string; stillUrl: string; mp4Url: string; width: number; he
 
 function GifTile({ gif, onSelect, onClose }: { gif: GifItem; onSelect: (url: string) => void; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHoldingRef = useRef(false);
+
+  const playVideo = () => videoRef.current?.play();
+  const stopVideo = () => {
+    if (videoRef.current) { videoRef.current.pause(); videoRef.current.currentTime = 0; }
+  };
+
+  const onTouchStart = () => {
+    isHoldingRef.current = false;
+    holdTimerRef.current = setTimeout(() => {
+      isHoldingRef.current = true;
+      playVideo();
+    }, 150);
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    if (isHoldingRef.current) {
+      // was a hold — stop video, don't select
+      stopVideo();
+      isHoldingRef.current = false;
+      e.preventDefault();
+    }
+    // short tap falls through to onClick
+  };
+
   return (
     <button
       type="button"
       onClick={() => { onSelect(gif.mp4Url); onClose(); }}
-      onMouseEnter={() => videoRef.current?.play()}
-      onMouseLeave={() => { if (videoRef.current) { videoRef.current.pause(); videoRef.current.currentTime = 0; } }}
-      className="relative block w-full overflow-hidden rounded-xl active:opacity-70"
+      onMouseEnter={playVideo}
+      onMouseLeave={stopVideo}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={() => { if (holdTimerRef.current) clearTimeout(holdTimerRef.current); stopVideo(); }}
+      className="relative block w-full overflow-hidden rounded-xl"
     >
-      {/* Static thumbnail — loads instantly */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={gif.stillUrl} alt="" loading="lazy" className="w-full object-cover" />
-      {/* MP4 overlaid — only plays on hover/tap */}
       <video
         ref={videoRef}
         src={gif.mp4Url}
@@ -912,7 +940,7 @@ function GifPickerSheet({
       <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
       <div
         className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl bg-surface pb-safe shadow-2xl lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2"
-        style={{ maxHeight: "70dvh" }}
+        style={{ height: "70dvh" }}
       >
         <div className="flex justify-center pt-3 pb-2">
           <div className="h-1 w-10 rounded-full bg-edge" />
@@ -952,7 +980,7 @@ function GifPickerSheet({
               {query ? "No GIFs found" : "GIFs unavailable"}
             </p>
           ) : (
-            <div className="columns-3 gap-1.5 space-y-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               {gifs.map((gif) => (
                 <GifTile key={gif.id} gif={gif} onSelect={onSelect} onClose={onClose} />
               ))}
