@@ -517,7 +517,14 @@ export const ChatResolver = {
         create: { participantAId, participantBId },
       });
 
-      const result = await toConversationGraphQL(conv, viewerId, null, 0);
+      const otherId = conv.participantAId === viewerId ? conv.participantBId : conv.participantAId;
+      const otherUser = await prisma.user.findUnique({
+        where: { id: otherId },
+        select: { id: true, displayName: true, username: true, profilePicture: true },
+      });
+      const userMap = new Map(otherUser ? [[otherUser.id, otherUser]] : []);
+
+      const result = toConversationGraphQL(conv, viewerId, null, 0, userMap);
       if (!result) throw new Error("Failed to load conversation");
       return result;
     },
