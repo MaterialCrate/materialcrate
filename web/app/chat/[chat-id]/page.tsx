@@ -948,8 +948,8 @@ function GifPickerSheet({
 
         <div className="flex items-center justify-between px-5 pb-3">
           <p className="text-sm font-semibold text-ink">GIFs</p>
-          <img src="/PoweredBy_200px-Black_HorizText.png" alt="Powered by GIPHY" className="h-4 dark:hidden" />
-          <img src="/PoweredBy_200px-White_HorizText.png" alt="Powered by GIPHY" className="h-4 hidden dark:block" />
+          <Image src="/PoweredBy_200px-Black_HorizText.png" alt="Powered by GIPHY" width={200} height={17} className="h-4 w-auto dark:hidden" />
+          <Image src="/PoweredBy_200px-White_HorizText.png" alt="Powered by GIPHY" width={200} height={17} className="h-4 w-auto hidden dark:block" />
         </div>
 
         <div className="px-4 pb-3">

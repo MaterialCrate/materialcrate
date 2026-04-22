@@ -179,7 +179,7 @@ export default function Navbar() {
                 />
                 <span className="hidden xl:inline">
                   Tokens
-                  {user.tokenBalance && (
+                  {user.tokenBalance != null && (
                     <span className="ml-1.5 rounded-full bg-[#FFF3E7] px-2 py-0.5 text-[10px] font-semibold text-[#E1761F]">
                       {new Intl.NumberFormat("en-US").format(user.tokenBalance)}
                     </span>
