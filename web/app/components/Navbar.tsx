@@ -66,7 +66,6 @@ export default function Navbar() {
     void fetchUnread();
   }, [user?.id, pathname]);
 
-  // Increment badge when a new message arrives in a chat the user isn't viewing
   useEffect(() => {
     const onNewChatMessage = () => setRawUnreadCount((n) => n + 1);
     window.addEventListener("mc:chat:new-message", onNewChatMessage);
