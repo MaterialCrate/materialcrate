@@ -513,9 +513,30 @@ export async function POST(req: Request) {
       });
 
       if (fileResponse.ok) {
-        const contentType =
-          fileResponse.headers.get("content-type")?.split(";")[0]?.trim() ||
-          "application/pdf";
+        const rawContentType =
+          fileResponse.headers.get("content-type")?.split(";")[0]?.trim() ?? "";
+        const GEMINI_SUPPORTED_MIME_TYPES = new Set([
+          "application/pdf",
+          "image/png",
+          "image/jpeg",
+          "image/webp",
+          "image/heic",
+          "image/heif",
+          "text/plain",
+          "text/html",
+          "text/css",
+          "text/javascript",
+          "text/x-typescript",
+          "text/csv",
+          "text/markdown",
+          "text/x-python",
+          "text/xml",
+          "application/rtf",
+          "application/json",
+        ]);
+        const contentType = GEMINI_SUPPORTED_MIME_TYPES.has(rawContentType)
+          ? rawContentType
+          : "application/pdf";
         const arrayBuffer = await fileResponse.arrayBuffer();
 
         if (arrayBuffer.byteLength <= MAX_INLINE_DOCUMENT_BYTES) {
