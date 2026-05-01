@@ -226,7 +226,7 @@ const isAllowedFileUrl = (value: string) => {
   }
 };
 
-const extractReplyText = (body: GeminiResponseBody) => {
+const extractStreamChunk = (body: GeminiResponseBody): string => {
   const parts = body?.candidates?.[0]?.content?.parts;
   if (!Array.isArray(parts)) {
     return "";
@@ -234,9 +234,7 @@ const extractReplyText = (body: GeminiResponseBody) => {
 
   return parts
     .map((part) => (typeof part?.text === "string" ? part.text : ""))
-    .filter(Boolean)
-    .join("\n")
-    .trim();
+    .join("");
 };
 
 const sanitizeHistory = (
@@ -583,87 +581,131 @@ export async function POST(req: Request) {
     createdAt: new Date().toISOString(),
   };
 
-  let reply = "";
-  let warning = "";
-  let tokensUsed = 0;
+  const resolvedPostId = documentRecord.post.id!;
+  const resolvedSavedPostId =
+    savedPostId ||
+    (documentRecord.id !== documentRecord.post.id
+      ? documentRecord.id
+      : undefined);
 
-  try {
-    const geminiResponse = await fetch(
-      `${GEMINI_API_BASE_URL}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+  const geminiRequestBody = JSON.stringify({
+    systemInstruction: {
+      parts: [
+        {
+          text:
+            "You are Ju Intelli, the in-app study assistant for Material Crate. " +
+            "Answer clearly and concisely using the selected Material Crate document and the conversation context. " +
+            "Use light Markdown formatting when helpful, such as short headings, bullet lists, numbered steps, and **bold** key terms. " +
+            "Do not use HTML or code fences unless the user asks for them. " +
+            "If the document does not contain enough information, say that directly instead of inventing details. " +
+            "Do not mention Gemini, API keys, or internal implementation details.",
         },
-        cache: "no-store",
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [
-              {
-                text:
-                  "You are Ju Intelli, the in-app study assistant for Material Crate. " +
-                  "Answer clearly and concisely using the selected Material Crate document and the conversation context. " +
-                  "Use light Markdown formatting when helpful, such as short headings, bullet lists, numbered steps, and **bold** key terms. " +
-                  "Do not use HTML or code fences unless the user asks for them. " +
-                  "If the document does not contain enough information, say that directly instead of inventing details. " +
-                  "Do not mention Gemini, API keys, or internal implementation details.",
-              },
-            ],
-          },
-          contents: [
-            {
-              role: "user",
-              parts,
-            },
-          ],
-          generationConfig: {
-            maxOutputTokens: 1024,
-            temperature: 0.7,
-          },
-        }),
-      },
-    );
+      ],
+    },
+    contents: [{ role: "user", parts }],
+    generationConfig: { maxOutputTokens: 1024, temperature: 0.7 },
+  });
 
-    const geminiBody = (await geminiResponse
-      .json()
-      .catch(() => ({}))) as GeminiResponseBody;
-    const nextReply = extractReplyText(geminiBody);
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
 
-    if (!geminiResponse.ok || !nextReply) {
-      throw new Error(
-        geminiBody?.error?.message || "Failed to generate AI response",
+  const sendEvent = (event: Record<string, unknown>) =>
+    writer.write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+
+  void (async () => {
+    let fullReply = "";
+    let tokensUsed = 0;
+    let warning = "";
+
+    try {
+      const geminiResponse = await fetch(
+        `${GEMINI_API_BASE_URL}/${encodeURIComponent(model)}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: geminiRequestBody,
+        },
       );
+
+      if (!geminiResponse.ok || !geminiResponse.body) {
+        const errBody = (await geminiResponse
+          .json()
+          .catch(() => ({}))) as GeminiResponseBody;
+        throw new Error(
+          errBody?.error?.message || "Failed to generate AI response",
+        );
+      }
+
+      const reader = geminiResponse.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === "[DONE]") continue;
+
+          try {
+            const parsed = JSON.parse(jsonStr) as GeminiResponseBody;
+            const chunkText = extractStreamChunk(parsed);
+            if (chunkText) {
+              fullReply += chunkText;
+              await sendEvent({ type: "chunk", text: chunkText });
+            }
+            if (parsed.usageMetadata?.totalTokenCount) {
+              tokensUsed = parsed.usageMetadata.totalTokenCount;
+            }
+          } catch {
+            // ignore malformed SSE lines
+          }
+        }
+      }
+
+      if (!fullReply) {
+        throw new Error("AI returned an empty response");
+      }
+    } catch (err) {
+      warning =
+        err instanceof Error ? err.message : "Failed to generate AI response";
+      if (!fullReply) {
+        const errorText = `I couldn’t respond right now. ${warning}`;
+        fullReply = errorText;
+        await sendEvent({ type: "chunk", text: errorText });
+      }
     }
 
-    reply = nextReply;
-    tokensUsed = geminiBody?.usageMetadata?.totalTokenCount ?? 0;
-  } catch (error) {
-    warning =
-      error instanceof Error ? error.message : "Failed to generate AI response";
-    reply = `I couldn’t respond right now. ${warning}`;
-  }
+    const assistantMessage = {
+      id: createMessageId(),
+      role: "assistant" as const,
+      text: fullReply,
+      createdAt: new Date().toISOString(),
+    };
 
-  const assistantMessage = {
-    id: createMessageId(),
-    role: "assistant" as const,
-    text: reply,
-    createdAt: new Date().toISOString(),
-  };
+    let chat: HubChatRecord | null = null;
+    let usage: unknown = undefined;
 
-  try {
-    const chat = await persistHubChat({
-      token,
-      postId: documentRecord.post.id,
-      savedPostId:
-        savedPostId ||
-        (documentRecord.id !== documentRecord.post.id
-          ? documentRecord.id
-          : undefined),
-      documentTitle,
-      messages: [...priorHistory, userMessage, assistantMessage],
-    });
+    try {
+      chat = await persistHubChat({
+        token,
+        postId: resolvedPostId,
+        savedPostId: resolvedSavedPostId,
+        documentTitle,
+        messages: [...priorHistory, userMessage, assistantMessage],
+      });
+    } catch {
+      // Non-blocking
+    }
 
-    let usage = undefined;
     if (tokensUsed > 0) {
       try {
         const usageBody = await requestGraphQL(
@@ -673,13 +715,13 @@ export async function POST(req: Request) {
         );
         usage = usageBody?.data?.recordAiTokenUsage ?? undefined;
       } catch {
-        // Non-blocking: don't fail the chat if usage recording fails
+        // Non-blocking
       }
     }
 
-    return NextResponse.json({
-      ok: true,
-      reply,
+    await sendEvent({
+      type: "done",
+      reply: fullReply,
       model,
       documentTitle,
       warning: warning || undefined,
@@ -687,17 +729,22 @@ export async function POST(req: Request) {
       tokensUsed: tokensUsed || undefined,
       usage,
     });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to save chat history",
-      },
-      { status: 500 },
-    );
-  }
+    await writer.close();
+  })().catch(async () => {
+    try {
+      await writer.close();
+    } catch {
+      // ignore
+    }
+  });
+
+  return new Response(readable, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }
 
 export async function DELETE(req: Request) {

@@ -351,6 +351,8 @@ export default function HubPage() {
   const hideHeaderTimerRef = useRef<number | null>(null);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const streamingTextRef = useRef("");
+  const streamingRafRef = useRef<number | null>(null);
   const popup = useSystemPopup();
 
   const [archive, setArchive] = useState<ArchiveData | null>(null);
@@ -371,6 +373,11 @@ export default function HubPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState<{
+    id: string;
+    text: string;
+    documentId: string;
+  } | null>(null);
   const [isClearingChat, setIsClearingChat] = useState(false);
   const [error, setError] = useState("");
   const [aiUsage, setAiUsage] = useState<AiUsage | null>(null);
@@ -450,6 +457,20 @@ export default function HubPage() {
 
     container.scrollTop = container.scrollHeight;
   }, [selectedDocumentId, history]);
+
+  useEffect(() => {
+    const container = chatScrollRef.current;
+    if (!container) {
+      return;
+    }
+
+    const distanceFromBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight;
+
+    if (distanceFromBottom < 120) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [streamingMessage]);
 
   useEffect(() => {
     resizePromptTextarea();
@@ -873,13 +894,17 @@ export default function HubPage() {
     setPrompt("");
     setError("");
     setIsSending(true);
+    streamingTextRef.current = "";
+    setStreamingMessage({
+      id: createMessageId(),
+      text: "",
+      documentId: selectedDocument.post.id,
+    });
 
     try {
       const response = await fetch("/api/hub/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           savedPostId:
             selectedDocument.id !== selectedDocument.post.id
@@ -896,9 +921,8 @@ export default function HubPage() {
         }),
       });
 
-      const body = await response.json().catch(() => ({}));
-
-      if (response.status === 429 && body?.error === "AI_LIMIT_REACHED") {
+      if (response.status === 429) {
+        const body = await response.json().catch(() => ({}));
         if (body?.usage) {
           setAiUsage(body.usage as AiUsage);
         }
@@ -908,33 +932,71 @@ export default function HubPage() {
         return;
       }
 
-      if (!response.ok || !body?.reply) {
+      if (!response.ok || !response.body) {
+        const body = await response.json().catch(() => ({}));
         throw new Error(body?.error || "Failed to get Ju Intelli response.");
       }
 
-      if (body?.usage) {
-        setAiUsage(body.usage as AiUsage);
-      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
 
-      if (body?.chat) {
-        syncChatFromServer(body.chat as HubChatRecord);
-      } else {
-        setHistory((current) => [
-          ...current,
-          {
-            id: createMessageId(),
-            role: "assistant",
-            text: body.reply,
-            createdAt: new Date().toISOString(),
-            documentId: selectedDocument.post.id,
-            documentTitle,
-            chatId: selectedChatId || undefined,
-          },
-        ]);
-      }
+      outer: while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      if (body?.warning) {
-        setError(body.warning);
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          try {
+            const event = JSON.parse(jsonStr) as Record<string, unknown>;
+
+            if (event.type === "chunk" && typeof event.text === "string") {
+              streamingTextRef.current += event.text as string;
+              if (streamingRafRef.current === null) {
+                streamingRafRef.current = requestAnimationFrame(() => {
+                  const text = streamingTextRef.current;
+                  setStreamingMessage((current) =>
+                    current ? { ...current, text } : null,
+                  );
+                  streamingRafRef.current = null;
+                });
+              }
+            } else if (event.type === "done") {
+              if (event.usage) {
+                setAiUsage(event.usage as AiUsage);
+              }
+              if (event.chat) {
+                syncChatFromServer(event.chat as HubChatRecord);
+              } else if (typeof event.reply === "string") {
+                setHistory((current) => [
+                  ...current,
+                  {
+                    id: createMessageId(),
+                    role: "assistant",
+                    text: event.reply as string,
+                    createdAt: new Date().toISOString(),
+                    documentId: selectedDocument.post.id,
+                    documentTitle,
+                    chatId: selectedChatId || undefined,
+                  },
+                ]);
+              }
+              if (typeof event.warning === "string") {
+                setError(event.warning);
+              }
+              break outer;
+            }
+          } catch {
+            // ignore malformed events
+          }
+        }
       }
     } catch (chatError) {
       const message =
@@ -955,6 +1017,11 @@ export default function HubPage() {
         },
       ]);
     } finally {
+      if (streamingRafRef.current !== null) {
+        cancelAnimationFrame(streamingRafRef.current);
+        streamingRafRef.current = null;
+      }
+      setStreamingMessage(null);
       setIsSending(false);
     }
   };
@@ -1020,7 +1087,7 @@ export default function HubPage() {
       {(isLoading || isLoadingHistory) && <LoadingBar />}
       {error ? <Alert type="error" message={error} /> : null}
 
-      {isPickerOpen ? (
+      {isPickerOpen && (
         <>
           <button
             type="button"
@@ -1078,11 +1145,11 @@ export default function HubPage() {
                           <p className="truncate text-sm font-semibold text-ink">
                             {title}
                           </p>
-                          {isSelected ? (
+                          {isSelected && (
                             <span className="shrink-0 rounded-full bg-[#202020] px-2 py-1 text-[10px] font-medium text-white">
                               Selected
                             </span>
-                          ) : null}
+                          )}
                         </div>
                         <p className="mt-1 text-xs text-ink-2">
                           {author}
@@ -1103,7 +1170,7 @@ export default function HubPage() {
             </div>
           </div>
         </>
-      ) : null}
+      )}
 
       {isHistoryOpen ? (
         <>
@@ -1283,8 +1350,23 @@ export default function HubPage() {
                   ))}
                   {isSending ? (
                     <div className="flex justify-start">
-                      <div className="rounded-3xl bg-surface-high px-4 py-3 text-sm text-ink-2">
-                        Ju Intelli is thinking…
+                      <div className="max-w-[85%] rounded-3xl bg-surface-high px-4 py-3 text-sm leading-6 text-ink">
+                        {streamingMessage?.documentId ===
+                          selectedDocument?.post.id &&
+                        streamingMessage?.text ? (
+                          <>
+                            <p className="wrap-break-word whitespace-pre-wrap">
+                              {streamingMessage.text}
+                            </p>
+                            <span className="ml-0.5 inline-block animate-pulse">
+                              ▋
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-ink-2">
+                            Ju Intelli is thinking…
+                          </span>
+                        )}
                       </div>
                     </div>
                   ) : null}
