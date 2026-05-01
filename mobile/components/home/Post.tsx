@@ -95,7 +95,7 @@ export default function Post({
 
   const [likeCount, setLikeCount] = useState(post.likeCount ?? 0);
   const [viewerHasLiked, setViewerHasLiked] = useState(
-    Boolean(post.viewerHasLiked)
+    Boolean(post.viewerHasLiked),
   );
   const [isLiking, setIsLiking] = useState(false);
 
@@ -143,7 +143,6 @@ export default function Post({
 
   return (
     <View style={styles.card}>
-      {/* Author row */}
       <View style={styles.authorRow}>
         <TouchableOpacity
           style={styles.authorInfo}
@@ -151,7 +150,7 @@ export default function Post({
           onPress={() => {
             if (!post.author?.username) return;
             router.push(
-              `/user/${encodeURIComponent(post.author.username)}` as never
+              `/user/${encodeURIComponent(post.author.username)}` as never,
             );
           }}
         >
@@ -180,7 +179,7 @@ export default function Post({
             </View>
             <Text style={styles.authorSub}>
               {authorUsername}
-              {"  ·  "}
+              {"  •  "}
               {createdLabel}
             </Text>
           </View>
@@ -196,12 +195,10 @@ export default function Post({
         </TouchableOpacity>
       </View>
 
-      {/* Description */}
       {!!post.description && (
         <Text style={styles.description}>{post.description}</Text>
       )}
 
-      {/* Document card */}
       <TouchableOpacity
         style={styles.docCard}
         activeOpacity={0.85}
@@ -225,9 +222,7 @@ export default function Post({
                 {cat.toUpperCase()}
               </Text>
             ))}
-            {post.year != null && (
-              <Text style={styles.year}>{post.year}</Text>
-            )}
+            {post.year != null && <Text style={styles.year}>{post.year}</Text>}
           </View>
           <Text style={styles.docTitle} numberOfLines={2}>
             {post.title}
@@ -235,7 +230,6 @@ export default function Post({
         </View>
       </TouchableOpacity>
 
-      {/* Action row */}
       <View style={styles.actions}>
         <View style={styles.actionsLeft}>
           <TouchableOpacity
@@ -283,9 +277,7 @@ export default function Post({
               color={isArchived ? "#E1761F" : "#959595"}
               variant={isArchived ? "Bold" : "Linear"}
             />
-            <Text
-              style={[styles.pillText, isArchived && styles.pillTextSaved]}
-            >
+            <Text style={[styles.pillText, isArchived && styles.pillTextSaved]}>
               {isArchived ? "Saved" : "Save"}
             </Text>
           </TouchableOpacity>
@@ -307,9 +299,7 @@ export default function Post({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#E5E7EB",
-    paddingHorizontal: 12,
+    paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 4,
   },
@@ -381,15 +371,15 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   thumbnail: {
-    width: 64,
-    height: 80,
+    width: 112,
+    height: 160,
     borderRadius: 8,
     overflow: "hidden",
     backgroundColor: "#E5E7EB",
   },
   thumbnailImage: {
-    width: 64,
-    height: 80,
+    width: 112,
+    height: 160,
   },
   thumbnailPlaceholder: {
     flex: 1,

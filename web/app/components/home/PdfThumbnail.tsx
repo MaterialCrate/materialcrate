@@ -43,7 +43,6 @@ export default function PdfThumbnail({
       return;
     }
 
-    // Don't attempt PDF fetch for unauthenticated users — show fallback
     if (!isAuthenticated) {
       setThumbnailState("error");
       return;
