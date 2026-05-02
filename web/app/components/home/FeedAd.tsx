@@ -89,7 +89,12 @@ export default function FeedAd() {
     container.appendChild(iframe);
 
     const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    iframe.srcdoc = buildAdHtml(zone, cacheBust);
+    const iframeDoc = iframe.contentDocument ?? iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(buildAdHtml(zone, cacheBust));
+      iframeDoc.close();
+    }
 
     const resizeToContent = () => {
       const body = iframe.contentDocument?.body;
