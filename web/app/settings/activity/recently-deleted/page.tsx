@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Trash,
   RotateLeft,
@@ -21,65 +21,77 @@ interface DeletedPost {
   type: PostType;
   deletedAt: Date;
   accentColor: string;
-  pages?: number;
 }
 
-const NOW = new Date("2026-05-02T12:00:00Z");
+interface ApiPost {
+  id: string;
+  title: string;
+  categories: string[];
+  fileUrl: string;
+  thumbnailUrl: string | null;
+  deletedAt: string;
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  mathematics: "#4f46e5",
+  chemistry: "#059669",
+  "computer science": "#0284c7",
+  biology: "#d97706",
+  physics: "#dc2626",
+  literature: "#7c3aed",
+  history: "#b45309",
+  economics: "#0891b2",
+  engineering: "#c026d3",
+  psychology: "#db2777",
+};
+
+const FALLBACK_COLORS = [
+  "#4f46e5",
+  "#059669",
+  "#0284c7",
+  "#d97706",
+  "#7c3aed",
+  "#0891b2",
+];
+
+function accentForCategory(categories: string[]): string {
+  const first = (categories[0] ?? "").toLowerCase();
+  if (CATEGORY_COLORS[first]) return CATEGORY_COLORS[first];
+  const hash = first
+    .split("")
+    .reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
+}
+
+function inferType(fileUrl: string): PostType {
+  const ext = fileUrl.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)) return "image";
+  if (ext === "pdf") return "pdf";
+  return "document";
+}
+
+function mapApiPost(p: ApiPost): DeletedPost {
+  return {
+    id: p.id,
+    title: p.title,
+    subject: p.categories[0]
+      ? p.categories[0].charAt(0).toUpperCase() + p.categories[0].slice(1)
+      : "Uncategorized",
+    type: inferType(p.fileUrl),
+    deletedAt: (() => { const d = new Date(p.deletedAt); return isNaN(d.getTime()) ? new Date() : d; })(),
+    accentColor: accentForCategory(p.categories),
+  };
+}
 
 function daysAgo(date: Date): number {
-  return Math.floor((NOW.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  const ms = date.getTime();
+  if (!Number.isFinite(ms)) return 0;
+  return Math.floor((Date.now() - ms) / (1000 * 60 * 60 * 24));
 }
 
 function daysRemaining(date: Date): number {
   return 30 - daysAgo(date);
 }
-
-const EXAMPLE_POSTS: DeletedPost[] = [
-  {
-    id: "1",
-    title: "Advanced Calculus — Chapter 5 Notes",
-    subject: "Mathematics",
-    type: "pdf",
-    deletedAt: new Date("2026-04-30T09:15:00Z"),
-    accentColor: "#4f46e5",
-    pages: 18,
-  },
-  {
-    id: "2",
-    title: "Organic Chemistry Lab Report",
-    subject: "Chemistry",
-    type: "document",
-    deletedAt: new Date("2026-04-25T14:30:00Z"),
-    accentColor: "#059669",
-    pages: 6,
-  },
-  {
-    id: "3",
-    title: "Machine Learning Lecture Slides",
-    subject: "Computer Science",
-    type: "pdf",
-    deletedAt: new Date("2026-04-17T11:00:00Z"),
-    accentColor: "#0284c7",
-    pages: 42,
-  },
-  {
-    id: "4",
-    title: "Study Diagram — Cell Cycle",
-    subject: "Biology",
-    type: "image",
-    deletedAt: new Date("2026-04-10T16:45:00Z"),
-    accentColor: "#d97706",
-  },
-  {
-    id: "5",
-    title: "Physics Problem Set — Week 8",
-    subject: "Physics",
-    type: "pdf",
-    deletedAt: new Date("2026-04-07T08:20:00Z"),
-    accentColor: "#dc2626",
-    pages: 4,
-  },
-];
 
 function TypeIcon({ type }: { type: PostType }) {
   if (type === "image")
@@ -126,6 +138,19 @@ function UrgencyPill({ remaining }: { remaining: number }) {
   );
 }
 
+function SkeletonCard() {
+  return (
+    <div className="flex gap-3 rounded-[20px] border border-edge bg-surface p-3.5">
+      <div className="h-16 w-14 shrink-0 animate-pulse rounded-[14px] bg-edge" />
+      <div className="flex flex-1 flex-col gap-2.5 pt-1">
+        <div className="h-3.5 w-3/4 animate-pulse rounded-full bg-edge" />
+        <div className="h-2.5 w-1/3 animate-pulse rounded-full bg-edge" />
+        <div className="h-2.5 w-1/2 animate-pulse rounded-full bg-edge" />
+      </div>
+    </div>
+  );
+}
+
 function PostCard({
   post,
   onRestore,
@@ -159,9 +184,7 @@ function PostCard({
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-ink">
-              {post.title}
-            </p>
+            <p className="truncate text-sm font-medium text-ink">{post.title}</p>
             <p className="mt-0.5 text-xs text-ink-3">{post.subject}</p>
           </div>
           <UrgencyPill remaining={remaining} />
@@ -171,7 +194,6 @@ function PostCard({
           <p className="text-[11px] text-ink-3">
             Deleted{" "}
             {ago === 0 ? "today" : ago === 1 ? "yesterday" : `${ago} days ago`}
-            {post.pages ? ` · ${post.pages} pages` : ""}
           </p>
 
           <div className="flex items-center gap-1.5">
@@ -184,8 +206,8 @@ function PostCard({
               Restore
             </button>
             <button
-              title="trash"
               type="button"
+              aria-label="Delete permanently"
               onClick={() => onDelete(post.id)}
               className="flex items-center gap-1 rounded-full border border-edge px-2.5 py-1 text-[11px] font-medium text-ink-3 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 active:scale-[0.97] dark:hover:bg-red-950/30"
             >
@@ -199,27 +221,62 @@ function PostCard({
 }
 
 export default function RecentlyDeletedPage() {
-  const [posts, setPosts] = useState<DeletedPost[]>(EXAMPLE_POSTS);
+  const [posts, setPosts] = useState<DeletedPost[]>([]);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{
     message: string;
     type: "restore" | "delete";
   } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/posts/deleted")
+      .then((r) => r.json())
+      .then((data) => {
+        setPosts((data.posts ?? []).map(mapApiPost));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   function showToast(message: string, type: "restore" | "delete") {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2800);
   }
 
-  function handleRestore(id: string) {
+  async function handleRestore(id: string) {
     const post = posts.find((p) => p.id === id);
     setPosts((prev) => prev.filter((p) => p.id !== id));
-    if (post) showToast(`"${post.title.slice(0, 30)}…" restored`, "restore");
+
+    const res = await fetch("/api/posts/restore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId: id }),
+    });
+
+    if (!res.ok) {
+      setPosts((prev) => (post ? [post, ...prev] : prev));
+      showToast("Failed to restore post", "delete");
+    } else {
+      if (post) showToast(`"${post.title.slice(0, 30)}…" restored`, "restore");
+    }
   }
 
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     const post = posts.find((p) => p.id === id);
     setPosts((prev) => prev.filter((p) => p.id !== id));
-    if (post) showToast("Permanently deleted", "delete");
+
+    const res = await fetch("/api/posts/permanently-delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId: id }),
+    });
+
+    if (!res.ok) {
+      setPosts((prev) => (post ? [post, ...prev] : prev));
+      showToast("Failed to delete post", "delete");
+    } else {
+      showToast("Permanently deleted", "delete");
+    }
   }
 
   const urgentPosts = posts.filter((p) => daysRemaining(p.deletedAt) <= 5);
@@ -245,7 +302,7 @@ export default function RecentlyDeletedPage() {
           </div>
         </div>
 
-        {urgentPosts.length > 0 && (
+        {!loading && urgentPosts.length > 0 && (
           <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/40 dark:bg-red-950/20">
             <Warning2
               size={15}
@@ -260,9 +317,15 @@ export default function RecentlyDeletedPage() {
           </div>
         )}
 
-        {posts.length > 0 ? (
+        {loading ? (
           <div className="space-y-2.5">
-            <div className="flex items-center justify-between px-1">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+        ) : posts.length > 0 ? (
+          <div className="space-y-2.5">
+            <div className="px-1">
               <p className="text-[11px] font-medium uppercase tracking-wider text-ink-3">
                 {posts.length} item{posts.length !== 1 ? "s" : ""}
               </p>

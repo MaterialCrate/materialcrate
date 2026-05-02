@@ -51,6 +51,30 @@ const collectPostAssets = (post: {
   return assets;
 };
 
+export const hardDeletePost = async (postId: string) => {
+  const post = await prisma.post.findUnique({
+    where: { id: postId },
+    select: {
+      id: true,
+      fileUrl: true,
+      thumbnailUrl: true,
+      versions: { select: { fileUrl: true, thumbnailUrl: true } },
+    },
+  });
+
+  if (!post) return;
+
+  for (const { key, bucket } of collectPostAssets(post)) {
+    try {
+      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+    } catch {
+      // best-effort S3 cleanup
+    }
+  }
+
+  await prisma.post.delete({ where: { id: postId } });
+};
+
 export const purgeExpiredDeletedPosts = async () => {
   const cutoff = new Date(
     Date.now() - POST_HARD_DELETE_AFTER_DAYS * 24 * 60 * 60 * 1000,

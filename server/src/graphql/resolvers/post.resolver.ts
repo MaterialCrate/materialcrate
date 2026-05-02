@@ -10,6 +10,7 @@ import {
 } from "../../services/notifications.js";
 import { emitPostActivity } from "../../realtime/postActivity.js";
 import { checkAchievements } from "../../achievements/service.js";
+import { hardDeletePost } from "../../services/postDeletion.js";
 
 type CreatePostArgs = {
   fileBase64: string;
@@ -1152,6 +1153,37 @@ export const PostResolver = {
         mapCommentForGraphQL(comment, viewerId),
       );
     },
+    recentlyDeletedPosts: async (
+      _: unknown,
+      { limit = 50, offset = 0 }: { limit?: number; offset?: number },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const safeLimit = Math.min(Math.max(1, limit ?? 50), 100);
+      const safeOffset = Math.max(0, offset ?? 0);
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      const posts = await prisma.post.findMany({
+        where: {
+          authorId: viewerId,
+          deleted: true,
+          deletedAt: { gte: cutoff },
+        },
+        include: buildPostInclude(viewerId),
+        orderBy: { deletedAt: "desc" },
+        take: safeLimit,
+        skip: safeOffset,
+      });
+
+      return posts.map((post) => ({
+        ...mapPostForGraphQL(post, viewerId),
+        deletedAt: post.deletedAt instanceof Date ? post.deletedAt.toISOString() : null,
+      }));
+    },
   },
   Mutation: {
     createPost: async (_: unknown, args: CreatePostArgs, ctx: any) => {
@@ -1705,6 +1737,78 @@ export const PostResolver = {
           pinned: false,
         },
       });
+
+      return true;
+    },
+    restorePost: async (
+      _: unknown,
+      { postId }: { postId: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedPostId = postId?.trim();
+      if (!normalizedPostId) {
+        throw new Error("Post id is required");
+      }
+
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const post = await prisma.post.findUnique({
+        where: { id: normalizedPostId },
+        select: { id: true, authorId: true, deleted: true, deletedAt: true },
+      });
+
+      if (!post || !post.deleted) {
+        throw new Error("Post not found in recently deleted");
+      }
+
+      if (post.authorId !== viewerId) {
+        throw new Error("You can only restore your own posts");
+      }
+
+      if (post.deletedAt && post.deletedAt < cutoff) {
+        throw new Error("Post has already expired and cannot be restored");
+      }
+
+      await prisma.post.update({
+        where: { id: normalizedPostId },
+        data: { deleted: false, deletedAt: null },
+      });
+
+      return true;
+    },
+    permanentlyDeletePost: async (
+      _: unknown,
+      { postId }: { postId: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) {
+        throw new Error("Not authenticated");
+      }
+
+      const normalizedPostId = postId?.trim();
+      if (!normalizedPostId) {
+        throw new Error("Post id is required");
+      }
+
+      const post = await prisma.post.findUnique({
+        where: { id: normalizedPostId },
+        select: { id: true, authorId: true, deleted: true },
+      });
+
+      if (!post || !post.deleted) {
+        throw new Error("Post not found in recently deleted");
+      }
+
+      if (post.authorId !== viewerId) {
+        throw new Error("You can only delete your own posts");
+      }
+
+      await hardDeletePost(normalizedPostId);
 
       return true;
     },

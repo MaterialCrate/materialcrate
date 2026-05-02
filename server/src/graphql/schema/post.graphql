@@ -15,6 +15,8 @@ type Post {
   viewCount: Int!
   pinned: Boolean!
   createdAt: String!
+  deleted: Boolean!
+  deletedAt: String
 }
 
 type PostVersion {
@@ -62,6 +64,7 @@ extend type Query {
   postVersions(postId: ID!): [PostVersion!]!
   posts(authorUsername: String, limit: Int = 50, offset: Int = 0): [Post!]!
   searchPosts(query: String!, limit: Int = 12, offset: Int = 0): [Post!]!
+  recentlyDeletedPosts(limit: Int = 50, offset: Int = 0): [Post!]!
   comments(
     postId: ID!
     parentCommentId: ID
@@ -89,6 +92,8 @@ extend type Mutation {
     year: Int
   ): Post!
   deletePost(postId: ID!): Boolean!
+  restorePost(postId: ID!): Boolean!
+  permanentlyDeletePost(postId: ID!): Boolean!
   togglePostLike(postId: ID!): Post!
   pinPostToProfile(postId: ID!): Post!
   togglePostComments(postId: ID!): Post!
