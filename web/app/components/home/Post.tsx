@@ -716,10 +716,9 @@ export default function Post({
             onClick={() => {
               void copyPostLink();
             }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-surface-high px-3 py-2 text-xs font-semibold text-ink-2 transition-all duration-200 hover:bg-surface-high active:scale-95"
+            className="inline-flex rounded-full bg-surface-high px-3 py-2 transition-all duration-200 hover:bg-surface-high active:scale-95"
           >
             <Send2 size={18} color="var(--ink-3)" />
-            <span>Share</span>
           </button>
         </div>
       </article>
