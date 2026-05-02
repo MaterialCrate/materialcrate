@@ -63,32 +63,33 @@ function buildAdHtml(zone: AdZone, cacheBust: string): string {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Rotate through zones deterministically per page load so different feed
-// positions show different ad formats.
 let zoneCounter = 0;
 
 export default function FeedAd() {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
+    const container = containerRef.current;
+    if (!container) return;
 
     const zone = AD_ZONES[zoneCounter % AD_ZONES.length];
     zoneCounter += 1;
 
     const minHeight = zone.type === "banner" ? zone.height : 120;
-    iframe.style.height = `${minHeight}px`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = `width:100%;height:${minHeight}px;border:none;display:block;overflow:hidden;`;
+    iframe.sandbox.add(
+      "allow-scripts",
+      "allow-same-origin",
+      "allow-popups",
+      "allow-popups-to-escape-sandbox",
+      "allow-forms",
+    );
+    container.appendChild(iframe);
 
     const cacheBust = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const html = buildAdHtml(zone, cacheBust);
-
-    const doc = iframe.contentDocument ?? iframe.contentWindow?.document;
-    if (doc) {
-      doc.open();
-      doc.write(html);
-      doc.close();
-    }
+    iframe.srcdoc = buildAdHtml(zone, cacheBust);
 
     const resizeToContent = () => {
       const body = iframe.contentDocument?.body;
@@ -106,6 +107,10 @@ export default function FeedAd() {
         if (attempts >= 10) clearInterval(poll);
       }, 300);
     });
+
+    return () => {
+      container.innerHTML = "";
+    };
   }, []);
 
   return (
@@ -143,13 +148,7 @@ export default function FeedAd() {
 
       <div className="px-2 pt-2 pb-4">
         <div className="overflow-hidden rounded-[22px] bg-doc-card p-3">
-          <iframe
-            ref={iframeRef}
-            title="Advertisement"
-            scrolling="no"
-            style={{ width: "100%", border: "none", display: "block" }}
-            sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
-          />
+          <div ref={containerRef} />
         </div>
       </div>
     </article>
