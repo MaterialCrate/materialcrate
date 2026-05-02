@@ -1348,7 +1348,7 @@ export default function HubPage() {
                       </div>
                     </div>
                   ))}
-                  {isSending ? (
+                  {isSending && (
                     <div className="flex justify-start">
                       <div className="max-w-[85%] rounded-3xl bg-surface-high px-4 py-3 text-sm leading-6 text-ink">
                         {streamingMessage?.documentId ===
@@ -1369,7 +1369,7 @@ export default function HubPage() {
                         )}
                       </div>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               ) : (
                 <div className="flex min-h-full flex-col items-center justify-center px-4 py-8 text-center">
