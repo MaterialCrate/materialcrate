@@ -1,5 +1,18 @@
-const BASE_URL = __DEV__ ? "http://localhost:4000" : "https://materialcrate.com";
+import Constants from "expo-constants";
 
+function getBaseUrl(): string {
+  if (!__DEV__) return "https://materialcrate.com";
+
+  // Expo sets hostUri to the Metro bundler address (e.g. "192.168.1.5:8081").
+  // Strip the Metro port to get the dev machine's IP, then point at the API server.
+  const host = Constants.expoConfig?.hostUri?.split(":")[0];
+  if (host) return `http://${host}:4000`;
+
+  // Fallback for iOS simulator (localhost works there)
+  return "http://localhost:4000";
+}
+
+const BASE_URL = getBaseUrl();
 const GRAPHQL_URL = `${BASE_URL}/graphql`;
 
 export function apiUrl(path: string): string {
