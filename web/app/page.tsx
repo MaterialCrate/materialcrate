@@ -34,6 +34,49 @@ const FEED_PAGE_SIZE = 15;
 const NOTIFICATION_INDICATOR_REFRESH_DEBOUNCE_MS = 300;
 const NOTIFICATION_INDICATOR_MIN_REFRESH_INTERVAL_MS = 1500;
 
+function PostSkeleton() {
+  const sk = "skeleton";
+  return (
+    <div className="w-full px-3">
+      <article className="lg:rounded-xl lg:border lg:border-edge lg:bg-surface lg:shadow-sm">
+        <div className="flex items-start justify-between px-2 pt-2">
+          <div className="flex items-center gap-3">
+            <div className={`${sk} h-11 w-11 shrink-0 rounded-full`} />
+            <div className="space-y-2">
+              <div className={`${sk} h-3.5 w-32 rounded-full`} />
+              <div className={`${sk} h-2.5 w-24 rounded-full`} />
+            </div>
+          </div>
+          <div className={`${sk} h-8 w-8 rounded-full`} />
+        </div>
+        <div className={`${sk} mx-2 mt-3 h-36 rounded-xl`} />
+        <div className="px-2 pt-3 space-y-2">
+          <div className={`${sk} h-3.5 w-3/4 rounded-full`} />
+          <div className="flex gap-2">
+            <div className={`${sk} h-5 w-16 rounded-full`} />
+            <div className={`${sk} h-5 w-20 rounded-full`} />
+          </div>
+        </div>
+        <div className="flex items-center gap-4 px-2 py-3">
+          <div className={`${sk} h-5 w-12 rounded-full`} />
+          <div className={`${sk} h-5 w-12 rounded-full`} />
+          <div className={`${sk} h-5 w-12 rounded-full`} />
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function FeedSkeleton() {
+  return (
+    <div className="space-y-0">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <PostSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
@@ -679,7 +722,7 @@ export default function Home() {
       <Header />
       <main className="mx-auto w-full max-w-140 2xl:max-w-120 lg:pt-4 lg:pb-8">
         {isLoadingPosts ? (
-          <p className="px-6 py-8 text-sm text-ink-2">Loading posts...</p>
+          <FeedSkeleton />
         ) : posts.length === 0 ? (
           <p className="px-6 py-8 text-sm text-ink-2">No posts yet.</p>
         ) : (

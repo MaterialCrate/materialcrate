@@ -19,6 +19,9 @@
 
   --doc-card: #f6f3ee;
   --doc-card-hover: #f2ece4;
+
+  --skeleton-base: #ebebeb;
+  --skeleton-shine: #f5f5f5;
 }
 
 [data-theme="dark"] {
@@ -41,6 +44,9 @@
 
   --doc-card: #252525;
   --doc-card-hover: #2e2e2e;
+
+  --skeleton-base: #272727;
+  --skeleton-shine: #333333;
 }
 
 [data-theme="sepia"] {
@@ -63,6 +69,9 @@
 
   --doc-card: #ede5d5;
   --doc-card-hover: #e5d9c5;
+
+  --skeleton-base: #d8cdb8;
+  --skeleton-shine: #e8dcc8;
 }
 
 @theme inline {
@@ -118,6 +127,26 @@ button,
 a,
 [role="button"] {
   touch-action: manipulation;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
 @keyframes loading-bar {

@@ -61,6 +61,72 @@ const normalizeProfileFieldVisibility = (
   return "everyone";
 };
 
+function ProfileSkeleton() {
+  const sk = "skeleton";
+  return (
+    <div className="flex flex-col gap-2">
+      <div
+        className="relative w-full overflow-hidden px-4 pt-8 pb-0 sm:px-6 sm:pt-10 lg:rounded-[28px] lg:shadow-[0_14px_34px_rgba(0,0,0,0.06)]"
+        style={{ background: "var(--skeleton-base)" }}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className={`${sk} h-18 w-18 shrink-0 rounded-2xl`} />
+            <div className="space-y-2">
+              <div className={`${sk} h-4 w-32 rounded-full`} />
+              <div className={`${sk} h-3 w-24 rounded-full`} />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className={`${sk} h-10 w-10 rounded-full`} />
+            <div className={`${sk} h-10 w-10 rounded-full`} />
+          </div>
+        </div>
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`${sk} h-10 w-16 rounded-xl`} />
+            <div className={`${sk} h-10 w-16 rounded-xl`} />
+          </div>
+          <div className={`${sk} h-9 w-24 rounded-full`} />
+        </div>
+        <div className="mt-8 -mx-4 grid grid-cols-2 sm:-mx-6">
+          <div className={`${sk} h-10 rounded-none`} />
+          <div className={`${sk} h-10 rounded-none opacity-60`} />
+        </div>
+      </div>
+      {[0, 1, 2].map((i) => (
+        <div key={i} className="w-full px-3">
+          <article className="lg:rounded-xl lg:border lg:border-edge lg:bg-surface lg:shadow-sm">
+            <div className="flex items-start justify-between px-2 pt-2">
+              <div className="flex items-center gap-3">
+                <div className={`${sk} h-11 w-11 shrink-0 rounded-full`} />
+                <div className="space-y-2">
+                  <div className={`${sk} h-3.5 w-32 rounded-full`} />
+                  <div className={`${sk} h-2.5 w-24 rounded-full`} />
+                </div>
+              </div>
+              <div className={`${sk} h-8 w-8 rounded-full`} />
+            </div>
+            <div className={`${sk} mx-2 mt-3 h-36 rounded-xl`} />
+            <div className="px-2 pt-3 space-y-2">
+              <div className={`${sk} h-3.5 w-3/4 rounded-full`} />
+              <div className="flex gap-2">
+                <div className={`${sk} h-5 w-16 rounded-full`} />
+                <div className={`${sk} h-5 w-20 rounded-full`} />
+              </div>
+            </div>
+            <div className="flex items-center gap-4 px-2 py-3">
+              <div className={`${sk} h-5 w-12 rounded-full`} />
+              <div className={`${sk} h-5 w-12 rounded-full`} />
+              <div className={`${sk} h-5 w-12 rounded-full`} />
+            </div>
+          </article>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ProfilePage({ username }: ProfilePageProps) {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
@@ -690,6 +756,10 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         onClose={() => setActivePdfPost(null)}
       />
       <div className="mx-auto flex w-full max-w-140 flex-col gap-2 lg:px-4">
+        {isLoadingProfile ? (
+          <ProfileSkeleton />
+        ) : (
+          <>
         <div className="relative">
           <Header
             displayName={displayName}
@@ -777,9 +847,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
           )}
         </div>
 
-        {isLoadingProfile ? (
-          <p className="px-6 py-8 text-sm text-ink-2">Loading profile...</p>
-        ) : !profile ? (
+        {!profile ? (
           <p className="px-6 py-8 text-sm text-ink-2">
             {error || "Profile not found."}
           </p>
@@ -880,6 +948,8 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                 )}
               </section>
             )}
+          </>
+        )}
           </>
         )}
       </div>
