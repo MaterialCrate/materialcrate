@@ -15,7 +15,6 @@ import Post, {
 import CommentDrawer from "@/app/components/home/CommentDrawer";
 import OptionsDrawer from "@/app/components/home/PostOptions";
 import PdfViewerModal from "@/app/components/home/PdfViewerModal";
-import UploadDrawer from "@/app/components/home/UploadDrawer";
 import FollowersnFollowingList from "./FollowersnFollowingList";
 import Alert from "../Alert";
 
@@ -73,7 +72,6 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [error, setError] = useState<string>("");
   const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
-  const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
   const [isPostOptionsDrawerOpen, setIsPostOptionsDrawerOpen] = useState(false);
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(
     null,
@@ -87,7 +85,6 @@ export default function ProfilePage({ username }: ProfilePageProps) {
   const [activeOptionsAnchor, setActiveOptionsAnchor] =
     useState<PostOptionsAnchor | null>(null);
   const [activePdfPost, setActivePdfPost] = useState<HomePost | null>(null);
-  const [editingPost, setEditingPost] = useState<HomePost | null>(null);
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false);
   const [selectedTab, setSelectedTab] = useState<ProfileTab>("posts");
   const [achievements, setAchievements] = useState<AchievementData[]>([]);
@@ -671,21 +668,6 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         postId={activeCommentPostId}
         post={activeCommentPost}
       />
-      <UploadDrawer
-        isOpen={isUploadDrawerOpen}
-        post={editingPost}
-        onClose={() => {
-          setIsUploadDrawerOpen(false);
-          setEditingPost(null);
-        }}
-        onPostSaved={(savedPost) => {
-          setPosts((current) =>
-            current.map((post) =>
-              post.id === savedPost.id ? savedPost : post,
-            ),
-          );
-        }}
-      />
       <OptionsDrawer
         isOpen={isPostOptionsDrawerOpen}
         onClose={() => {
@@ -699,15 +681,7 @@ export default function ProfilePage({ username }: ProfilePageProps) {
         onPostUpdated={handlePostUpdated}
         onPostDeleted={handlePostDeleted}
         onEditPost={(selectedPost) => {
-          setEditingPost(selectedPost);
-          setIsUploadDrawerOpen(true);
-          setIsPostOptionsDrawerOpen(false);
-          setActiveOptionsPost(null);
-          setActiveOptionsAnchor(null);
-          setIsCommentDrawerOpen(false);
-          setActiveCommentPostId(null);
-          setActiveCommentPost(null);
-          setActivePdfPost(null);
+          router.push(`/create?postId=${selectedPost.id}`);
         }}
       />
       <PdfViewerModal
@@ -877,8 +851,6 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                           setActiveCommentPostId(selectedPost.id);
                           setActiveCommentPost(selectedPost);
                           setIsCommentDrawerOpen(true);
-                          setIsUploadDrawerOpen(false);
-                          setEditingPost(null);
                           setIsPostOptionsDrawerOpen(false);
                           setActiveOptionsPost(null);
                           setActiveOptionsAnchor(null);
@@ -888,8 +860,6 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                           setActiveOptionsPost(selectedPost);
                           setActiveOptionsAnchor(anchor);
                           setIsPostOptionsDrawerOpen(true);
-                          setIsUploadDrawerOpen(false);
-                          setEditingPost(null);
                           setIsCommentDrawerOpen(false);
                           setActiveCommentPostId(null);
                           setActiveCommentPost(null);
@@ -897,8 +867,6 @@ export default function ProfilePage({ username }: ProfilePageProps) {
                         }}
                         onFileClick={(selectedPost) => {
                           setActivePdfPost(selectedPost);
-                          setIsUploadDrawerOpen(false);
-                          setEditingPost(null);
                           setIsCommentDrawerOpen(false);
                           setActiveCommentPostId(null);
                           setActiveCommentPost(null);

@@ -574,8 +574,8 @@ export default function Home() {
             current?.id === hiddenPostId ? null : current,
           );
         }}
-        onEditPost={() => {
-          router.push("/create");
+        onEditPost={(selectedPost) => {
+          router.push(`/create?postId=${selectedPost.id}`);
         }}
       />
       <PdfViewerModal

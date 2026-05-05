@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowDown2,
   CloseCircle,
@@ -22,9 +22,23 @@ import Header from "@/app/components/Header";
 
 const MAX_UPLOAD_FILE_BYTES = 20 * 1024 * 1024;
 
+type EditPost = {
+  id: string;
+  title: string;
+  categories: string[];
+  year?: number | null;
+  description?: string | null;
+};
+
 export default function CreatePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const postId = searchParams.get("postId");
+  const isEditMode = Boolean(postId);
+
   const { user, isLoading: isLoadingAuth } = useAuth();
+  const [editPost, setEditPost] = useState<EditPost | null>(null);
+  const [isLoadingPost, setIsLoadingPost] = useState(isEditMode);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState<string>("");
   const [categoryQuery, setCategoryQuery] = useState<string>("");
@@ -55,6 +69,43 @@ export default function CreatePage() {
       router.push("/login");
     }
   }, [isLoadingAuth, router, user]);
+
+  useEffect(() => {
+    if (!postId) return;
+
+    const controller = new AbortController();
+
+    async function fetchPost() {
+      try {
+        const response = await fetch(`/api/posts/${postId}`, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("Failed to load post");
+        const body = await response.json().catch(() => ({}));
+        const post: EditPost = body?.post ?? body;
+        setEditPost(post);
+        setTitle(post.title ?? "");
+        setSelectedCategories(
+          Array.isArray(post.categories) ? post.categories : [],
+        );
+        setYear(post.year ? String(post.year) : "");
+        setDescription(post.description ?? "");
+      } catch {
+        if (!controller.signal.aborted) {
+          setAlertType("error");
+          setAlertMessage("Failed to load post for editing.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoadingPost(false);
+        }
+      }
+    }
+
+    void fetchPost();
+    return () => controller.abort();
+  }, [postId]);
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -106,7 +157,8 @@ export default function CreatePage() {
     title.length < 3 ||
     selectedCategories.length === 0 ||
     isPublishing ||
-    !selectedFile;
+    isLoadingPost ||
+    (!isEditMode && !selectedFile);
 
   const filteredCategoryOptions = POST_CATEGORIES.filter((categoryOption) => {
     if (selectedCategories.includes(categoryOption)) return false;
@@ -116,39 +168,59 @@ export default function CreatePage() {
   }).slice(0, 12);
 
   async function handlePublish() {
-    if (disabled || !selectedFile) return;
+    if (disabled) return;
 
     setIsPublishing(true);
     setAlertMessage("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      if (thumbnailBase64) {
-        formData.append("thumbnailBase64", thumbnailBase64);
-      }
-      formData.append("title", title.trim());
-      for (const cat of selectedCategories) {
-        formData.append("categories", cat);
-      }
-      formData.append("description", description.trim());
-      if (year) {
-        formData.append("year", year);
-      }
+      let response: Response;
 
-      const response = await fetch("/api/posts/create", {
-        method: "POST",
-        body: formData,
-      });
+      if (isEditMode && postId) {
+        response = await fetch("/api/posts/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            postId,
+            title: title.trim(),
+            categories: selectedCategories,
+            description: description.trim(),
+            year: year || null,
+          }),
+        });
+      } else {
+        if (!selectedFile) return;
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        if (thumbnailBase64) {
+          formData.append("thumbnailBase64", thumbnailBase64);
+        }
+        formData.append("title", title.trim());
+        for (const cat of selectedCategories) {
+          formData.append("categories", cat);
+        }
+        formData.append("description", description.trim());
+        if (year) {
+          formData.append("year", year);
+        }
+        response = await fetch("/api/posts/create", {
+          method: "POST",
+          body: formData,
+        });
+      }
 
       if (!response.ok) {
-        throw new Error("Failed to upload document");
+        throw new Error(
+          isEditMode ? "Failed to update document" : "Failed to upload document",
+        );
       }
 
-      router.push("/");
+      router.back();
     } catch (error: unknown) {
       setAlertType("error");
-      setAlertMessage("Failed to upload document");
+      setAlertMessage(
+        isEditMode ? "Failed to update document" : "Failed to upload document",
+      );
       console.error("Error details:", error);
       setIsPublishing(false);
     }
@@ -156,7 +228,10 @@ export default function CreatePage() {
 
   return (
     <div className="min-h-screen bg-surface lg:bg-page">
-      <Header title="Share a New Material" isLoading={isPublishing} />
+      <Header
+        title={isEditMode ? "Edit Material" : "Share a New Material"}
+        isLoading={isPublishing || isLoadingPost}
+      />
       <div className="mx-auto w-full max-w-140 2xl:max-w-120 pt-20 lg:pb-10 px-0 lg:px-6">
         <div className="px-6 pb-10 pt-6 space-y-3 lg:bg-surface lg:rounded-3xl lg:border lg:border-edge lg:shadow-sm lg:px-8 lg:py-8">
           {alertMessage && (
@@ -168,72 +243,86 @@ export default function CreatePage() {
           )}
           <div className="space-y-1">
             <p className="text-ink-2 text-sm">
-              Select document to share<span className="text-red-500">*</span>
+              {isEditMode ? "Document" : "Select document to share"}
+              {!isEditMode && <span className="text-red-500">*</span>}
             </p>
-            <input
-              ref={fileInputRef}
-              id="material-upload"
-              type="file"
-              accept=".pdf,application/pdf"
-              className="hidden"
-              onChange={handleFileChange}
-              required
-            />
-            <label
-              htmlFor="material-upload"
-              className="w-full py-6 px-3 border border-[#B0B0B0] border-dashed rounded-xl flex flex-col items-center justify-center gap-5 cursor-pointer"
-            >
-              {!selectedFile ? (
-                <>
-                  <DocumentUpload size={40} color="#B0B0B0" />
-                  <div>
-                    <p className="text-xs font-medium text-ink-2">
-                      Drag and drop or{" "}
-                      <span className="underline text-ink-2 text-center">
-                        click to upload
-                      </span>
-                    </p>
-                    <p className="text-[10px] text-ink-2 font-medium text-center">
-                      Max file size: 20MB (PDF)
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <div className="flex justify-between items-center gap-2 w-full">
-                  <div className="flex gap-2 items-center">
-                    <DocumentText size={38} color="#E1761F" variant="Bold" />
-                    <div className="flex flex-col justify-between">
-                      <p className="text-xs text-ink font-medium truncate max-w-56">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-ink-3 text-xs font-medium">
-                        {(selectedFile.size / (1024 * 1024)).toFixed(2)}MB
-                      </p>
-                      {isGeneratingThumbnail && (
-                        <p className="text-ink-3 text-[10px] font-medium">
-                          Generating preview… you can still publish now.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      thumbnailRequestIdRef.current += 1;
-                      setSelectedFile(null);
-                      setThumbnailBase64(null);
-                      setIsGeneratingThumbnail(false);
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                      }
-                    }}
-                  >
-                    <Trash size={22} color="#E00505" />
-                  </button>
+            {isEditMode ? (
+              <div className="w-full rounded-xl border border-[#E4E4E4] bg-page px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <DocumentText size={30} color="#E1761F" variant="Bold" />
+                  <p className="text-xs font-medium text-ink">
+                    {editPost?.title || "Current document"}
+                  </p>
                 </div>
-              )}
-            </label>
+              </div>
+            ) : (
+              <>
+                <input
+                  ref={fileInputRef}
+                  id="material-upload"
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  required
+                />
+                <label
+                  htmlFor="material-upload"
+                  className="w-full py-6 px-3 border border-[#B0B0B0] border-dashed rounded-xl flex flex-col items-center justify-center gap-5 cursor-pointer"
+                >
+                  {!selectedFile ? (
+                    <>
+                      <DocumentUpload size={40} color="#B0B0B0" />
+                      <div>
+                        <p className="text-xs font-medium text-ink-2">
+                          Drag and drop or{" "}
+                          <span className="underline text-ink-2 text-center">
+                            click to upload
+                          </span>
+                        </p>
+                        <p className="text-[10px] text-ink-2 font-medium text-center">
+                          Max file size: 20MB (PDF)
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between items-center gap-2 w-full">
+                      <div className="flex gap-2 items-center">
+                        <DocumentText size={38} color="#E1761F" variant="Bold" />
+                        <div className="flex flex-col justify-between">
+                          <p className="text-xs text-ink font-medium truncate max-w-56">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-ink-3 text-xs font-medium">
+                            {(selectedFile.size / (1024 * 1024)).toFixed(2)}MB
+                          </p>
+                          {isGeneratingThumbnail && (
+                            <p className="text-ink-3 text-[10px] font-medium">
+                              Generating preview… you can still publish now.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          thumbnailRequestIdRef.current += 1;
+                          setSelectedFile(null);
+                          setThumbnailBase64(null);
+                          setIsGeneratingThumbnail(false);
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                          }
+                        }}
+                      >
+                        <Trash size={22} color="#E00505" />
+                      </button>
+                    </div>
+                  )}
+                </label>
+              </>
+            )}
           </div>
           <div className="space-y-1">
             <p className="text-ink-2 text-sm">
@@ -385,7 +474,13 @@ export default function CreatePage() {
             onClick={handlePublish}
             disabled={disabled}
           >
-            {isPublishing ? "Publishing..." : "Publish"}
+            {isPublishing
+              ? isEditMode
+                ? "Saving..."
+                : "Publishing..."
+              : isEditMode
+                ? "Save changes"
+                : "Publish"}
           </ActionButton>
         </div>
       </div>
