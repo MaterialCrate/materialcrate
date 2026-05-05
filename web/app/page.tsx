@@ -10,7 +10,6 @@ import Post, {
   type PostOptionsAnchor,
 } from "./components/home/Post";
 import FeedAd from "./components/home/FeedAd";
-import UploadDrawer from "./components/home/UploadDrawer";
 import CommentDrawer from "./components/home/CommentDrawer";
 import OptionsDrawer from "./components/home/PostOptions";
 import PdfViewerModal from "./components/home/PdfViewerModal";
@@ -39,8 +38,6 @@ export default function Home() {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
-  const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
-  const [editingPost, setEditingPost] = useState<HomePost | null>(null);
   const [isCommentDrawerOpen, setIsCommentDrawerOpen] = useState(false);
   const [isPostOptionsDrawerOpen, setIsPostOptionsDrawerOpen] = useState(false);
   const [isArchiveDrawerOpen, setIsArchiveDrawerOpen] = useState(false);
@@ -60,7 +57,6 @@ export default function Home() {
   const [activeArchivePost, setActiveArchivePost] = useState<HomePost | null>(
     null,
   );
-  const [isUploading, setIsUploading] = useState(false);
   const [posts, setPosts] = useState<HomePost[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(true);
   const [isLoadingMorePosts, setIsLoadingMorePosts] = useState(false);
@@ -77,7 +73,6 @@ export default function Home() {
   const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const notificationRefreshTimeoutRef = useRef<number | null>(null);
   const lastNotificationRefreshAtRef = useRef(0);
-  // Random ad interval between 3–5 posts, stable for the session
   const adIntervalRef = useRef(3 + Math.floor(Math.random() * 3));
 
   const requireAuthenticatedAccess = useCallback(() => {
@@ -90,8 +85,6 @@ export default function Home() {
     }
 
     setMoreOptionsOpen(false);
-    setIsUploadDrawerOpen(false);
-    setEditingPost(null);
     setIsCommentDrawerOpen(false);
     setIsPostOptionsDrawerOpen(false);
     setIsArchiveDrawerOpen(false);
@@ -551,71 +544,6 @@ export default function Home() {
           void refreshArchiveState();
         }}
       />
-      <UploadDrawer
-        isOpen={isUploadDrawerOpen}
-        post={editingPost}
-        onClose={() => {
-          setIsUploadDrawerOpen(false);
-          setEditingPost(null);
-        }}
-        onUploadStarted={() => setIsUploading(true)}
-        onUploadFinished={() => setIsUploading(false)}
-        onPostSaved={(savedPost, mode) => {
-          const normalizedSavedPost: HomePost = {
-            ...savedPost,
-            createdAt: savedPost.createdAt || new Date().toISOString(),
-            likeCount: savedPost.likeCount ?? 0,
-            commentCount: savedPost.commentCount ?? 0,
-            viewerHasLiked: Boolean(savedPost.viewerHasLiked),
-            isAuthorFollowedByCurrentUser:
-              savedPost.isAuthorFollowedByCurrentUser ?? false,
-            isAuthorMutedByCurrentUser:
-              savedPost.isAuthorMutedByCurrentUser ?? false,
-            isAuthorBlockedByCurrentUser:
-              savedPost.isAuthorBlockedByCurrentUser ?? false,
-            author:
-              savedPost.author ||
-              (user
-                ? {
-                    id: user.id,
-                    displayName: user.displayName,
-                    username: user.username,
-                    profilePicture: user.profilePicture ?? null,
-                    subscriptionPlan: user.subscriptionPlan ?? "free",
-                  }
-                : null),
-          };
-
-          if (mode === "edit") {
-            setPosts((current) =>
-              current.map((post) =>
-                post.id === normalizedSavedPost.id ? normalizedSavedPost : post,
-              ),
-            );
-            return;
-          }
-
-          const isOwnPost = Boolean(
-            (normalizedSavedPost.author?.id &&
-              user?.id &&
-              normalizedSavedPost.author.id === user.id) ||
-            (normalizedSavedPost.author?.username &&
-              user?.username &&
-              normalizedSavedPost.author.username.trim().toLowerCase() ===
-                user.username.trim().toLowerCase()),
-          );
-
-          if (isOwnPost) {
-            setPosts((current) =>
-              current.filter((post) => post.id !== normalizedSavedPost.id),
-            );
-            return;
-          }
-
-          setPosts((current) => [normalizedSavedPost, ...current]);
-          setNextOffset((current) => current + 1);
-        }}
-      />
       <CommentDrawer
         isOpen={isCommentDrawerOpen}
         onClose={() => {
@@ -646,19 +574,8 @@ export default function Home() {
             current?.id === hiddenPostId ? null : current,
           );
         }}
-        onEditPost={(selectedPost) => {
-          setEditingPost(selectedPost);
-          setIsUploadDrawerOpen(true);
-          setIsPostOptionsDrawerOpen(false);
-          setActiveOptionsPost(null);
-          setActiveOptionsAnchor(null);
-          setIsCommentDrawerOpen(false);
-          setActiveCommentPostId(null);
-          setActiveCommentPost(null);
-          setIsArchiveDrawerOpen(false);
-          setActiveArchivePost(null);
-          setActivePdfPost(null);
-          setMoreOptionsOpen(false);
+        onEditPost={() => {
+          router.push("/create");
         }}
       />
       <PdfViewerModal
@@ -671,7 +588,6 @@ export default function Home() {
         type="button"
         className={`fixed inset-0 z-40 transition-all duration-300 ease-out ${
           moreOptionsOpen ||
-          isUploadDrawerOpen ||
           isCommentDrawerOpen ||
           isPostOptionsDrawerOpen ||
           isArchiveDrawerOpen ||
@@ -685,8 +601,6 @@ export default function Home() {
             return;
           }
           setMoreOptionsOpen(false);
-          setIsUploadDrawerOpen(false);
-          setEditingPost(null);
           setIsCommentDrawerOpen(false);
           setIsPostOptionsDrawerOpen(false);
           setActiveCommentPostId(null);
@@ -704,19 +618,7 @@ export default function Home() {
             if (!requireAuthenticatedAccess()) {
               return;
             }
-
-            setEditingPost(null);
-            setIsUploadDrawerOpen(true);
-            setIsPostOptionsDrawerOpen(false);
-            setActiveOptionsPost(null);
-            setActiveOptionsAnchor(null);
-            setIsCommentDrawerOpen(false);
-            setActiveCommentPostId(null);
-            setActiveCommentPost(null);
-            setIsArchiveDrawerOpen(false);
-            setActiveArchivePost(null);
-            setActivePdfPost(null);
-            setMoreOptionsOpen(false);
+            router.push("/create");
           }}
           className={`cursor-pointer absolute right-0 bottom-16 flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-page active:scale-95 ${
             moreOptionsOpen
@@ -774,7 +676,7 @@ export default function Home() {
           />
         </button>
       </div>
-      <Header forceVisible={isUploading} showLoadingBar={isUploading} />
+      <Header />
       <main className="mx-auto w-full max-w-140 2xl:max-w-120 lg:pt-4 lg:pb-8">
         {isLoadingPosts ? (
           <p className="px-6 py-8 text-sm text-ink-2">Loading posts...</p>
@@ -794,8 +696,6 @@ export default function Home() {
                       setActiveCommentPost(selectedPost);
                       setIsCommentDrawerOpen(true);
                       setMoreOptionsOpen(false);
-                      setIsUploadDrawerOpen(false);
-                      setEditingPost(null);
                       setIsPostOptionsDrawerOpen(false);
                       setIsArchiveDrawerOpen(false);
                       setActiveOptionsPost(null);
@@ -807,8 +707,6 @@ export default function Home() {
                       setActiveOptionsAnchor(anchor);
                       setIsPostOptionsDrawerOpen(true);
                       setMoreOptionsOpen(false);
-                      setIsUploadDrawerOpen(false);
-                      setEditingPost(null);
                       setIsCommentDrawerOpen(false);
                       setIsArchiveDrawerOpen(false);
                       setActiveCommentPostId(null);
@@ -819,8 +717,6 @@ export default function Home() {
                     onFileClick={(selectedPost) => {
                       setActivePdfPost(selectedPost);
                       setMoreOptionsOpen(false);
-                      setIsUploadDrawerOpen(false);
-                      setEditingPost(null);
                       setIsCommentDrawerOpen(false);
                       setActiveCommentPostId(null);
                       setActiveCommentPost(null);
@@ -834,8 +730,6 @@ export default function Home() {
                       setActiveArchivePost(selectedPost);
                       setIsArchiveDrawerOpen(true);
                       setMoreOptionsOpen(false);
-                      setIsUploadDrawerOpen(false);
-                      setEditingPost(null);
                       setIsCommentDrawerOpen(false);
                       setActiveCommentPostId(null);
                       setActiveCommentPost(null);

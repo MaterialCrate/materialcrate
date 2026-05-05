@@ -15,30 +15,14 @@ import {
   normalizeAllowedCategory,
 } from "@/app/lib/post-categories";
 import { useAuth } from "@/app/lib/auth-client";
-import ActionButton from "../ActionButton";
-import Alert from "../Alert";
-import MentionInput from "../MentionInput";
-import type { HomePost } from "./Post";
-
-interface UploadDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  post?: HomePost | null;
-  onPostSaved?: (post: HomePost, mode: "create" | "edit") => void;
-  onUploadStarted?: () => void;
-  onUploadFinished?: () => void;
-}
+import ActionButton from "@/app/components/ActionButton";
+import Alert from "@/app/components/Alert";
+import MentionInput from "@/app/components/MentionInput";
+import Header from "@/app/components/Header";
 
 const MAX_UPLOAD_FILE_BYTES = 20 * 1024 * 1024;
 
-export default function UploadDrawer({
-  isOpen,
-  onClose,
-  post,
-  onPostSaved,
-  onUploadStarted,
-  onUploadFinished,
-}: UploadDrawerProps) {
+export default function CreatePage() {
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -64,41 +48,13 @@ export default function UploadDrawer({
   const yearOptions = Array.from({ length: 60 }, (_, index) =>
     String(currentYear - index),
   );
-  const isEditMode = Boolean(post);
 
   useEffect(() => {
-    if (!isOpen || isLoadingAuth) return;
-
+    if (isLoadingAuth) return;
     if (!user) {
-      onClose();
       router.push("/login");
     }
-  }, [isLoadingAuth, isOpen, onClose, router, user]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    thumbnailRequestIdRef.current += 1;
-    setAlertMessage("");
-    setAlertType("error");
-    setIsPublishing(false);
-    setIsGeneratingThumbnail(false);
-    setSelectedFile(null);
-    setThumbnailBase64(null);
-    setTitle(post?.title ?? "");
-    const restored = (post?.categories ?? [])
-      .map((c) => normalizeAllowedCategory(c))
-      .filter(Boolean) as string[];
-    setSelectedCategories(restored);
-    setCategoryQuery("");
-    setIsCategoryDropdownOpen(false);
-    setYear(post?.year ? String(post.year) : "");
-    setDescription(post?.description ?? "");
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  }, [isOpen, post]);
+  }, [isLoadingAuth, router, user]);
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
@@ -133,16 +89,10 @@ export default function UploadDrawer({
     void (async () => {
       try {
         const nextThumbnailBase64 = await createPdfThumbnailBase64(file);
-        if (thumbnailRequestIdRef.current !== requestId) {
-          return;
-        }
-
+        if (thumbnailRequestIdRef.current !== requestId) return;
         setThumbnailBase64(nextThumbnailBase64);
       } catch {
-        if (thumbnailRequestIdRef.current !== requestId) {
-          return;
-        }
-
+        if (thumbnailRequestIdRef.current !== requestId) return;
         setThumbnailBase64(null);
       } finally {
         if (thumbnailRequestIdRef.current === requestId) {
@@ -156,7 +106,7 @@ export default function UploadDrawer({
     title.length < 3 ||
     selectedCategories.length === 0 ||
     isPublishing ||
-    (!isEditMode && !selectedFile);
+    !selectedFile;
 
   const filteredCategoryOptions = POST_CATEGORIES.filter((categoryOption) => {
     if (selectedCategories.includes(categoryOption)) return false;
@@ -166,228 +116,124 @@ export default function UploadDrawer({
   }).slice(0, 12);
 
   async function handlePublish() {
-    if (disabled) return;
+    if (disabled || !selectedFile) return;
 
     setIsPublishing(true);
     setAlertMessage("");
 
-    const isCreate = !isEditMode || !post;
-
-    // For new posts, close drawer immediately and show loading bar
-    if (isCreate) {
-      onUploadStarted?.();
-      onClose();
-    }
-
     try {
-      let response: Response;
-
-      if (isEditMode && post) {
-        response = await fetch("/api/posts/update", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            postId: post.id,
-            title: title.trim(),
-            categories: selectedCategories,
-            description: description.trim(),
-            year: year || null,
-          }),
-        });
-      } else {
-        if (!selectedFile) return;
-
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-        if (thumbnailBase64) {
-          formData.append("thumbnailBase64", thumbnailBase64);
-        }
-        formData.append("title", title.trim());
-        for (const cat of selectedCategories) {
-          formData.append("categories", cat);
-        }
-        formData.append("description", description.trim());
-        if (year) {
-          formData.append("year", year);
-        }
-
-        response = await fetch("/api/posts/create", {
-          method: "POST",
-          body: formData,
-        });
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      if (thumbnailBase64) {
+        formData.append("thumbnailBase64", thumbnailBase64);
+      }
+      formData.append("title", title.trim());
+      for (const cat of selectedCategories) {
+        formData.append("categories", cat);
+      }
+      formData.append("description", description.trim());
+      if (year) {
+        formData.append("year", year);
       }
 
-      const body = await response.json().catch(() => ({}));
+      const response = await fetch("/api/posts/create", {
+        method: "POST",
+        body: formData,
+      });
+
       if (!response.ok) {
-        throw new Error(
-          isEditMode
-            ? "Failed to update document"
-            : "Failed to upload document",
-        );
-        console.error("Upload error details:", {
-          status: response.status,
-          statusText: response.statusText,
-          body,
-        });
+        throw new Error("Failed to upload document");
       }
 
-      setAlertType("success");
-      setAlertMessage(
-        isEditMode
-          ? "Document updated successfully."
-          : "Document uploaded successfully.",
-      );
-      setSelectedFile(null);
-      setThumbnailBase64(null);
-      setTitle("");
-      setCategoryQuery("");
-      setSelectedCategories([]);
-      setIsCategoryDropdownOpen(false);
-      setYear("");
-      setDescription("");
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-      if (body?.post) {
-        onPostSaved?.(body.post, isEditMode ? "edit" : "create");
-      }
-      if (!isCreate) {
-        onClose();
-      }
+      router.push("/");
     } catch (error: unknown) {
       setAlertType("error");
-      setAlertMessage(
-        isEditMode ? "Failed to update document" : "Failed to upload document",
-      );
+      setAlertMessage("Failed to upload document");
       console.error("Error details:", error);
-    } finally {
       setIsPublishing(false);
-      if (isCreate) {
-        onUploadFinished?.();
-      }
     }
   }
 
   return (
-    <>
-      {alertMessage && (
-        <Alert
-          key={`${alertType}-${alertMessage}`}
-          message={alertMessage}
-          type={alertType}
-        />
-      )}
-      <div
-        className={`fixed inset-x-0 top-[15%] bottom-0 bg-surface z-100 rounded-t-3xl transition-all duration-300 ease-out overflow-hidden flex flex-col lg:left-1/2 lg:right-auto lg:w-full lg:max-w-2xl lg:-translate-x-1/2 ${
-          isOpen
-            ? "translate-y-0 opacity-100 pointer-events-auto"
-            : "translate-y-[110%] opacity-0 pointer-events-none"
-        }`}
-      >
-        <div className="shrink-0 px-6 py-5 bg-surface">
-          <div className="relative flex items-center justify-center">
-            <h4 className="text-center font-medium text-lg text-ink">
-              {isEditMode ? "Edit Material" : "Share a New Material"}
-            </h4>
-            <button
-              aria-label="Close upload drawer"
-              type="button"
-              className="absolute right-0 flex items-center justify-center"
-              onClick={onClose}
-            >
-              <CloseCircle size={24} color="#737373" />
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-3">
+    <div className="min-h-screen bg-surface lg:bg-page">
+      <Header title="Share a New Material" isLoading={isPublishing} />
+      <div className="mx-auto w-full max-w-140 2xl:max-w-120 pt-20 lg:pb-10 px-0 lg:px-6">
+        <div className="px-6 pb-10 pt-6 space-y-3 lg:bg-surface lg:rounded-3xl lg:border lg:border-edge lg:shadow-sm lg:px-8 lg:py-8">
+          {alertMessage && (
+            <Alert
+              key={`${alertType}-${alertMessage}`}
+              message={alertMessage}
+              type={alertType}
+            />
+          )}
           <div className="space-y-1">
             <p className="text-ink-2 text-sm">
-              {isEditMode ? "Document" : "Select document to share"}
-              {!isEditMode && <span className="text-red-500">*</span>}
+              Select document to share<span className="text-red-500">*</span>
             </p>
-            {isEditMode ? (
-              <div className="w-full rounded-xl border border-[#E4E4E4] bg-page px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <DocumentText size={30} color="#E1761F" variant="Bold" />
+            <input
+              ref={fileInputRef}
+              id="material-upload"
+              type="file"
+              accept=".pdf,application/pdf"
+              className="hidden"
+              onChange={handleFileChange}
+              required
+            />
+            <label
+              htmlFor="material-upload"
+              className="w-full py-6 px-3 border border-[#B0B0B0] border-dashed rounded-xl flex flex-col items-center justify-center gap-5 cursor-pointer"
+            >
+              {!selectedFile ? (
+                <>
+                  <DocumentUpload size={40} color="#B0B0B0" />
                   <div>
-                    <p className="text-xs font-medium text-ink">
-                      {post?.title || "Current document"}
+                    <p className="text-xs font-medium text-ink-2">
+                      Drag and drop or{" "}
+                      <span className="underline text-ink-2 text-center">
+                        click to upload
+                      </span>
+                    </p>
+                    <p className="text-[10px] text-ink-2 font-medium text-center">
+                      Max file size: 20MB (PDF)
                     </p>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <input
-                  ref={fileInputRef}
-                  id="material-upload"
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  required
-                />
-                <label
-                  htmlFor="material-upload"
-                  className="w-full py-6 px-3 border border-[#B0B0B0] border-dashed rounded-xl flex flex-col items-center justify-center gap-5 cursor-pointer"
-                >
-                  {!selectedFile ? (
-                    <>
-                      <DocumentUpload size={40} color="#B0B0B0" />
-                      <div>
-                        <p className="text-xs font-medium text-ink-2">
-                          Drag and drop or{" "}
-                          <span className="underline text-ink-2 text-center">
-                            click to upload
-                          </span>
+                </>
+              ) : (
+                <div className="flex justify-between items-center gap-2 w-full">
+                  <div className="flex gap-2 items-center">
+                    <DocumentText size={38} color="#E1761F" variant="Bold" />
+                    <div className="flex flex-col justify-between">
+                      <p className="text-xs text-ink font-medium truncate max-w-56">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-ink-3 text-xs font-medium">
+                        {(selectedFile.size / (1024 * 1024)).toFixed(2)}MB
+                      </p>
+                      {isGeneratingThumbnail && (
+                        <p className="text-ink-3 text-[10px] font-medium">
+                          Generating preview… you can still publish now.
                         </p>
-                        <p className="text-[10px] text-ink-2 font-medium text-center">
-                          Max file size: 20MB (PDF)
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex justify-between items-center gap-2 w-full">
-                      <div className="flex gap-2 items-center">
-                        <DocumentText
-                          size={38}
-                          color="#E1761F"
-                          variant="Bold"
-                        />
-                        <div className="flex flex-col justify-between">
-                          <p className="text-xs text-ink font-medium truncate max-w-56">
-                            {selectedFile.name}
-                          </p>
-                          <p className="text-ink-3 text-xs font-medium">
-                            {(selectedFile.size / (1024 * 1024)).toFixed(2)}MB
-                          </p>
-                          {isGeneratingThumbnail && (
-                            <p className="text-ink-3 text-[10px] font-medium">
-                              Generating preview… you can still publish now.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          thumbnailRequestIdRef.current += 1;
-                          setSelectedFile(null);
-                          setThumbnailBase64(null);
-                          setIsGeneratingThumbnail(false);
-                          if (fileInputRef.current) {
-                            fileInputRef.current.value = "";
-                          }
-                        }}
-                      >
-                        <Trash size={22} color="#E00505" />
-                      </button>
+                      )}
                     </div>
-                  )}
-                </label>
-              </>
-            )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      thumbnailRequestIdRef.current += 1;
+                      setSelectedFile(null);
+                      setThumbnailBase64(null);
+                      setIsGeneratingThumbnail(false);
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                  >
+                    <Trash size={22} color="#E00505" />
+                  </button>
+                </div>
+              )}
+            </label>
           </div>
           <div className="space-y-1">
             <p className="text-ink-2 text-sm">
@@ -539,16 +385,10 @@ export default function UploadDrawer({
             onClick={handlePublish}
             disabled={disabled}
           >
-            {isPublishing
-              ? isEditMode
-                ? "Saving..."
-                : "Publishing..."
-              : isEditMode
-                ? "Save changes"
-                : "Publish"}
+            {isPublishing ? "Publishing..." : "Publish"}
           </ActionButton>
         </div>
       </div>
-    </>
+    </div>
   );
 }
