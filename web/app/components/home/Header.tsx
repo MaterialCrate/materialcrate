@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import useScrollVisibility from "../useScrollVisibility";
 import { SearchNormal1, Coin1 } from "iconsax-reactjs";
 import Image from "next/image";
@@ -25,11 +24,7 @@ export default function Header({
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-10 flex flex-col bg-surface shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] lg:hidden"
-      style={{
-        transform: isVisible ? "translateY(0)" : "translateY(-100%)",
-        transition: "transform 300ms ease-out",
-      }}
+      className={`fixed top-0 left-0 right-0 z-10 flex flex-col bg-surface shadow-[0_4px_6px_-2px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-out lg:hidden ${isVisible ? "translate-y-0" : "-translate-y-full"}`}
     >
       <div className="flex items-center justify-between px-6 pb-3 pt-6">
         <button

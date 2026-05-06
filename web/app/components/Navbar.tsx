@@ -12,6 +12,8 @@ import {
   SearchNormal1,
   Coin1,
   Messages2,
+  Notification,
+  DocumentUpload,
 } from "iconsax-reactjs";
 import type { Icon as IconsaxIcon } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
@@ -39,10 +41,10 @@ export default function Navbar() {
     : "/login";
 
   const [rawUnreadCount, setRawUnreadCount] = useState(0);
-  // Derive 0 when logged out without needing a setState call in the effect
+  const [rawNotificationCount, setRawNotificationCount] = useState(0);
   const unreadMessageCount = user?.id ? rawUnreadCount : 0;
+  const unreadNotificationCount = user?.id ? rawNotificationCount : 0;
 
-  // Fetch total unread message count whenever the route changes
   useEffect(() => {
     if (!user?.id) return;
 
@@ -64,6 +66,27 @@ export default function Navbar() {
     };
 
     void fetchUnread();
+  }, [user?.id, pathname]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch("/api/notifications?limit=100&unreadOnly=true", {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          notifications?: unknown[];
+        };
+        if (Array.isArray(data?.notifications)) {
+          setRawNotificationCount(data.notifications.length);
+        }
+      } catch {}
+    };
+
+    void fetchNotifications();
   }, [user?.id, pathname]);
 
   useEffect(() => {
@@ -160,6 +183,36 @@ export default function Navbar() {
           </button>
         </div>
         <ul className="flex flex-col gap-1 px-2 flex-1">
+          <li>
+            <Link
+              href="/notifications"
+              className={`flex items-center gap-4 rounded-xl px-3 py-3 text-sm font-semibold transition-all duration-200 hover:bg-black/5 active:scale-[0.97] ${
+                pathname === "/notifications"
+                  ? "text-[#E1761F] bg-[#FFF3E7]"
+                  : "text-ink-2 hover:text-ink"
+              }`}
+              aria-current={pathname === "/notifications" ? "page" : undefined}
+              onClick={(event) => {
+                if (isLoading || user) return;
+                event.preventDefault();
+                router.push("/login");
+              }}
+            >
+              <div className="relative shrink-0">
+                <Notification
+                  size={24}
+                  color={pathname === "/notifications" ? "#E1761F" : "#959595"}
+                  variant={pathname === "/notifications" ? "Bold" : "Linear"}
+                />
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white leading-none">
+                    {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                  </span>
+                )}
+              </div>
+              <span className="hidden xl:inline">Notifications</span>
+            </Link>
+          </li>
           {user && (
             <li>
               <Link
@@ -232,6 +285,18 @@ export default function Navbar() {
             );
           })}
         </ul>
+        {user && (
+          <div className="px-3 pb-3">
+            <button
+              type="button"
+              onClick={() => router.push("/create")}
+              className="cursor-pointer w-full flex items-center justify-center gap-3 rounded-xl bg-[#E1761F] px-3 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#C96018] active:scale-[0.97]"
+            >
+              <DocumentUpload size={20} color="white" />
+              <span className="hidden xl:inline">Upload</span>
+            </button>
+          </div>
+        )}
         {!isLoading && !user && (
           <div className="px-3 pb-6">
             <button
