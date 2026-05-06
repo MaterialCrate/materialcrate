@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
+import DesktopChatPanel from "./DesktopChatPanel";
 import {
   Home,
   Clipboard,
@@ -40,6 +41,7 @@ export default function Navbar() {
     ? `/user/${encodeURIComponent(user.username)}`
     : "/login";
 
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(false);
   const [rawUnreadCount, setRawUnreadCount] = useState(0);
   const [rawNotificationCount, setRawNotificationCount] = useState(0);
   const unreadMessageCount = user?.id ? rawUnreadCount : 0;
@@ -243,12 +245,15 @@ export default function Navbar() {
           {items.map(({ label, href, Icon }) => {
             const isProfileItem = href === "/user";
             const isArchiveItem = href === "/saved";
+            const isChatItem = href === "/chat";
             const resolvedHref = isProfileItem ? userProfileHref : href;
-            const isActive = isProfileItem
-              ? userProfileHref !== "/login" && pathname === userProfileHref
-              : isArchiveItem
-                ? pathname === href || pathname.startsWith("/saved/folder/")
-                : pathname === href;
+            const isActive = isChatItem
+              ? isChatPanelOpen
+              : isProfileItem
+                ? userProfileHref !== "/login" && pathname === userProfileHref
+                : isArchiveItem
+                  ? pathname === href || pathname.startsWith("/saved/folder/")
+                  : pathname === href;
             const color = isActive ? "#E1761F" : "#959595";
             return (
               <li key={href}>
@@ -261,6 +266,12 @@ export default function Navbar() {
                   }`}
                   aria-current={isActive ? "page" : undefined}
                   onClick={(event) => {
+                    if (isChatItem && window.innerWidth >= 1024) {
+                      event.preventDefault();
+                      if (!isLoading && !user) { router.push("/login"); return; }
+                      setIsChatPanelOpen((prev) => !prev);
+                      return;
+                    }
                     if (href === "/") return;
                     if (isLoading || user) return;
                     event.preventDefault();
@@ -273,7 +284,7 @@ export default function Navbar() {
                       color={color}
                       variant={isActive ? "Bold" : "Linear"}
                     />
-                    {href === "/chat" && unreadMessageCount > 0 && (
+                    {isChatItem && unreadMessageCount > 0 && (
                       <span className="absolute -top-1 -right-1 flex min-w-4 h-4 items-center justify-center rounded-full bg-red-500 px-0.5 text-[9px] font-bold text-white leading-none">
                         {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
                       </span>
@@ -312,6 +323,10 @@ export default function Navbar() {
           </div>
         )}
       </div>
+      <DesktopChatPanel
+        isOpen={isChatPanelOpen}
+        onClose={() => setIsChatPanelOpen(false)}
+      />
     </>
   );
 }
