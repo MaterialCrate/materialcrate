@@ -16,6 +16,7 @@ import {
   indexPostContent,
   removePostIndex,
 } from "../../services/plagiarism/plagiarism-service.js";
+import { createPlagiarismCase } from "../../services/plagiarism-case.service.js";
 import { normalizePricingInput } from "./purchase.resolver.js";
 
 type CreatePostArgs = {
@@ -1359,8 +1360,7 @@ export const PostResolver = {
                 `score=${(overallScore * 100).toFixed(1)}% ` +
                 `top_match=${matchesByPost[0]?.postId ?? "none"}`,
               );
-              // TODO: write to a plagiarism_results table, notify admins,
-              // or auto-flag the post depending on your policy.
+              await createPlagiarismCase(plagiarismResult, createdPost.id);
             }
           }
           // Index after check so our own content doesn't match itself.
@@ -1722,11 +1722,17 @@ export const PostResolver = {
         if (isFirstLongViewToday && input.postId?.trim()) {
           const postId = input.postId.trim();
 
-          const updatedPost = await (prisma as any).post.update({
-            where: { id: postId },
-            data: { viewCount: { increment: 1 } },
-            select: { viewCount: true, authorId: true },
-          });
+          const [updatedPost, redirect] = await Promise.all([
+            (prisma as any).post.update({
+              where: { id: postId },
+              data: { viewCount: { increment: 1 } },
+              select: { viewCount: true, authorId: true },
+            }),
+            prisma.revenueRedirect.findFirst({
+              where: { sourcePostId: postId, active: true },
+              select: { beneficiaryUserId: true },
+            }),
+          ]);
 
           const VIEWS_PER_TOKEN = 5;
           if (
@@ -1734,9 +1740,11 @@ export const PostResolver = {
             updatedPost.authorId !== viewerId &&
             updatedPost.viewCount % VIEWS_PER_TOKEN === 0
           ) {
+            const recipientId = redirect?.beneficiaryUserId ?? updatedPost.authorId;
+            const isRedirected = Boolean(redirect?.beneficiaryUserId);
             await (prisma as any).$transaction([
               (prisma as any).user.update({
-                where: { id: updatedPost.authorId },
+                where: { id: recipientId },
                 data: {
                   tokenBalance: { increment: 1 },
                   tokensEarned: { increment: 1 },
@@ -1744,11 +1752,13 @@ export const PostResolver = {
               }),
               (prisma as any).tokenTransaction.create({
                 data: {
-                  userId: updatedPost.authorId,
-                  type: "VIEW_EARN",
+                  userId: recipientId,
+                  type: isRedirected ? "VIEW_EARN_REDIRECT" : "VIEW_EARN",
                   amount: 1,
                   postId,
-                  description: `Earned from view #${updatedPost.viewCount}`,
+                  description: isRedirected
+                    ? `Revenue redirect: view #${updatedPost.viewCount} of post ${postId}`
+                    : `Earned from view #${updatedPost.viewCount}`,
                 },
               }),
             ]);

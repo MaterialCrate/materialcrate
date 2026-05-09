@@ -14,6 +14,7 @@ import {
   MessageText1,
   Profile2User,
   Setting4,
+  Shield,
 } from "iconsax-reactjs";
 import Header from "../components/Header";
 import Alert from "../components/Alert";
@@ -115,6 +116,11 @@ const ICON_STYLES: Record<
     accent: "#1D1D1D",
     imageTone: "bg-surface-high text-ink",
     Icon: Notification,
+  },
+  Shield: {
+    accent: "#C0392B",
+    imageTone: "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    Icon: Shield,
   },
 };
 

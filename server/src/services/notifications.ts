@@ -10,6 +10,7 @@ export const NOTIFICATION_ICON = {
   POST_LIKE: "Heart",
   SYSTEM: "Notification",
   ACHIEVEMENT: "Award",
+  PLAGIARISM: "Shield",
 } as const;
 
 export const NOTIFICATION_TYPE = {
@@ -21,6 +22,8 @@ export const NOTIFICATION_TYPE = {
   POST_LIKE: "POST_LIKE",
   SYSTEM: "SYSTEM",
   ACHIEVEMENT_UNLOCKED: "ACHIEVEMENT_UNLOCKED",
+  PLAGIARISM_ORIGINAL_AUTHOR: "PLAGIARISM_ORIGINAL_AUTHOR",
+  PLAGIARISM_FLAGGED_UPLOAD: "PLAGIARISM_FLAGGED_UPLOAD",
 } as const;
 
 const PUSH_NOTIFICATION_TYPE_TO_PREF: Record<string, string> = {
@@ -76,6 +79,8 @@ export const createNotification = async ({
       icon: icon.trim(),
       profilePicture: profilePicture?.trim() || null,
       achievementId: achievementId?.trim() || null,
+      postId: postId?.trim() || null,
+      commentId: commentId?.trim() || null,
       unread,
     },
   });

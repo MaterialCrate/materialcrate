@@ -83,7 +83,9 @@ model User {
   reports       Report[]
   tokenTransactions TokenTransaction[]
   cashoutRequests   TokenCashoutRequest[]
-  purchases         Purchase[]
+  purchases              Purchase[]
+  revenueRedirects       RevenueRedirect[]   @relation("RevenueRedirectBeneficiary")
+  plagiarismAppeals      PlagiarismAppeal[]  @relation("PlagiarismAppealUser")
   conversationsAsA  Conversation[] @relation("ConversationParticipantA")
   conversationsAsB  Conversation[] @relation("ConversationParticipantB")
   sentChatMessages  ChatMessage[]  @relation("ChatMessageSender")
@@ -141,6 +143,8 @@ model Notification {
   icon          String
   profilePicture String?
   achievementId String?
+  postId        String?
+  commentId     String?
   unread        Boolean  @default(true)
   time          DateTime @default(now())
 
@@ -149,6 +153,7 @@ model Notification {
   @@index([userId, time])
   @@index([userId, unread])
   @@index([userId, type, actorId])
+  @@index([postId])
 }
 
 model UserAchievement {
@@ -211,8 +216,10 @@ model Post {
   feedInteractions FeedInteraction[]
   tokenTransactions TokenTransaction[]
   chatAttachments   ChatMessageAttachment[] @relation("PostChatAttachments")
-  documentFingerprint DocumentFingerprint?
-  contentChunks       ContentChunk[]
+  documentFingerprint      DocumentFingerprint?
+  contentChunks            ContentChunk[]
+  originalPlagiarismCases  PlagiarismCase[] @relation("PlagiarismOriginalPost")
+  suspectedPlagiarismCases PlagiarismCase[] @relation("PlagiarismSuspectedPost")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -593,4 +600,66 @@ model ChatMessageEdit {
   message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@index([messageId, editedAt])
+}
+
+model PlagiarismCase {
+  id                     String    @id @default(cuid())
+  originalPostId         String
+  suspectedPostId        String
+  similarityScore        Float
+  verdict                String    // DUPLICATE | SUSPICIOUS | POSSIBLE
+  status                 String    @default("PENDING_REVIEW") // PENDING_REVIEW | REVIEWING | RESOLVED | DISMISSED
+  matchedChunkCount      Int       @default(0)
+  totalChunkCount        Int       @default(0)
+  revenueRedirectEnabled Boolean   @default(false)
+  matchSummaryJson       Json      @default("{}")
+  moderatorId            String?
+  moderatorNote          String?
+  resolvedAt             DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  originalPost    Post              @relation("PlagiarismOriginalPost", fields: [originalPostId], references: [id], onDelete: Cascade)
+  suspectedPost   Post              @relation("PlagiarismSuspectedPost", fields: [suspectedPostId], references: [id], onDelete: Cascade)
+  revenueRedirect RevenueRedirect?
+  appeals         PlagiarismAppeal[]
+
+  @@unique([originalPostId, suspectedPostId])
+  @@index([originalPostId])
+  @@index([suspectedPostId])
+  @@index([status])
+}
+
+model RevenueRedirect {
+  id                 String   @id @default(cuid())
+  caseId             String   @unique
+  sourcePostId       String
+  beneficiaryPostId  String
+  beneficiaryUserId  String
+  redirectPercentage Float    @default(100)
+  reason             String
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  case            PlagiarismCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  beneficiaryUser User           @relation("RevenueRedirectBeneficiary", fields: [beneficiaryUserId], references: [id], onDelete: Cascade)
+
+  @@index([sourcePostId, active])
+}
+
+model PlagiarismAppeal {
+  id        String   @id @default(cuid())
+  caseId    String
+  userId    String
+  reason    String
+  status    String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  response  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  case PlagiarismCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  user User           @relation("PlagiarismAppealUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([caseId])
+  @@index([userId])
 }

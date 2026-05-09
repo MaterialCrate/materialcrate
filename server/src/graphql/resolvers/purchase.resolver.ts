@@ -137,13 +137,67 @@ export const PurchaseResolver = {
         throw new Error("You have already purchased access to this document.");
       }
 
-      const purchase = await prisma.purchase.create({
-        data: {
-          userId: viewerId,
-          postId: normalizedPostId,
-          amount: post.price,
-        },
-      });
+      const tokenCost = Math.round(post.price);
+
+      const [buyer, redirect] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: viewerId },
+          select: { tokenBalance: true },
+        }),
+        prisma.revenueRedirect.findFirst({
+          where: { sourcePostId: normalizedPostId, active: true },
+          select: { beneficiaryUserId: true, beneficiaryPostId: true },
+        }),
+      ]);
+
+      if (!buyer) throw new Error("Buyer account not found.");
+      if (buyer.tokenBalance < tokenCost) {
+        throw new Error("Insufficient token balance to purchase this document.");
+      }
+
+      const recipientId = redirect?.beneficiaryUserId ?? post.authorId;
+      const postTitle = (await prisma.post.findUnique({
+        where: { id: normalizedPostId },
+        select: { title: true },
+      }))?.title ?? "document";
+
+      const [purchase] = await prisma.$transaction([
+        prisma.purchase.create({
+          data: { userId: viewerId, postId: normalizedPostId, amount: post.price },
+        }),
+        prisma.user.update({
+          where: { id: viewerId },
+          data: { tokenBalance: { decrement: tokenCost }, tokensRedeemed: { increment: tokenCost } },
+        }),
+        prisma.tokenTransaction.create({
+          data: {
+            userId: viewerId,
+            type: "PURCHASE",
+            amount: -tokenCost,
+            postId: normalizedPostId,
+            description: `Purchased "${postTitle}"`,
+          },
+        }),
+        ...(recipientId
+          ? [
+              prisma.user.update({
+                where: { id: recipientId },
+                data: { tokenBalance: { increment: tokenCost }, tokensEarned: { increment: tokenCost } },
+              }),
+              prisma.tokenTransaction.create({
+                data: {
+                  userId: recipientId,
+                  type: redirect ? "SALE_REDIRECT" : "SALE",
+                  amount: tokenCost,
+                  postId: normalizedPostId,
+                  description: redirect
+                    ? `Revenue redirect: sale of post ${normalizedPostId}`
+                    : `Sale of "${postTitle}"`,
+                },
+              }),
+            ]
+          : []),
+      ]);
 
       return { ...purchase, createdAt: purchase.createdAt.toISOString() };
     },
