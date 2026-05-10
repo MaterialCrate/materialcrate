@@ -2,12 +2,23 @@ import { createRequire } from "module";
 
 const _require = createRequire(import.meta.url);
 
+type MammothImage = {
+  read: (encoding: "base64" | "binary") => Promise<string>;
+  contentType: string;
+  altText?: string;
+};
+
 type MammothMod = {
   convertToHtml: (
     input: { buffer: Buffer },
     options?: Record<string, unknown>,
   ) => Promise<{ value: string; messages: Array<{ type: string; message: string }> }>;
   extractRawText: (opts: { buffer: Buffer }) => Promise<{ value: string }>;
+  images: {
+    imgElement: (
+      converter: (image: MammothImage) => Promise<Record<string, string>>,
+    ) => unknown;
+  };
 };
 
 let _mammoth: MammothMod | null = null;
@@ -49,13 +60,41 @@ export interface WordConversionResult {
   warnings: string[];
 }
 
+// Max dimension for images embedded in the rendered HTML.
+// Keeps data URIs small enough that the full document stays well under 5 MB.
+const MAX_EMBEDDED_IMAGE_PX = 900;
+
 export async function convertWordToHtml(
   buffer: Buffer,
 ): Promise<WordConversionResult> {
   const mammoth = getMammoth();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sharpMod = (await import("sharp")) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sharpFn: (input: Buffer) => any = sharpMod.default ?? sharpMod;
+
+  const convertImage = mammoth.images.imgElement(async (image: MammothImage) => {
+    const base64 = await image.read("base64");
+    const attrs: Record<string, string> = {};
+    if (image.altText) attrs["alt"] = image.altText;
+
+    try {
+      const rawBuffer = Buffer.from(base64, "base64");
+      const compressed: Buffer = await sharpFn(rawBuffer)
+        .resize({ width: MAX_EMBEDDED_IMAGE_PX, withoutEnlargement: true })
+        .webp({ quality: 75 })
+        .toBuffer();
+      attrs["src"] = `data:image/webp;base64,${compressed.toString("base64")}`;
+    } catch {
+      attrs["src"] = `data:${image.contentType};base64,${base64}`;
+    }
+
+    return attrs;
+  });
+
   const [htmlResult, textResult] = await Promise.all([
-    mammoth.convertToHtml({ buffer }),
+    mammoth.convertToHtml({ buffer }, { convertImage }),
     mammoth.extractRawText({ buffer }),
   ]);
 
