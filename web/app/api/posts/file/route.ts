@@ -113,34 +113,41 @@ export async function GET(req: Request) {
   const acceptMime = MIME_BY_TYPE[fileType] ?? "application/pdf";
   const fileExt = EXT_BY_TYPE[fileType] ?? "pdf";
 
-  let upstreamResponse: Response;
+  let fileBuffer: Buffer;
   try {
-    upstreamResponse = await fetch(fileUrl, {
+    const upstreamResponse = await fetch(fileUrl, {
       method: "GET",
       cache: "no-store",
-      headers: {
-        Accept: `${acceptMime},*/*`,
-      },
-      signal: AbortSignal.timeout(15000),
+      headers: { Accept: `${acceptMime},*/*` },
+      // Generous timeout — large PDFs can take a while over slower links.
+      signal: AbortSignal.timeout(60000),
     });
+
+    if (!upstreamResponse.ok || !upstreamResponse.body) {
+      return NextResponse.json(
+        { error: "Failed to fetch file" },
+        { status: upstreamResponse.status || 502 },
+      );
+    }
+
+    // Buffer the entire file before responding. Streaming without a known
+    // Content-Length causes Next.js to use chunked encoding, which breaks
+    // with ERR_INCOMPLETE_CHUNKED_ENCODING when the upstream connection drops.
+    fileBuffer = Buffer.from(await upstreamResponse.arrayBuffer());
   } catch (err) {
     const isTimeout =
       err instanceof Error &&
-      (err.name === "TimeoutError" || err.name === "AbortError" || err.message.includes("Timeout"));
+      (err.name === "TimeoutError" ||
+        err.name === "AbortError" ||
+        err.message.includes("Timeout"));
     return NextResponse.json(
       { error: isTimeout ? "File fetch timed out" : "Failed to reach file storage" },
       { status: 504 },
     );
   }
 
-  if (!upstreamResponse.ok || !upstreamResponse.body) {
-    return NextResponse.json(
-      { error: "Failed to fetch file" },
-      { status: upstreamResponse.status || 502 },
-    );
-  }
-
-  await fetch(GRAPHQL_ENDPOINT, {
+  // Fire-and-forget interaction tracking — don't block the file response.
+  fetch(GRAPHQL_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -163,11 +170,11 @@ export async function GET(req: Request) {
     }),
   }).catch(() => null);
 
-  return new NextResponse(upstreamResponse.body, {
+  return new NextResponse(fileBuffer, {
     status: 200,
     headers: {
-      "Content-Type":
-        upstreamResponse.headers.get("content-type") ?? acceptMime,
+      "Content-Type": acceptMime,
+      "Content-Length": fileBuffer.byteLength.toString(),
       "Content-Disposition": isDownloadRequest
         ? `attachment; filename="materialcrate-document.${fileExt}"`
         : `inline; filename="protected-document.${fileExt}"`,

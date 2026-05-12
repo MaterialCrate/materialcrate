@@ -11,14 +11,38 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
-import { apiUrl } from '@/lib/api';
+import { gql, GRAPHQL_URL } from '@/lib/api';
 
 const BRAND = '#E1761F';
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const RESERVED_USERNAMES = new Set(['deleted', 'disabled']);
+
+const Q_EMAIL_AVAILABLE = `query EmailAvailable($email: String!) { emailAvailable(email: $email) }`;
+const Q_USERNAME_AVAILABLE = `query UsernameAvailable($username: String!) { usernameAvailable(username: $username) }`;
+const M_SIGNUP = `
+  mutation Signup(
+    $email: String! $password: String! $username: String!
+    $displayName: String! $institution: String $program: String
+  ) {
+    signup(email: $email, password: $password, username: $username,
+           displayName: $displayName, institution: $institution, program: $program) {
+      token
+    }
+  }
+`;
+const M_VERIFY_EMAIL = `
+  mutation VerifyEmailCode($email: String!, $code: String!) {
+    verifyEmailCode(email: $email, code: $code)
+  }
+`;
+const M_RESEND_VERIFICATION = `
+  mutation ResendVerificationEmail($email: String!) {
+    resendVerificationEmail(email: $email)
+  }
+`;
 
 function Rule({ ok, text }: { ok: boolean; text: string }) {
   return (
@@ -42,8 +66,16 @@ const TITLES: Record<number, string> = {
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [email, setEmail] = useState('');
+  const params = useLocalSearchParams<{
+    email?: string;
+    verify?: string;
+    verificationDeadline?: string;
+  }>();
+
+  const isVerifyOnly = params.verify === '1';
+
+  const [step, setStep] = useState(() => (isVerifyOnly ? 7 : 1));
+  const [email, setEmail] = useState(() => (isVerifyOnly ? (params.email ?? '') : ''));
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -52,13 +84,11 @@ export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Username availability
   const [usernameMsg, setUsernameMsg] = useState('');
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const lastCheckedRef = useRef('');
 
-  // Verification code
   const [code, setCode] = useState(['', '', '', '']);
   const [verifyStatus, setVerifyStatus] = useState<string | null>(null);
   const codeRefs = useRef<(TextInput | null)[]>([null, null, null, null]);
@@ -69,7 +99,7 @@ export default function RegisterScreen() {
   const hasUppercase = /[A-Z]/.test(password);
   const isValidPassword = hasMinLength && hasNumber && hasUppercase;
 
-  // Live username availability check
+  // Live username availability — calls GraphQL directly so it can be aborted
   useEffect(() => {
     const trimmed = username.trim();
     if (!trimmed) {
@@ -96,16 +126,17 @@ export default function RegisterScreen() {
     const ctrl = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(
-          apiUrl(`/api/auth/username-available?username=${encodeURIComponent(trimmed)}`),
-          { signal: ctrl.signal },
+        const data = await gql<{ usernameAvailable: boolean }>(
+          Q_USERNAME_AVAILABLE,
+          { username: trimmed },
+          undefined,
+          ctrl.signal,
         );
-        const body = await res.json().catch(() => ({}));
         lastCheckedRef.current = trimmed;
-        setUsernameAvailable(Boolean(body?.available));
+        setUsernameAvailable(data.usernameAvailable);
         setUsernameMsg('');
-      } catch {
-        // aborted or network error — don't update state
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
       } finally {
         setCheckingUsername(false);
       }
@@ -118,20 +149,20 @@ export default function RegisterScreen() {
   }, [username]);
 
   const handleGoogleAuth = async () => {
-    await WebBrowser.openBrowserAsync(apiUrl('/api/auth/social/google?mode=register'));
+    await WebBrowser.openBrowserAsync(
+      `${GRAPHQL_URL.replace('/graphql', '')}/api/auth/social/google?mode=register`,
+    );
   };
 
   const handleEmailNext = async () => {
     setError(null);
-    const trimmed = email.trim();
     setLoading(true);
     try {
-      const res = await fetch(
-        apiUrl(`/api/auth/email-available?email=${encodeURIComponent(trimmed)}`),
+      const data = await gql<{ emailAvailable: boolean }>(
+        Q_EMAIL_AVAILABLE,
+        { email: email.trim() },
       );
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body?.error || 'Could not verify this email');
-      if (!body?.available) {
+      if (!data.emailAvailable) {
         setError('Account already exists with this email.');
         return;
       }
@@ -151,11 +182,11 @@ export default function RegisterScreen() {
     }
     setCheckingUsername(true);
     try {
-      const res = await fetch(
-        apiUrl(`/api/auth/username-available?username=${encodeURIComponent(trimmed)}`),
+      const data = await gql<{ usernameAvailable: boolean }>(
+        Q_USERNAME_AVAILABLE,
+        { username: trimmed },
       );
-      const body = await res.json().catch(() => ({}));
-      if (!body?.available) {
+      if (!data.usernameAvailable) {
         setUsernameAvailable(false);
         return;
       }
@@ -173,25 +204,10 @@ export default function RegisterScreen() {
     setError(null);
     setLoading(true);
     try {
-      const res = await fetch(apiUrl('/api/auth/signup'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          username,
-          displayName,
-          institution,
-          program,
-        }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok || !body?.ok) {
-        throw new Error(body?.error || 'Oops, something went wrong');
-      }
+      await gql(M_SIGNUP, { email, password, username, displayName, institution, program });
       setStep(7);
-    } catch {
-      setError('Oops, something went wrong :-(');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Oops, something went wrong :-(');
     } finally {
       setLoading(false);
     }
@@ -218,18 +234,10 @@ export default function RegisterScreen() {
     setError(null);
     setVerifyStatus(null);
     try {
-      const res = await fetch(apiUrl('/api/auth/verify-email-code'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code: fullCode }),
-      });
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        throw new Error(b.error || 'Verification failed');
-      }
+      await gql(M_VERIFY_EMAIL, { email, code: fullCode });
       router.replace('/(auth)/login');
-    } catch {
-      setError('Verification failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Verification failed');
     } finally {
       setLoading(false);
     }
@@ -240,12 +248,7 @@ export default function RegisterScreen() {
     setError(null);
     setVerifyStatus(null);
     try {
-      const res = await fetch(apiUrl('/api/auth/resend-verification'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      if (!res.ok) throw new Error('Failed to resend');
+      await gql(M_RESEND_VERIFICATION, { email });
       setCode(['', '', '', '']);
       codeRefs.current[0]?.focus();
       setVerifyStatus('A new verification code was sent.');
@@ -256,7 +259,7 @@ export default function RegisterScreen() {
     }
   };
 
-  const canGoBack = step > 1 && step !== 7;
+  const canGoBack = !isVerifyOnly && step > 1 && step !== 7;
 
   const isUsernameNextDisabled =
     !username.trim() ||
@@ -264,6 +267,14 @@ export default function RegisterScreen() {
     username.length < 3 ||
     usernameMsg !== '' ||
     usernameAvailable === false;
+
+  const deadlineLabel = params.verificationDeadline
+    ? new Date(params.verificationDeadline).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : null;
 
   return (
     <KeyboardAvoidingView
@@ -274,32 +285,32 @@ export default function RegisterScreen() {
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Top bar with back button */}
         <View style={styles.topBar}>
           {canGoBack && (
-            <TouchableOpacity
-              onPress={() => setStep(step - 1)}
-              style={styles.backBtn}
-            >
+            <TouchableOpacity onPress={() => setStep(step - 1)} style={styles.backBtn}>
               <Ionicons name="arrow-back" size={24} color="#111" />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Card */}
+        {isVerifyOnly && deadlineLabel && (
+          <View style={styles.warningBox}>
+            <Text style={styles.warningText}>
+              Your account will be permanently deleted on{' '}
+              <Text style={{ fontWeight: '700' }}>{deadlineLabel}</Text> if you
+              don't verify your email.
+            </Text>
+          </View>
+        )}
+
         <View style={styles.card}>
-          {/* Logo + title (hidden on verification step) */}
           {step !== 7 && (
             <View style={styles.header}>
-              <Image
-                source={require('@/assets/images/icon.png')}
-                style={styles.logo}
-              />
+              <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
               <Text style={styles.title}>{TITLES[step]}</Text>
             </View>
           )}
 
-          {/* Error */}
           {error ? (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
@@ -333,10 +344,7 @@ export default function RegisterScreen() {
 
               <Text style={styles.switchText}>
                 {'Already have an account? '}
-                <Text
-                  style={styles.switchLink}
-                  onPress={() => router.replace('/(auth)/login')}
-                >
+                <Text style={styles.switchLink} onPress={() => router.replace('/(auth)/login')}>
                   Sign in
                 </Text>
               </Text>
@@ -353,10 +361,7 @@ export default function RegisterScreen() {
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
                   <Text
-                    style={[
-                      styles.actionBtnText,
-                      !isValidEmail && styles.actionBtnTextDisabled,
-                    ]}
+                    style={[styles.actionBtnText, !isValidEmail && styles.actionBtnTextDisabled]}
                   >
                     NEXT
                   </Text>
@@ -383,18 +388,12 @@ export default function RegisterScreen() {
                 <Rule ok={hasUppercase} text="At least one uppercase letter" />
               </View>
               <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  !isValidPassword && styles.actionBtnDisabled,
-                ]}
+                style={[styles.actionBtn, !isValidPassword && styles.actionBtnDisabled]}
                 onPress={() => setStep(3)}
                 disabled={!isValidPassword}
               >
                 <Text
-                  style={[
-                    styles.actionBtnText,
-                    !isValidPassword && styles.actionBtnTextDisabled,
-                  ]}
+                  style={[styles.actionBtnText, !isValidPassword && styles.actionBtnTextDisabled]}
                 >
                   NEXT
                 </Text>
@@ -432,14 +431,9 @@ export default function RegisterScreen() {
                   ) : null}
                 </View>
               </View>
-              {usernameMsg ? (
-                <Text style={styles.fieldError}>{usernameMsg}</Text>
-              ) : null}
+              {usernameMsg ? <Text style={styles.fieldError}>{usernameMsg}</Text> : null}
               <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  isUsernameNextDisabled && styles.actionBtnDisabled,
-                ]}
+                style={[styles.actionBtn, isUsernameNextDisabled && styles.actionBtnDisabled]}
                 onPress={handleUsernameNext}
                 disabled={isUsernameNextDisabled}
               >
@@ -503,18 +497,12 @@ export default function RegisterScreen() {
                 placeholderTextColor="#aaa"
               />
               <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  !institution && styles.actionBtnDisabled,
-                ]}
+                style={[styles.actionBtn, !institution && styles.actionBtnDisabled]}
                 onPress={() => setStep(6)}
                 disabled={!institution}
               >
                 <Text
-                  style={[
-                    styles.actionBtnText,
-                    !institution && styles.actionBtnTextDisabled,
-                  ]}
+                  style={[styles.actionBtnText, !institution && styles.actionBtnTextDisabled]}
                 >
                   NEXT
                 </Text>
@@ -534,22 +522,14 @@ export default function RegisterScreen() {
                 placeholderTextColor="#aaa"
               />
               <TouchableOpacity
-                style={[
-                  styles.actionBtn,
-                  (!program || loading) && styles.actionBtnDisabled,
-                ]}
+                style={[styles.actionBtn, (!program || loading) && styles.actionBtnDisabled]}
                 onPress={handleSubmit}
                 disabled={!program || loading}
               >
                 {loading ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text
-                    style={[
-                      styles.actionBtnText,
-                      !program && styles.actionBtnTextDisabled,
-                    ]}
-                  >
+                  <Text style={[styles.actionBtnText, !program && styles.actionBtnTextDisabled]}>
                     SUBMIT
                   </Text>
                 )}
@@ -572,15 +552,11 @@ export default function RegisterScreen() {
                 {code.map((digit, i) => (
                   <TextInput
                     key={i}
-                    ref={(el) => {
-                      codeRefs.current[i] = el;
-                    }}
+                    ref={(el) => { codeRefs.current[i] = el; }}
                     style={styles.codeInput}
                     value={digit}
                     onChangeText={(v) => handleCodeChange(v, i)}
-                    onKeyPress={({ nativeEvent }) =>
-                      handleCodeKeyPress(nativeEvent.key, i)
-                    }
+                    onKeyPress={({ nativeEvent }) => handleCodeKeyPress(nativeEvent.key, i)}
                     keyboardType="number-pad"
                     maxLength={1}
                     textAlign="center"
@@ -589,12 +565,8 @@ export default function RegisterScreen() {
                 ))}
               </View>
 
-              {verifyStatus ? (
-                <Text style={styles.verifySuccess}>{verifyStatus}</Text>
-              ) : null}
-              {error ? (
-                <Text style={styles.fieldError}>{error}</Text>
-              ) : null}
+              {verifyStatus ? <Text style={styles.verifySuccess}>{verifyStatus}</Text> : null}
+              {error ? <Text style={styles.fieldError}>{error}</Text> : null}
 
               <Text style={styles.resendText}>
                 {"Didn't receive it? "}
@@ -606,8 +578,7 @@ export default function RegisterScreen() {
               <TouchableOpacity
                 style={[
                   styles.actionBtn,
-                  (code.some((d) => d === '') || loading) &&
-                    styles.actionBtnDisabled,
+                  (code.some((d) => d === '') || loading) && styles.actionBtnDisabled,
                 ]}
                 onPress={handleVerify}
                 disabled={code.some((d) => d === '') || loading}
@@ -627,20 +598,9 @@ export default function RegisterScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F2F1EE',
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  topBar: {
-    height: 40,
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
+  container: { flex: 1, backgroundColor: '#F2F1EE' },
+  scroll: { flexGrow: 1, paddingHorizontal: 16, paddingVertical: 16 },
+  topBar: { height: 40, justifyContent: 'center', marginBottom: 4 },
   backBtn: {
     width: 40,
     height: 40,
@@ -648,6 +608,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  warningBox: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  warningText: { color: '#92400E', fontSize: 13, lineHeight: 19 },
   card: {
     flex: 1,
     backgroundColor: '#fff',
@@ -659,36 +626,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     elevation: 2,
   },
-  header: {
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 8,
-    marginBottom: 28,
-  },
-  logo: {
-    width: 50,
-    height: 50,
-    borderRadius: 12,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '600',
-    textAlign: 'center',
-    color: '#111',
-  },
+  header: { alignItems: 'center', gap: 16, marginTop: 8, marginBottom: 28 },
+  logo: { width: 50, height: 50, borderRadius: 12 },
+  title: { fontSize: 28, fontWeight: '600', textAlign: 'center', color: '#111' },
   errorBox: {
     backgroundColor: '#FEE2E2',
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
   },
-  errorText: {
-    color: '#B91C1C',
-    fontSize: 14,
-  },
-  content: {
-    flex: 1,
-  },
+  errorText: { color: '#B91C1C', fontSize: 14 },
+  content: { flex: 1 },
   socialBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -700,28 +648,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: '#fff',
   },
-  socialBtnText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#111',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 16,
-    gap: 8,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#D5D5D5',
-  },
-  dividerText: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#999',
-    letterSpacing: 1.5,
-  },
+  socialBtnText: { fontSize: 15, fontWeight: '500', color: '#111' },
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 16, gap: 8 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: '#D5D5D5' },
+  dividerText: { fontSize: 10, fontWeight: '500', color: '#999', letterSpacing: 1.5 },
   input: {
     borderWidth: 1,
     borderColor: '#E0E0E0',
@@ -740,30 +670,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  rules: {
-    marginTop: 12,
-    gap: 6,
-  },
-  switchText: {
-    fontSize: 14,
-    color: '#555',
-    marginTop: 10,
-  },
-  switchLink: {
-    fontWeight: '700',
-    color: '#111',
-  },
-  fieldError: {
-    color: '#ef4444',
-    fontSize: 12,
-    marginTop: 6,
-  },
+  label: { fontSize: 13, fontWeight: '600', color: '#333', marginBottom: 8 },
+  rules: { marginTop: 12, gap: 6 },
+  switchText: { fontSize: 14, color: '#555', marginTop: 10 },
+  switchLink: { fontWeight: '700', color: '#111' },
+  fieldError: { color: '#ef4444', fontSize: 12, marginTop: 6 },
   actionBtn: {
     backgroundColor: BRAND,
     borderRadius: 100,
@@ -772,24 +683,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 24,
   },
-  actionBtnDisabled: {
-    backgroundColor: '#EBEBEB',
-  },
-  actionBtnText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
-    letterSpacing: 1,
-  },
-  actionBtnTextDisabled: {
-    color: '#aaa',
-  },
-  // Verification
-  verifyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: 24,
-  },
+  actionBtnDisabled: { backgroundColor: '#EBEBEB' },
+  actionBtnText: { color: '#fff', fontWeight: '600', fontSize: 15, letterSpacing: 1 },
+  actionBtnTextDisabled: { color: '#aaa' },
+  verifyContainer: { flex: 1, alignItems: 'center', paddingTop: 24 },
   verifyOverline: {
     fontSize: 11,
     fontWeight: '500',
@@ -797,12 +694,7 @@ const styles = StyleSheet.create({
     letterSpacing: 3,
     marginBottom: 12,
   },
-  verifyTitle: {
-    fontSize: 30,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 12,
-  },
+  verifyTitle: { fontSize: 30, fontWeight: '700', color: '#111', marginBottom: 12 },
   verifyDesc: {
     fontSize: 14,
     color: '#666',
@@ -811,10 +703,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     paddingHorizontal: 8,
   },
-  codeRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
+  codeRow: { flexDirection: 'row', gap: 12 },
   codeInput: {
     width: 56,
     height: 64,
@@ -826,19 +715,7 @@ const styles = StyleSheet.create({
     color: '#111',
     backgroundColor: '#F8F8F6',
   },
-  verifySuccess: {
-    color: '#16a34a',
-    fontSize: 13,
-    marginTop: 12,
-  },
-  resendText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 20,
-  },
-  resendLink: {
-    color: '#A15D16',
-    fontWeight: '500',
-    textDecorationLine: 'underline',
-  },
+  verifySuccess: { color: '#16a34a', fontSize: 13, marginTop: 12 },
+  resendText: { fontSize: 14, color: '#666', marginTop: 20 },
+  resendLink: { color: '#A15D16', fontWeight: '500', textDecorationLine: 'underline' },
 });

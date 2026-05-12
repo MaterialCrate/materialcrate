@@ -13,7 +13,7 @@ function getBaseUrl(): string {
 }
 
 const BASE_URL = getBaseUrl();
-const GRAPHQL_URL = `${BASE_URL}/graphql`;
+export const GRAPHQL_URL = `${BASE_URL}/graphql`;
 
 export function apiUrl(path: string): string {
   return `${BASE_URL}${path}`;
@@ -22,7 +22,8 @@ export function apiUrl(path: string): string {
 export async function gql<T = unknown>(
   query: string,
   variables?: Record<string, unknown>,
-  token?: string
+  token?: string,
+  signal?: AbortSignal,
 ): Promise<T> {
   const res = await fetch(GRAPHQL_URL, {
     method: "POST",
@@ -31,6 +32,7 @@ export async function gql<T = unknown>(
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify({ query, variables }),
+    signal,
   });
 
   const json = await res.json();

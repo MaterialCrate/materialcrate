@@ -179,6 +179,11 @@ const recordFeedInteraction = async (
 const extractS3Key = (fileUrl: string) => {
   try {
     const parsed = new URL(fileUrl);
+    // Only presign URLs that belong to this app's S3 or CloudFront — never external URLs.
+    const isS3 = /\.s3(\.[a-z0-9-]+)?\.amazonaws\.com$/.test(parsed.hostname);
+    const cfRaw = process.env.CLOUDFRONT_URL ?? '';
+    const cfHost = cfRaw ? (() => { try { return new URL(cfRaw).hostname; } catch { return ''; } })() : '';
+    if (!isS3 && !(cfHost && parsed.hostname === cfHost)) return null;
     const key = parsed.pathname.replace(/^\/+/, "");
     return key ? decodeURIComponent(key) : null;
   } catch {
