@@ -12,15 +12,23 @@ import sharp from 'sharp';
 import bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 
-// pdfjs-dist@3 (legacy build) tries to require the old 'canvas' package to
-// polyfill DOMMatrix / Path2D. That package doesn't build on Node v24.
-// Set the globals from @napi-rs/canvas BEFORE requiring pdfjs so it skips
-// its broken fallback entirely.
+// pdfjs-dist@3 (legacy build) requires canvas@2.11.2 which has no Node v24
+// prebuilt binaries. Intercept require('canvas') at the Node module level and
+// return @napi-rs/canvas instead — this catches both init-time AND lazy
+// render-time requires inside pdfjs.
 (globalThis as any).DOMMatrix ??= DOMMatrix;
 (globalThis as any).Path2D ??= Path2D;
 (globalThis as any).ImageData ??= ImageData;
 
 const _require = createRequire(import.meta.url);
+const NodeModule = _require('module') as any;
+const _nativeCanvas = { createCanvas, DOMMatrix, Path2D, ImageData };
+const _origLoad = NodeModule._load.bind(NodeModule);
+NodeModule._load = (id: string, ...args: any[]) => {
+  if (id === 'canvas') return _nativeCanvas;
+  return _origLoad(id, ...args);
+};
+
 const pdfjsLib = _require('pdfjs-dist/legacy/build/pdf.js') as any;
 
 const __filename = fileURLToPath(import.meta.url);
