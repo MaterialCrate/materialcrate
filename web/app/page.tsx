@@ -2,7 +2,12 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { DocumentUpload, More2, Notification } from "iconsax-reactjs";
+import {
+  DocumentUpload,
+  MessageQuestion,
+  More2,
+  Notification,
+} from "iconsax-reactjs";
 import { useAuth } from "./lib/auth-client";
 import { subscribeToNotificationActivity } from "./lib/post-activity-realtime";
 import Post, {
@@ -653,7 +658,7 @@ export default function Home() {
           setActivePdfPost(null);
         }}
       />
-      <div className="lg:hidden fixed right-6 bottom-28 z-50">
+      <div className="lg:hidden fixed right-6 bottom-28 z-50 flex flex-col items-end gap-3">
         <button
           aria-label="Upload button"
           type="button"
@@ -663,23 +668,48 @@ export default function Home() {
             }
             router.push("/create");
           }}
-          className={`cursor-pointer absolute right-0 bottom-16 flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-page active:scale-95 ${
-            moreOptionsOpen
-              ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
-              : "opacity-0 translate-y-3 scale-95 pointer-events-none"
-          }`}
+          className="cursor-pointer flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg hover:bg-page active:opacity-70"
+          style={{
+            opacity: moreOptionsOpen ? 1 : 0,
+            transform: moreOptionsOpen
+              ? "translateY(0) scale(1)"
+              : "translateY(1rem) scale(0.95)",
+            pointerEvents: moreOptionsOpen ? "auto" : "none",
+            transition: "opacity 300ms ease-out, transform 300ms ease-out",
+          }}
         >
           <DocumentUpload size={24} variant="Bold" />
           <p>Upload</p>
         </button>
         <button
-          aria-label="Upload button"
+          aria-label="Request button"
           type="button"
-          className={`cursor-pointer absolute right-16 bottom-0 flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg transition-all duration-300 ease-out hover:bg-page active:scale-95 ${
-            moreOptionsOpen
-              ? "opacity-100 translate-x-0 scale-100 pointer-events-auto"
-              : "opacity-0 translate-x-3 scale-95 pointer-events-none"
-          }`}
+          onClick={() => router.push("/request")}
+          className="cursor-pointer flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg hover:bg-page active:opacity-70"
+          style={{
+            opacity: moreOptionsOpen ? 1 : 0,
+            transform: moreOptionsOpen
+              ? "translateY(0) scale(1)"
+              : "translateY(1rem) scale(0.95)",
+            pointerEvents: moreOptionsOpen ? "auto" : "none",
+            transition: "opacity 300ms ease-out, transform 300ms ease-out",
+          }}
+        >
+          <MessageQuestion size={24} variant="Bold" />
+          <p>Request</p>
+        </button>
+        <button
+          aria-label="Notifications button"
+          type="button"
+          className="cursor-pointer flex items-center gap-3 rounded-3xl bg-surface px-5 py-3 shadow-lg hover:bg-page active:opacity-70"
+          style={{
+            opacity: moreOptionsOpen ? 1 : 0,
+            transform: moreOptionsOpen
+              ? "translateY(0) scale(1)"
+              : "translateY(1rem) scale(0.95)",
+            pointerEvents: moreOptionsOpen ? "auto" : "none",
+            transition: "opacity 300ms ease-out, transform 300ms ease-out",
+          }}
           onClick={() => {
             if (!requireAuthenticatedAccess()) {
               return;
@@ -698,7 +728,13 @@ export default function Home() {
           <div className="relative">
             <Notification size={24} variant="Bold" />
             {unreadNotificationCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-red-500 rounded-full transition-opacity duration-200 flex items-center justify-center text-white text-xs">
+              <span
+                className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 bg-red-500 rounded-full flex items-center justify-center text-white text-xs"
+                style={{
+                  transition: "opacity 200ms",
+                  opacity: unreadNotificationCount > 0 ? 1 : 0,
+                }}
+              >
                 {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
               </span>
             )}
@@ -708,14 +744,30 @@ export default function Home() {
         <button
           title="more actions"
           type="button"
-          className={`cursor-pointer w-12 h-12 relative bg-surface drop-shadow-xl rounded-full flex items-center justify-center transition-all duration-300 ease-out hover:bg-page active:scale-90 ${
-            moreOptionsOpen ? "rotate-180 scale-105" : "rotate-0 scale-100"
-          }`}
+          className="cursor-pointer w-12 h-12 relative bg-surface drop-shadow-xl rounded-full flex items-center justify-center hover:bg-page active:opacity-70"
           onClick={() => setMoreOptionsOpen((prev) => !prev)}
         >
-          <More2 size={30} />
           <span
-            className={`absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full transition-opacity duration-200 ${hasUnopenedNotifications && !moreOptionsOpen ? "opacity-100" : "opacity-0"}`}
+            style={{
+              display: "block",
+              transform: `rotate(${moreOptionsOpen ? 180 : 0}deg)`,
+              transition: "transform 300ms ease-out",
+            }}
+          >
+            <More2 size={30} />
+          </span>
+          <span
+            style={{
+              position: "absolute",
+              top: "-4px",
+              right: "-4px",
+              width: "20px",
+              height: "20px",
+              borderRadius: "50%",
+              background: "rgb(239 68 68)",
+              opacity: hasUnopenedNotifications && !moreOptionsOpen ? 1 : 0,
+              transition: "opacity 200ms",
+            }}
           />
         </button>
       </div>
