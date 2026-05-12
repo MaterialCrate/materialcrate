@@ -223,10 +223,10 @@ export async function POST(req: Request) {
     }
   }
 
-  if (!body.username || !body.displayName || !body.institution) {
+  if (!body.username || !body.displayName) {
     return NextResponse.json(
       {
-        error: "Username, display name, and institution are required",
+        error: "Username and display name are required",
       },
       { status: 400 },
     );
@@ -244,7 +244,7 @@ export async function POST(req: Request) {
   const variables = {
     username: body.username,
     displayName: body.displayName,
-    institution: body.institution,
+    institution: body.institution ?? "",
     institutionVisibility:
       typeof body.institutionVisibility === "string"
         ? body.institutionVisibility.trim() || undefined

@@ -39,6 +39,7 @@ type EditableTextInput = {
   key: "displayName" | "institution" | "program";
   minLength: number;
   maxLength: number;
+  optional?: boolean;
   visibilityKey?: "institutionVisibility" | "programVisibility";
 };
 
@@ -315,6 +316,7 @@ export default function Page() {
       key: "institution",
       minLength: 3,
       maxLength: 50,
+      optional: true,
       visibilityKey: "institutionVisibility",
     },
     {
@@ -325,6 +327,7 @@ export default function Page() {
       key: "program",
       minLength: 3,
       maxLength: 50,
+      optional: true,
       visibilityKey: "programVisibility",
     },
   ];
@@ -349,7 +352,11 @@ export default function Page() {
     profile.username.length < MIN_USERNAME_LENGTH ||
     getValidationError(profile.username.trim()) !== "" ||
     (isUsernameAvailable === false && profile.username !== fetchedUsername) ||
-    textInputs.some((input) => input.value.trim().length < input.minLength) ||
+    textInputs.some((input) => {
+      const trimmed = input.value.trim();
+      if (input.optional && trimmed.length === 0) return false;
+      return trimmed.length < input.minLength;
+    }) ||
     isLoading ||
     isSaving ||
     isSubmitChecking;
@@ -784,8 +791,8 @@ export default function Page() {
                       value={input.value}
                       onChange={input.onchange}
                       disabled={isLoading || isSaving}
-                      required
-                      minLength={input.minLength}
+                      required={!input.optional}
+                      minLength={input.optional && input.value.trim().length === 0 ? undefined : input.minLength}
                       maxLength={input.maxLength}
                       className={`w-full rounded-2xl border border-edge bg-surface-high px-3 py-3 text-sm placeholder:text-ink-3 focus:outline-none ${visibilityKey ? "pr-12" : ""}`}
                     />
