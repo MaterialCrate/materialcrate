@@ -183,7 +183,7 @@ export default function Header({
               <button
                 type="button"
                 aria-label="edit profile"
-                onClick={() => router.push("/settings/profile")}
+                onClick={() => router.replace("/settings/profile")}
                 className={iconButtonClass}
               >
                 <Edit2 size={20} color={iconColor} />
@@ -245,7 +245,7 @@ export default function Header({
               <button
                 type="button"
                 aria-label="edit profile"
-                onClick={() => router.push("/settings/profile")}
+                onClick={() => router.replace("/settings/profile")}
                 className={iconButtonClass}
               >
                 <Edit2 size={20} color={iconColor} />
