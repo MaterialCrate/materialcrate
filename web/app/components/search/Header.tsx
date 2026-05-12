@@ -3,6 +3,7 @@
 import { ArrowLeft2, SearchNormal1 } from "iconsax-reactjs";
 import { useRouter } from "next/navigation";
 import useScrollVisibility from "../useScrollVisibility";
+import LoadingBar from "../LoadingBar";
 
 export type SearchTab = "users" | "documents";
 
@@ -12,6 +13,7 @@ type HeaderProps = {
   activeTab: SearchTab;
   onTabChange: (tab: SearchTab) => void;
   search: () => void;
+  isLoading?: boolean;
 };
 
 export default function Header({
@@ -20,13 +22,14 @@ export default function Header({
   activeTab,
   onTabChange,
   search,
+  isLoading = false,
 }: HeaderProps) {
   const router = useRouter();
   const isVisible = useScrollVisibility();
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-30 border-b border-edge-strong bg-surface backdrop-blur-md transition-transform duration-300 ease-out ${
+      className={`fixed top-0 left-0 right-0 z-30 bg-surface backdrop-blur-md transition-transform duration-300 ease-out ${
         isVisible ? "translate-y-0" : "-translate-y-full"
       } ${!query && "pb-6"}`}
     >
@@ -82,6 +85,7 @@ export default function Header({
           </div>
         )}
       </div>
+      {isLoading && <LoadingBar />}
     </div>
   );
 }

@@ -9,7 +9,6 @@ import Post, {
 import OptionsDrawer from "@/app/components/home/PostOptions";
 import Header, { type SearchTab } from "@/app/components/search/Header";
 import UserCard, { type SearchUser } from "@/app/components/search/UserCard";
-import LoadingBar from "../components/LoadingBar";
 import Alert from "../components/Alert";
 
 const PAGE_SIZE = 12;
@@ -35,13 +34,11 @@ export default function SearchPage() {
   const [activeOptionsAnchor, setActiveOptionsAnchor] =
     useState<PostOptionsAnchor | null>(null);
 
-  // track how many items are loaded per tab
   const offsetRef = useRef({ users: 0, documents: 0 });
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const deferredQuery = useDeferredValue(query.trim());
 
-  // sync URL → state
   useEffect(() => {
     const nextQuery = searchParams.get("q")?.trim() ?? "";
     const nextTab = searchParams.get("tab") === "users" ? "users" : "documents";
@@ -49,7 +46,6 @@ export default function SearchPage() {
     setActiveTab((c) => (c === nextTab ? c : nextTab));
   }, [searchParams]);
 
-  // sync state → URL
   useEffect(() => {
     const nextParams = new URLSearchParams(searchParamsString);
     if (query.trim()) nextParams.set("q", query.trim());
@@ -81,7 +77,6 @@ export default function SearchPage() {
     [],
   );
 
-  // initial / query-change fetch
   useEffect(() => {
     const normalizedQuery = deferredQuery.trim();
 
@@ -133,7 +128,6 @@ export default function SearchPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deferredQuery, fetchResults]);
 
-  // re-fetch when tab switches (reset to offset 0)
   useEffect(() => {
     const normalizedQuery = deferredQuery.trim();
     if (!normalizedQuery) return;
@@ -280,6 +274,7 @@ export default function SearchPage() {
           onQueryChange={setQuery}
           activeTab={activeTab}
           onTabChange={setActiveTab}
+          isLoading={isLoading || isFetchingMore}
           search={() => {
             const nextParams = new URLSearchParams(searchParamsString);
             if (query.trim()) nextParams.set("q", query.trim());
@@ -289,7 +284,6 @@ export default function SearchPage() {
             router.push(qs ? `/search?${qs}` : "/search");
           }}
         />
-        {(isLoading || isFetchingMore) && <LoadingBar />}
       </>
 
       <main className="mx-auto max-w-2xl">
