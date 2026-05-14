@@ -9,6 +9,7 @@ import {
   InfoCircle,
   Image as ImageIcon,
   Warning2,
+  MessageQuestion,
 } from "iconsax-reactjs";
 import Header from "../../../components/Header";
 
@@ -220,8 +221,97 @@ function PostCard({
   );
 }
 
+interface DeletedRequest {
+  id: string;
+  title: string;
+  categories: string[];
+  bounty?: number | null;
+  deletedAt: Date;
+}
+
+interface ApiRequest {
+  id: string;
+  title: string;
+  categories: string[];
+  bounty?: number | null;
+  deletedAt: string;
+}
+
+function mapApiRequest(r: ApiRequest): DeletedRequest {
+  return {
+    id: r.id,
+    title: r.title,
+    categories: r.categories,
+    bounty: r.bounty,
+    deletedAt: (() => { const d = new Date(r.deletedAt); return isNaN(d.getTime()) ? new Date() : d; })(),
+  };
+}
+
+function RequestCard({
+  request,
+  onRestore,
+  onDelete,
+}: {
+  request: DeletedRequest;
+  onRestore: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const ago = daysAgo(request.deletedAt);
+  const remaining = daysRemaining(request.deletedAt);
+
+  return (
+    <div className="flex gap-3 rounded-[20px] border border-edge bg-surface p-3.5 transition-all duration-200">
+      <div className="relative flex h-16 w-14 shrink-0 items-center justify-center rounded-[14px] bg-[#EFF6FF] opacity-80">
+        <MessageQuestion size={20} variant="Bold" className="text-[#1D4ED8]" />
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-ink">{request.title}</p>
+            <p className="mt-0.5 text-xs text-ink-3">
+              {request.categories[0]
+                ? request.categories[0].charAt(0).toUpperCase() + request.categories[0].slice(1)
+                : "Request"}
+              {request.bounty ? ` · ${request.bounty.toLocaleString()} tokens` : ""}
+            </p>
+          </div>
+          <UrgencyPill remaining={remaining} />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <p className="text-[11px] text-ink-3">
+            Deleted{" "}
+            {ago === 0 ? "today" : ago === 1 ? "yesterday" : `${ago} days ago`}
+          </p>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => onRestore(request.id)}
+              className="flex items-center gap-1 rounded-full border border-edge px-2.5 py-1 text-[11px] font-medium text-ink-2 transition-colors hover:border-[#E1761F]/40 hover:bg-[#FBF7F2] hover:text-[#E1761F] active:scale-[0.97]"
+            >
+              <RotateLeft size={12} />
+              Restore
+            </button>
+            <button
+              type="button"
+              aria-label="Delete permanently"
+              onClick={() => onDelete(request.id)}
+              className="flex items-center gap-1 rounded-full border border-edge px-2.5 py-1 text-[11px] font-medium text-ink-3 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 active:scale-[0.97]"
+            >
+              <Trash size={12} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function RecentlyDeletedPage() {
   const [posts, setPosts] = useState<DeletedPost[]>([]);
+  const [requests, setRequests] = useState<DeletedRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{
     message: string;
@@ -229,13 +319,13 @@ export default function RecentlyDeletedPage() {
   } | null>(null);
 
   useEffect(() => {
-    fetch("/api/posts/deleted")
-      .then((r) => r.json())
-      .then((data) => {
-        setPosts((data.posts ?? []).map(mapApiPost));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    Promise.all([
+      fetch("/api/posts/deleted").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/requests/deleted").then((r) => r.json()).catch(() => ({})),
+    ]).then(([postData, requestData]) => {
+      setPosts((postData.posts ?? []).map(mapApiPost));
+      setRequests((requestData.requests ?? []).map(mapApiRequest));
+    }).finally(() => setLoading(false));
   }, []);
 
   function showToast(message: string, type: "restore" | "delete") {
@@ -246,13 +336,11 @@ export default function RecentlyDeletedPage() {
   async function handleRestore(id: string) {
     const post = posts.find((p) => p.id === id);
     setPosts((prev) => prev.filter((p) => p.id !== id));
-
     const res = await fetch("/api/posts/restore", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ postId: id }),
     });
-
     if (!res.ok) {
       setPosts((prev) => (post ? [post, ...prev] : prev));
       showToast("Failed to restore post", "delete");
@@ -264,13 +352,11 @@ export default function RecentlyDeletedPage() {
   async function handleDelete(id: string) {
     const post = posts.find((p) => p.id === id);
     setPosts((prev) => prev.filter((p) => p.id !== id));
-
     const res = await fetch("/api/posts/permanently-delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ postId: id }),
     });
-
     if (!res.ok) {
       setPosts((prev) => (post ? [post, ...prev] : prev));
       showToast("Failed to delete post", "delete");
@@ -279,7 +365,34 @@ export default function RecentlyDeletedPage() {
     }
   }
 
+  async function handleRestoreRequest(id: string) {
+    const req = requests.find((r) => r.id === id);
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+    const res = await fetch(`/api/requests/${id}/restore`, { method: "POST" });
+    if (!res.ok) {
+      setRequests((prev) => (req ? [req, ...prev] : prev));
+      showToast("Failed to restore request", "delete");
+    } else {
+      if (req) showToast(`"${req.title.slice(0, 30)}…" restored`, "restore");
+    }
+  }
+
+  async function handleDeleteRequest(id: string) {
+    const req = requests.find((r) => r.id === id);
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+    const res = await fetch(`/api/requests/${id}/permanently-delete`, { method: "POST" });
+    if (!res.ok) {
+      setRequests((prev) => (req ? [req, ...prev] : prev));
+      showToast("Failed to delete request", "delete");
+    } else {
+      showToast("Permanently deleted", "delete");
+    }
+  }
+
   const urgentPosts = posts.filter((p) => daysRemaining(p.deletedAt) <= 5);
+  const urgentRequests = requests.filter((r) => daysRemaining(r.deletedAt) <= 5);
+  const totalUrgent = urgentPosts.length + urgentRequests.length;
+  const totalItems = posts.length + requests.length;
 
   return (
     <div className="min-h-screen bg-page">
@@ -302,17 +415,13 @@ export default function RecentlyDeletedPage() {
           </div>
         </div>
 
-        {!loading && urgentPosts.length > 0 && (
+        {!loading && totalUrgent > 0 && (
           <div className="flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/40 dark:bg-red-950/20">
-            <Warning2
-              size={15}
-              variant="Bold"
-              className="shrink-0 text-red-500"
-            />
+            <Warning2 size={15} variant="Bold" className="shrink-0 text-red-500" />
             <p className="text-xs font-medium text-red-600 dark:text-red-400">
-              {urgentPosts.length === 1
-                ? "1 post is expiring in 5 days or less"
-                : `${urgentPosts.length} posts are expiring in 5 days or less`}
+              {totalUrgent === 1
+                ? "1 item is expiring in 5 days or less"
+                : `${totalUrgent} items are expiring in 5 days or less`}
             </p>
           </div>
         )}
@@ -323,21 +432,38 @@ export default function RecentlyDeletedPage() {
             <SkeletonCard />
             <SkeletonCard />
           </div>
-        ) : posts.length > 0 ? (
-          <div className="space-y-2.5">
-            <div className="px-1">
-              <p className="text-[11px] font-medium uppercase tracking-wider text-ink-3">
-                {posts.length} item{posts.length !== 1 ? "s" : ""}
-              </p>
-            </div>
-            {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onRestore={handleRestore}
-                onDelete={handleDelete}
-              />
-            ))}
+        ) : totalItems > 0 ? (
+          <div className="space-y-4">
+            {posts.length > 0 && (
+              <div className="space-y-2.5">
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wider text-ink-3">
+                  Documents · {posts.length}
+                </p>
+                {posts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onRestore={handleRestore}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+            )}
+            {requests.length > 0 && (
+              <div className="space-y-2.5">
+                <p className="px-1 text-[11px] font-medium uppercase tracking-wider text-ink-3">
+                  Requests · {requests.length}
+                </p>
+                {requests.map((req) => (
+                  <RequestCard
+                    key={req.id}
+                    request={req}
+                    onRestore={handleRestoreRequest}
+                    onDelete={handleDeleteRequest}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 rounded-[20px] border border-edge bg-surface px-6 py-16 text-center">
@@ -347,8 +473,8 @@ export default function RecentlyDeletedPage() {
             <div>
               <p className="text-sm font-semibold text-ink">Nothing here</p>
               <p className="mt-1 text-xs leading-relaxed text-ink-3">
-                Posts you delete will appear here for 30 days before being
-                permanently removed.
+                Posts and requests you delete will appear here for 30 days before
+                being permanently removed.
               </p>
             </div>
           </div>

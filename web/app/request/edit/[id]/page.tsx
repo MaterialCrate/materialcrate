@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown2, CloseCircle, Coin1 } from "iconsax-reactjs";
 import {
@@ -12,9 +12,27 @@ import ActionButton from "@/app/components/ActionButton";
 import Alert from "@/app/components/Alert";
 import Header from "@/app/components/Header";
 
-export default function CreateRequestPage() {
+type RequestData = {
+  id: string;
+  title: string;
+  description: string;
+  categories: string[];
+  bounty?: number | null;
+  canEditBounty: boolean;
+  solved: boolean;
+  closed: boolean;
+};
+
+export default function EditRequestPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
   const router = useRouter();
   const { user, isLoading: isLoadingAuth } = useAuth();
+
+  const [original, setOriginal] = useState<RequestData | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [categoryQuery, setCategoryQuery] = useState("");
@@ -22,16 +40,30 @@ export default function CreateRequestPage() {
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [bounty, setBounty] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
-  const [alertType, setAlertType] = useState<"success" | "error" | "info">(
-    "error",
-  );
+  const [alertType, setAlertType] = useState<"success" | "error" | "info">("error");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingRequest, setIsLoadingRequest] = useState(true);
   const categoryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isLoadingAuth) return;
     if (!user) router.push("/login");
   }, [isLoadingAuth, router, user]);
+
+  useEffect(() => {
+    fetch(`/api/requests/${id}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data: RequestData) => {
+        if (!data?.id) { router.push("/"); return; }
+        setOriginal(data);
+        setTitle(data.title);
+        setDescription(data.description);
+        setSelectedCategories(data.categories ?? []);
+        setBounty(data.bounty ? String(data.bounty) : "");
+      })
+      .catch(() => router.push("/"))
+      .finally(() => setIsLoadingRequest(false));
+  }, [id, router]);
 
   const filteredCategories = POST_CATEGORIES.filter(
     (cat) =>
@@ -60,12 +92,12 @@ export default function CreateRequestPage() {
     e.preventDefault();
     if (!title.trim()) {
       setAlertType("error");
-      setAlertMessage("Please enter a title for your request");
+      setAlertMessage("Please enter a title");
       return;
     }
     if (!description.trim()) {
       setAlertType("error");
-      setAlertMessage("Please describe what you're looking for");
+      setAlertMessage("Please describe what you need");
       return;
     }
 
@@ -74,23 +106,25 @@ export default function CreateRequestPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/requests", {
-        method: "POST",
+      const body: Record<string, unknown> = {
+        title: title.trim(),
+        description: description.trim(),
+        categories: selectedCategories,
+      };
+      if (original?.canEditBounty) body.bounty = bountyNum;
+
+      const res = await fetch(`/api/requests/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim(),
-          categories: selectedCategories,
-          bounty: bountyNum,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setAlertType("error");
-        setAlertMessage(data?.error || "Failed to post request");
+        setAlertMessage(data?.error || "Failed to save changes");
         return;
       }
-      router.push(`/request/${data.id}`);
+      router.push(`/request/${id}`);
     } catch {
       setAlertType("error");
       setAlertMessage("Something went wrong. Please try again.");
@@ -101,9 +135,21 @@ export default function CreateRequestPage() {
 
   const canSubmit = title.trim().length > 0 && description.trim().length > 0;
 
+  if (isLoadingRequest) {
+    return (
+      <div className="min-h-screen bg-page">
+        <Header title="Edit Request" />
+        <div className="mx-auto max-w-xl px-4 pt-22 space-y-4">
+          <div className="skeleton h-48 rounded-2xl" />
+          <div className="skeleton h-32 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-page">
-      <Header title="New Request" />
+      <Header title="Edit Request" />
       <Alert message={alertMessage || null} type={alertType} />
 
       <form
@@ -113,57 +159,49 @@ export default function CreateRequestPage() {
         <div className="space-y-4 lg:bg-surface lg:rounded-2xl lg:border lg:border-edge lg:shadow-sm lg:p-6">
           <div>
             <label
-              htmlFor="request-title"
+              htmlFor="edit-title"
               className="mb-2 block text-sm font-semibold text-ink"
             >
               What are you looking for?
               <span className="ml-1 text-red-400">*</span>
             </label>
             <input
-              id="request-title"
+              id="edit-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Grade 12 Physics Notes – ZSCE"
               maxLength={120}
               className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 text-sm text-ink placeholder:text-ink-3 focus:border-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 transition-all duration-200"
             />
-            <p className="mt-1.5 text-right text-xs text-ink-3">
-              {title.length}/120
-            </p>
+            <p className="mt-1.5 text-right text-xs text-ink-3">{title.length}/120</p>
           </div>
 
           <div>
             <label
-              htmlFor="request-description"
+              htmlFor="edit-description"
               className="mb-2 block text-sm font-semibold text-ink"
             >
               Describe what you need
               <span className="ml-1 text-red-400">*</span>
             </label>
             <textarea
-              id="request-description"
+              id="edit-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Provide details about the document — edition, year, specific chapters, format preferences, etc."
               rows={5}
               maxLength={1000}
               className="w-full resize-none rounded-2xl border border-edge-mid bg-input px-4 py-3 text-sm text-ink placeholder:text-ink-3 focus:border-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 transition-all duration-200"
             />
-            <p className="mt-1.5 text-right text-xs text-ink-3">
-              {description.length}/1000
-            </p>
+            <p className="mt-1.5 text-right text-xs text-ink-3">{description.length}/1000</p>
           </div>
 
           <div className="relative">
             <label
-              htmlFor="request-categories"
+              htmlFor="edit-categories"
               className="mb-2 block text-sm font-semibold text-ink"
             >
               Categories
-              <span className="ml-1.5 text-xs font-normal text-ink-3">
-                (optional, up to 5)
-              </span>
+              <span className="ml-1.5 text-xs font-normal text-ink-3">(optional, up to 5)</span>
             </label>
 
             {selectedCategories.length > 0 && (
@@ -190,7 +228,7 @@ export default function CreateRequestPage() {
             <div className="relative">
               <input
                 ref={categoryInputRef}
-                id="request-categories"
+                id="edit-categories"
                 type="text"
                 value={categoryQuery}
                 onChange={(e) => {
@@ -198,9 +236,7 @@ export default function CreateRequestPage() {
                   setIsCategoryDropdownOpen(true);
                 }}
                 onFocus={() => setIsCategoryDropdownOpen(true)}
-                onBlur={() =>
-                  setTimeout(() => setIsCategoryDropdownOpen(false), 150)
-                }
+                onBlur={() => setTimeout(() => setIsCategoryDropdownOpen(false), 150)}
                 placeholder="Search categories…"
                 className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 pr-10 text-sm text-ink placeholder:text-ink-3 focus:border-[#1D4ED8] focus:outline-none focus:ring-2 focus:ring-[#1D4ED8]/20 transition-all duration-200"
               />
@@ -227,62 +263,65 @@ export default function CreateRequestPage() {
             )}
           </div>
 
-          <div>
-            <label
-              htmlFor="request-bounty"
-              className="mb-2 block text-sm font-semibold text-ink"
-            >
-              Offer a reward
-              <span className="ml-1.5 text-xs font-normal text-ink-3">
-                (optional)
-              </span>
-            </label>
-            <div className="relative">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
-                <Coin1 size={18} color="#E1761F" variant="Bold" />
-                <span className="text-sm font-semibold text-[#E1761F]">
-                  Tokens
-                </span>
+          {original?.canEditBounty ? (
+            <div>
+              <label
+                htmlFor="edit-bounty"
+                className="mb-2 block text-sm font-semibold text-ink"
+              >
+                Offer a reward
+                <span className="ml-1.5 text-xs font-normal text-ink-3">(optional)</span>
+              </label>
+              <div className="relative">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
+                  <Coin1 size={18} color="#E1761F" variant="Bold" />
+                  <span className="text-sm font-semibold text-[#E1761F]">Tokens</span>
+                </div>
+                <input
+                  id="edit-bounty"
+                  type="text"
+                  inputMode="numeric"
+                  value={bounty}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    if (digits === "" || parseInt(digits, 10) <= 100000) setBounty(digits);
+                  }}
+                  placeholder="0"
+                  className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 pl-28 text-sm text-ink placeholder:text-ink-3 focus:border-[#E1761F] focus:outline-none focus:ring-2 focus:ring-[#E1761F]/20 transition-all duration-200"
+                />
               </div>
-              <input
-                id="request-bounty"
-                type="text"
-                inputMode="numeric"
-                value={bounty}
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, "");
-                  if (digits === "" || parseInt(digits, 10) <= 100000) {
-                    setBounty(digits);
-                  }
-                }}
-                placeholder="0"
-                className="w-full rounded-2xl border border-edge-mid bg-input px-4 py-3 pl-28 text-sm text-ink placeholder:text-ink-3 focus:border-[#E1761F] focus:outline-none focus:ring-2 focus:ring-[#E1761F]/20 transition-all duration-200"
-              />
+              <p className="mt-1.5 text-xs text-ink-3">
+                Tokens will be held until the request is fulfilled.
+              </p>
             </div>
-            <p className="mt-1.5 text-xs text-ink-3">
-              Tokens will be held until the request is fulfilled and released to
-              the contributor you choose.
-            </p>
-          </div>
+          ) : (
+            original?.bounty ? (
+              <div className="flex items-center gap-2 rounded-2xl bg-surface-high px-4 py-3">
+                <Coin1 size={16} color="#E1761F" variant="Bold" />
+                <p className="text-sm text-ink-2">
+                  <span className="font-semibold text-[#E1761F]">{original.bounty.toLocaleString()} token reward</span>
+                  <span className="ml-1.5 text-ink-3">— bounty cannot be changed once responses have been submitted</span>
+                </p>
+              </div>
+            ) : null
+          )}
 
-          {/* Desktop submit button — inside the card */}
           <button
             type="submit"
             disabled={!canSubmit || isSubmitting}
             className="hidden lg:flex w-full cursor-pointer items-center justify-center rounded-2xl bg-[#1D4ED8] py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#1A44C2] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
-            {isSubmitting ? "Posting…" : "Post Request"}
+            {isSubmitting ? "Saving…" : "Save Changes"}
           </button>
         </div>
 
-        {/* Mobile fixed bottom button */}
         <ActionButton
           type="submit"
           disabled={!canSubmit || isSubmitting}
           fixedBottom
           className="lg:hidden w-full"
         >
-          {isSubmitting ? "Posting…" : "Post Request"}
+          {isSubmitting ? "Saving…" : "Save Changes"}
         </ActionButton>
       </form>
     </div>

@@ -18,6 +18,7 @@ const DETAIL_QUERY = `
       solved
       closed
       responseCount
+      canEditBounty
       viewerHasFulfilled
       viewerIsAuthor
       createdAt
@@ -81,6 +82,15 @@ const DETAIL_QUERY = `
   }
 `;
 
+const UPDATE_MUTATION = `
+  mutation UpdateDocumentRequest($id: ID!, $title: String, $description: String, $categories: [String!], $bounty: Int) {
+    updateDocumentRequest(id: $id, title: $title, description: $description, categories: $categories, bounty: $bounty) {
+      id title description categories bounty solved closed responseCount canEditBounty createdAt updatedAt
+      author { id displayName username profilePicture subscriptionPlan }
+    }
+  }
+`;
+
 const DELETE_MUTATION = `
   mutation DeleteDocumentRequest($id: ID!) {
     deleteDocumentRequest(id: $id)
@@ -118,6 +128,39 @@ export async function GET(
   }
 
   return NextResponse.json(body.data.documentRequest);
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("mc_session")?.value;
+  if (!token) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  const { id } = await params;
+  const body = await request.json().catch(() => null);
+  if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+
+  const { title, description, categories, bounty } = body;
+
+  const res = await fetch(GRAPHQL_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({
+      query: UPDATE_MUTATION,
+      variables: { id, title, description, categories, bounty: bounty ?? undefined },
+    }),
+  });
+
+  const gqlBody = await res.json().catch(() => ({}));
+  if (!res.ok || gqlBody?.errors?.length) {
+    return NextResponse.json(
+      { error: gqlBody?.errors?.[0]?.message || "Failed to update request" },
+      { status: 400 },
+    );
+  }
+  return NextResponse.json(gqlBody.data.updateDocumentRequest);
 }
 
 export async function DELETE(

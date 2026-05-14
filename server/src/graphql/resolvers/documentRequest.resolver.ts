@@ -179,6 +179,24 @@ function scoreRequestForFeed(
 
 export const DocumentRequestResolver = {
   Query: {
+    recentlyDeletedRequests: async (
+      _: unknown,
+      { limit = 50, offset = 0 }: { limit?: number; offset?: number },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated.");
+      const safeLimit = Math.min(Math.max(1, limit ?? 50), 100);
+      const safeOffset = Math.max(0, offset ?? 0);
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      return prisma.documentRequest.findMany({
+        where: { authorId: viewerId, deleted: true, deletedAt: { gte: cutoff } },
+        orderBy: { deletedAt: "desc" },
+        take: safeLimit,
+        skip: safeOffset,
+      });
+    },
+
     documentRequest: async (
       _: unknown,
       { id }: { id: string },
@@ -651,6 +669,113 @@ export const DocumentRequestResolver = {
       return updatedRequest;
     },
 
+    updateDocumentRequest: async (
+      _: unknown,
+      {
+        id,
+        title,
+        description,
+        categories,
+        bounty,
+      }: {
+        id: string;
+        title?: string;
+        description?: string;
+        categories?: string[];
+        bounty?: number | null;
+      },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated.");
+
+      const request = await prisma.documentRequest.findFirst({
+        where: { id, deleted: false },
+        select: {
+          id: true,
+          authorId: true,
+          bounty: true,
+          bountyEscrowedAt: true,
+          bountyReleasedAt: true,
+          solved: true,
+          closed: true,
+          title: true,
+        },
+      });
+      if (!request) throw new Error("Request not found.");
+      if (request.authorId !== viewerId) throw new Error("Only the author can edit this request.");
+      if (request.solved || request.closed) throw new Error("Cannot edit a solved or closed request.");
+
+      const responseCount = await prisma.documentRequestFulfillment.count({
+        where: { requestId: id },
+      });
+      const hasResponses = responseCount > 0;
+
+      const data: Record<string, unknown> = {};
+      if (title !== undefined) data.title = title.trim();
+      if (description !== undefined) data.description = description.trim();
+      if (categories !== undefined) data.categories = categories;
+
+      // Bounty changes only allowed when no responses
+      if (bounty !== undefined && !hasResponses) {
+        const oldBounty = request.bounty ?? 0;
+        const newBounty = typeof bounty === "number" && bounty > 0 ? Math.round(bounty) : 0;
+
+        if (newBounty !== oldBounty) {
+          const user = await prisma.user.findUnique({
+            where: { id: viewerId },
+            select: { tokenBalance: true },
+          });
+          if (!user) throw new Error("User not found.");
+
+          const diff = newBounty - oldBounty;
+          if (diff > 0 && user.tokenBalance < diff) {
+            throw new Error("Insufficient token balance for this bounty.");
+          }
+
+          const ops: Parameters<typeof prisma.$transaction>[0] = [
+            prisma.documentRequest.update({
+              where: { id },
+              data: {
+                ...data,
+                bounty: newBounty > 0 ? newBounty : null,
+                bountyEscrowedAt: newBounty > 0 ? (request.bountyEscrowedAt ?? new Date()) : null,
+                bountyReleasedAt: newBounty === 0 && oldBounty > 0 ? new Date() : null,
+              },
+            }),
+          ];
+
+          if (diff !== 0) {
+            ops.push(
+              prisma.user.update({
+                where: { id: viewerId },
+                data: {
+                  tokenBalance: { increment: -diff },
+                  tokensRedeemed: { increment: diff },
+                },
+              }),
+              prisma.tokenTransaction.create({
+                data: {
+                  userId: viewerId,
+                  type: diff > 0 ? "REQUEST_BOUNTY_ESCROW" : "REQUEST_BOUNTY_REFUND",
+                  amount: -diff,
+                  description:
+                    diff > 0
+                      ? `Bounty increased: "${request.title}"`
+                      : `Bounty reduced: "${request.title}"`,
+                },
+              }),
+            );
+          }
+
+          const [updatedRequest] = await prisma.$transaction(ops);
+          return updatedRequest;
+        }
+      }
+
+      return prisma.documentRequest.update({ where: { id }, data });
+    },
+
     deleteDocumentRequest: async (
       _: unknown,
       { id }: { id: string },
@@ -664,11 +789,13 @@ export const DocumentRequestResolver = {
         select: { id: true, authorId: true, bounty: true, solved: true, title: true },
       });
       if (!request) throw new Error("Request not found.");
-      if (request.authorId !== viewerId) {
-        throw new Error("Only the request author can delete it.");
-      }
+      if (request.authorId !== viewerId) throw new Error("Only the request author can delete it.");
 
-      // Refund escrow if bounty was not yet released
+      const responseCount = await prisma.documentRequestFulfillment.count({
+        where: { requestId: id },
+      });
+      if (responseCount > 0) throw new Error("Cannot delete a request that already has responses.");
+
       if (request.bounty && !request.solved) {
         await prisma.$transaction([
           prisma.documentRequest.update({
@@ -698,6 +825,72 @@ export const DocumentRequestResolver = {
         });
       }
 
+      return true;
+    },
+
+    restoreDocumentRequest: async (
+      _: unknown,
+      { id }: { id: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated.");
+
+      const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const request = await prisma.documentRequest.findFirst({
+        where: { id, authorId: viewerId, deleted: true, deletedAt: { gte: cutoff } },
+      });
+      if (!request) throw new Error("Request not found or no longer restorable.");
+
+      return prisma.documentRequest.update({
+        where: { id },
+        data: { deleted: false, deletedAt: null },
+      });
+    },
+
+    permanentlyDeleteDocumentRequest: async (
+      _: unknown,
+      { id }: { id: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated.");
+
+      const request = await prisma.documentRequest.findFirst({
+        where: { id, authorId: viewerId, deleted: true },
+      });
+      if (!request) throw new Error("Request not found.");
+
+      await prisma.documentRequest.delete({ where: { id } });
+      return true;
+    },
+
+    deleteDocumentRequestFulfillment: async (
+      _: unknown,
+      { fulfillmentId }: { fulfillmentId: string },
+      ctx: GraphQLContext,
+    ) => {
+      const viewerId = ctx.user?.sub;
+      if (!viewerId) throw new Error("Not authenticated.");
+
+      const fulfillment = await prisma.documentRequestFulfillment.findUnique({
+        where: { id: fulfillmentId },
+        select: { id: true, authorId: true, requestId: true },
+      });
+      if (!fulfillment) throw new Error("Fulfillment not found.");
+      if (fulfillment.authorId !== viewerId) {
+        throw new Error("Only the fulfillment author can delete it.");
+      }
+
+      const request = await prisma.documentRequest.findUnique({
+        where: { id: fulfillment.requestId },
+        select: { acceptedFulfillmentId: true },
+      });
+      if (request?.acceptedFulfillmentId === fulfillmentId) {
+        throw new Error("Cannot delete an accepted fulfillment.");
+      }
+
+      await prisma.documentRequestFulfillment.delete({ where: { id: fulfillmentId } });
       return true;
     },
   },
@@ -749,12 +942,20 @@ export const DocumentRequestResolver = {
 
     createdAt: (parent: { createdAt: Date }) => parent.createdAt.toISOString(),
     updatedAt: (parent: { updatedAt: Date }) => parent.updatedAt.toISOString(),
+    deletedAt: (parent: { deletedAt?: Date | null }) => parent.deletedAt?.toISOString() ?? null,
 
     bountyEscrowedAt: (parent: { bountyEscrowedAt?: Date | null }) =>
       parent.bountyEscrowedAt?.toISOString() ?? null,
 
     bountyReleasedAt: (parent: { bountyReleasedAt?: Date | null }) =>
       parent.bountyReleasedAt?.toISOString() ?? null,
+
+    canEditBounty: async (parent: { id: string }) => {
+      const count = await prisma.documentRequestFulfillment.count({
+        where: { requestId: parent.id },
+      });
+      return count === 0;
+    },
   },
 
   DocumentRequestFulfillment: {

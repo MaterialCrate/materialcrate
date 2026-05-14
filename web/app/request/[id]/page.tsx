@@ -13,6 +13,8 @@ import {
   TickCircle,
   Send2,
   Heart,
+  Edit2,
+  Trash,
 } from "iconsax-reactjs";
 import { useAuth } from "@/app/lib/auth-client";
 import Header from "@/app/components/Header";
@@ -52,6 +54,7 @@ type RequestDetail = {
   solved: boolean;
   closed: boolean;
   responseCount: number;
+  canEditBounty: boolean;
   viewerHasFulfilled: boolean;
   viewerIsAuthor: boolean;
   createdAt: string;
@@ -92,6 +95,8 @@ export default function RequestDetailPage({
   const [notFound, setNotFound] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
   const [likingId, setLikingId] = useState<string | null>(null);
+  const [isDeletingRequest, setIsDeletingRequest] = useState(false);
+  const [deletingFulfillmentId, setDeletingFulfillmentId] = useState<string | null>(null);
 
   useEffect(() => {
     setIsLoading(true);
@@ -189,11 +194,34 @@ export default function RequestDetailPage({
   };
 
   const handleFulfill = () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (!user) { router.push("/login"); return; }
     router.push(`/create?requestId=${id}`);
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!window.confirm("Delete this request? It will be kept for 30 days and can be restored.")) return;
+    setIsDeletingRequest(true);
+    try {
+      const res = await fetch(`/api/requests/${id}`, { method: "DELETE" });
+      if (res.ok) router.push("/");
+    } finally {
+      setIsDeletingRequest(false);
+    }
+  };
+
+  const handleDeleteFulfillment = async (fulfillmentId: string) => {
+    if (!window.confirm("Remove your response from this request?")) return;
+    setDeletingFulfillmentId(fulfillmentId);
+    try {
+      const res = await fetch(`/api/requests/fulfillments/${fulfillmentId}`, { method: "DELETE" });
+      if (res.ok) {
+        setRequest((prev) =>
+          prev ? { ...prev, fulfillments: prev.fulfillments.filter((f) => f.id !== fulfillmentId) } : prev,
+        );
+      }
+    } finally {
+      setDeletingFulfillmentId(null);
+    }
   };
 
   if (isLoading) {
@@ -229,48 +257,70 @@ export default function RequestDetailPage({
       <Header
         title="Document Request"
         rightSlot={
-          <button
-            type="button"
-            aria-label="Share"
-            className="cursor-pointer rounded-full p-1 transition-opacity hover:opacity-60"
-            onClick={() => {
-              if (navigator.share) {
-                void navigator.share({
-                  title: request.title,
-                  url: window.location.href,
-                });
-              }
-            }}
-          >
-            <Send2 size={20} color="var(--ink-2)" />
-          </button>
+          <div className="flex items-center gap-1">
+            {request.viewerIsAuthor && !request.solved && !request.closed && (
+              <button
+                type="button"
+                aria-label="Edit request"
+                onClick={() => router.push(`/request/edit/${id}`)}
+                className="cursor-pointer rounded-full p-1.5 transition-colors hover:bg-surface-high active:bg-edge"
+              >
+                <Edit2 size={18} color="var(--ink-2)" />
+              </button>
+            )}
+            {request.viewerIsAuthor && !request.solved && !request.closed && request.responseCount === 0 && (
+              <button
+                type="button"
+                aria-label="Delete request"
+                disabled={isDeletingRequest}
+                onClick={() => void handleDeleteRequest()}
+                className="cursor-pointer rounded-full p-1.5 transition-colors hover:bg-red-50 active:bg-red-100 disabled:opacity-40"
+              >
+                <Trash size={18} color="#ef4444" />
+              </button>
+            )}
+            <button
+              type="button"
+              aria-label="Share"
+              className="cursor-pointer rounded-full p-1.5 transition-opacity hover:opacity-60"
+              onClick={() => {
+                if (navigator.share) {
+                  void navigator.share({ title: request.title, url: window.location.href });
+                }
+              }}
+            >
+              <Send2 size={18} color="var(--ink-2)" />
+            </button>
+          </div>
         }
       />
 
-      <div className="mx-auto max-w-150 pt-22 pb-20">
-        <div className="lg:bg-surface lg:rounded-xl lg:border lg:border-edge lg:shadow-sm">
-          <div className="flex items-start justify-between px-4">
+      <div className="mx-auto max-w-150 pt-20 pb-28 lg:pb-12 lg:px-4 lg:pt-22">
+        {/* Request card */}
+        <div className="lg:bg-surface lg:rounded-2xl lg:border lg:border-edge lg:shadow-sm">
+          {/* Author + status */}
+          <div className="flex items-start justify-between px-4 pt-5">
             <button
               type="button"
-              className="cursor-pointer flex min-w-0 items-center gap-3 rounded-xl py-1 text-left transition-colors hover:bg-surface-high active:bg-edge"
+              className="cursor-pointer flex min-w-0 items-center gap-3 rounded-xl py-1 -ml-1 pl-1 text-left transition-colors hover:bg-surface-high active:bg-edge"
               onClick={() =>
                 router.push(
                   `/user/${encodeURIComponent(request.author.username)}`,
                 )
               }
             >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
                 {request.author.profilePicture ? (
                   <Image
                     src={request.author.profilePicture}
                     alt=""
-                    width={44}
-                    height={44}
+                    width={40}
+                    height={40}
                     className="rounded-full object-cover"
                     unoptimized
                   />
                 ) : (
-                  <User size={18} color="var(--ink-3)" variant="Bold" />
+                  <User size={16} color="var(--ink-3)" variant="Bold" />
                 )}
               </div>
               <div className="min-w-0">
@@ -290,39 +340,49 @@ export default function RequestDetailPage({
               </div>
             </button>
 
-            {request.solved ? (
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#E8F5E9] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#2E7D32]">
-                <TickCircle size={11} color="#2E7D32" variant="Bold" />
-                Fulfilled
-              </span>
-            ) : (
-              <span className="mt-1 inline-flex items-center rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#1D4ED8]">
-                Open
-              </span>
-            )}
+            <div className="pt-1 shrink-0">
+              {request.solved ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#E8F5E9] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#2E7D32]">
+                  <TickCircle size={11} color="#2E7D32" variant="Bold" />
+                  Fulfilled
+                </span>
+              ) : request.closed ? (
+                <span className="inline-flex items-center rounded-full bg-surface-high px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-ink-3">
+                  Closed
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#1D4ED8]">
+                  Open
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="px-4 pt-4">
-            <div className="flex flex-wrap items-center gap-1.5 mb-3">
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#1D4ED8]">
-                <MessageQuestion size={11} color="#1D4ED8" variant="Bold" />
-                Request
+          {/* Badges */}
+          <div className="flex flex-wrap items-center gap-1.5 px-4 pt-3">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#EFF6FF] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-widest text-[#1D4ED8]">
+              <MessageQuestion size={11} color="#1D4ED8" variant="Bold" />
+              Request
+            </span>
+            {request.bounty ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF3E7] px-2.5 py-1 text-[10px] font-semibold text-[#E1761F]">
+                <Coin1 size={11} color="#E1761F" variant="Bold" />
+                {request.bounty.toLocaleString()} token reward
               </span>
-              {request.bounty ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF3E7] px-2.5 py-1 text-[10px] font-semibold text-[#E1761F]">
-                  <Coin1 size={11} color="#E1761F" variant="Bold" />
-                  {request.bounty.toLocaleString()} token reward
-                </span>
-              ) : null}
-            </div>
+            ) : null}
+          </div>
+
+          {/* Title + description */}
+          <div className="px-4 pt-3">
             <h1 className="text-lg font-bold text-ink leading-snug">
               {request.title}
             </h1>
-            <p className="mt-2.5 text-sm leading-6 text-ink-2">
+            <p className="mt-2 text-sm leading-6 text-ink-2">
               {request.description}
             </p>
           </div>
 
+          {/* Categories */}
           {request.categories.length > 0 && (
             <div className="flex flex-wrap gap-1.5 px-4 pt-3">
               {request.categories.map((cat) => (
@@ -336,20 +396,38 @@ export default function RequestDetailPage({
             </div>
           )}
 
-          <div className="flex items-center gap-4 border-t border-edge px-4 py-3 mt-4">
+          {/* Footer bar: response count + desktop fulfill button */}
+          <div className="mt-4 flex items-center justify-between border-t border-edge px-4 py-3">
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-3">
               <DocumentText1 size={15} color="var(--ink-3)" />
               {request.responseCount}{" "}
               {request.responseCount === 1 ? "response" : "responses"}
             </span>
+
+            {!request.solved && !request.closed && !request.viewerIsAuthor && !request.viewerHasFulfilled && (
+              <button
+                type="button"
+                onClick={handleFulfill}
+                className="cursor-pointer hidden lg:inline-flex items-center gap-2 rounded-2xl bg-[#1D4ED8] px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#1A44C2] active:scale-[0.98]"
+              >
+                <DocumentUpload size={16} color="white" />
+                Post This Document
+              </button>
+            )}
+            {request.viewerHasFulfilled && !request.solved && (
+              <span className="hidden lg:inline-flex items-center gap-1.5 text-xs font-medium text-[#16A34A]">
+                <TickCircle size={13} color="#16A34A" variant="Bold" />
+                You responded
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Responses */}
         {request.fulfillments.length > 0 && (
-          <div className="mt-6 mx-4 lg:mx-0">
+          <div className="mt-5 px-4 lg:px-0">
             <h2 className="mb-3 text-sm font-bold text-ink">
-              {request.fulfillments.length}{" "}
-              {request.fulfillments.length === 1 ? "Response" : "Responses"}
+              {request.fulfillments.length === 1 ? "1 Response" : `${request.fulfillments.length} Responses`}
             </h2>
             <div className="space-y-3">
               {request.fulfillments.map((ful) => (
@@ -371,7 +449,13 @@ export default function RequestDetailPage({
                   )}
 
                   <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => router.push(`/user/${encodeURIComponent(ful.author.username)}`)}
+                      onKeyDown={(e) => e.key === "Enter" && router.push(`/user/${encodeURIComponent(ful.author.username)}`)}
+                      className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-surface-high ring-1 ring-edge"
+                    >
                       {ful.author.profilePicture ? (
                         <Image
                           src={ful.author.profilePicture}
@@ -386,8 +470,14 @@ export default function RequestDetailPage({
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => router.push(`/user/${encodeURIComponent(ful.author.username)}`)}
+                          onKeyDown={(e) => e.key === "Enter" && router.push(`/user/${encodeURIComponent(ful.author.username)}`)}
+                          className="cursor-pointer min-w-0"
+                        >
                           <p className="text-sm font-semibold text-ink">
                             {ful.author.displayName}
                           </p>
@@ -396,27 +486,35 @@ export default function RequestDetailPage({
                             {formatTimeAgo(ful.createdAt)}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            void handleLike(ful.id, ful.viewerHasLiked)
-                          }
-                          disabled={likingId === ful.id}
-                          className={`cursor-pointer inline-flex items-center gap-1 text-xs font-medium shrink-0 transition-colors duration-150 ${
-                            ful.viewerHasLiked
-                              ? "text-red-500"
-                              : "text-ink-3 hover:text-red-400"
-                          }`}
-                        >
-                          <Heart
-                            size={14}
-                            color={
-                              ful.viewerHasLiked ? "#ef4444" : "var(--ink-3)"
-                            }
-                            variant={ful.viewerHasLiked ? "Bold" : "Linear"}
-                          />
-                          {ful.likeCount}
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => void handleLike(ful.id, ful.viewerHasLiked)}
+                            disabled={likingId === ful.id}
+                            className={`cursor-pointer inline-flex items-center gap-1 text-xs font-medium transition-colors duration-150 ${
+                              ful.viewerHasLiked ? "text-red-500" : "text-ink-3 hover:text-red-400"
+                            }`}
+                          >
+                            <Heart
+                              size={14}
+                              color={ful.viewerHasLiked ? "#ef4444" : "var(--ink-3)"}
+                              variant={ful.viewerHasLiked ? "Bold" : "Linear"}
+                            />
+                            {ful.likeCount}
+                          </button>
+                          {/* Respondee can delete their own response; requester cannot */}
+                          {user?.id === ful.authorId && !request.viewerIsAuthor && !ful.isAccepted && (
+                            <button
+                              type="button"
+                              aria-label="Delete response"
+                              disabled={deletingFulfillmentId === ful.id}
+                              onClick={() => void handleDeleteFulfillment(ful.id)}
+                              className="cursor-pointer rounded-full p-0.5 text-ink-3 transition-colors hover:text-red-400 disabled:opacity-40"
+                            >
+                              <Trash size={14} color="currentColor" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       <button
@@ -443,14 +541,8 @@ export default function RequestDetailPage({
                           disabled={acceptingId === ful.id}
                           className="cursor-pointer mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-[#16A34A] px-3 py-1.5 text-xs font-semibold text-[#16A34A] transition-all duration-200 hover:bg-[#F0FDF4] active:scale-95 disabled:opacity-50"
                         >
-                          <TickCircle
-                            size={13}
-                            color="#16A34A"
-                            variant="Bold"
-                          />
-                          {acceptingId === ful.id
-                            ? "Accepting…"
-                            : "Mark as accepted"}
+                          <TickCircle size={13} color="#16A34A" variant="Bold" />
+                          {acceptingId === ful.id ? "Accepting…" : "Mark as accepted"}
                         </button>
                       )}
                     </div>
@@ -462,21 +554,19 @@ export default function RequestDetailPage({
         )}
       </div>
 
-      {!request.solved &&
-        !request.closed &&
-        !request.viewerIsAuthor &&
-        !request.viewerHasFulfilled && (
-          <div className="fixed bottom-0 left-0 right-0 z-20 bg-surface border-t border-edge px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
-            <button
-              type="button"
-              onClick={handleFulfill}
-              className="cursor-pointer w-full flex items-center justify-center gap-2 rounded-2xl bg-[#1D4ED8] py-4 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#1A44C2] active:scale-[0.98]"
-            >
-              <DocumentUpload size={18} color="white" />
-              Post This Document
-            </button>
-          </div>
-        )}
+      {/* Mobile sticky fulfill bar */}
+      {!request.solved && !request.closed && !request.viewerIsAuthor && !request.viewerHasFulfilled && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-edge bg-surface px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+          <button
+            type="button"
+            onClick={handleFulfill}
+            className="cursor-pointer flex w-full items-center justify-center gap-2 rounded-2xl bg-[#1D4ED8] py-3.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-[#1A44C2] active:scale-[0.98]"
+          >
+            <DocumentUpload size={18} color="white" />
+            Post This Document
+          </button>
+        </div>
+      )}
     </div>
   );
 }

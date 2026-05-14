@@ -9,7 +9,10 @@ type DocumentRequest {
   acceptedFulfillmentId: ID
   solved: Boolean!
   closed: Boolean!
+  deleted: Boolean!
+  deletedAt: String
   responseCount: Int!
+  canEditBounty: Boolean!
   author: User!
   fulfillments: [DocumentRequestFulfillment!]!
   acceptedFulfillment: DocumentRequestFulfillment
@@ -46,6 +49,7 @@ extend type Query {
     limit: Int
     offset: Int
   ): DocumentRequestFeed!
+  recentlyDeletedRequests(limit: Int, offset: Int): [DocumentRequest!]!
 }
 
 extend type Mutation {
@@ -73,7 +77,16 @@ extend type Mutation {
     id: ID!
   ): DocumentRequest!
 
-  deleteDocumentRequest(
+  updateDocumentRequest(
     id: ID!
-  ): Boolean!
+    title: String
+    description: String
+    categories: [String!]
+    bounty: Int
+  ): DocumentRequest!
+
+  restoreDocumentRequest(id: ID!): DocumentRequest!
+  permanentlyDeleteDocumentRequest(id: ID!): Boolean!
+  deleteDocumentRequest(id: ID!): Boolean!
+  deleteDocumentRequestFulfillment(fulfillmentId: ID!): Boolean!
 }
