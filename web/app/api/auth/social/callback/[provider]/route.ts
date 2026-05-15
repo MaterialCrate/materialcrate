@@ -113,6 +113,10 @@ const clearSocialCookies = (response: NextResponse, provider: string) => {
     path: "/",
     maxAge: 0,
   });
+  response.cookies.set(`mc_oauth_mobile_${provider}`, "", {
+    path: "/",
+    maxAge: 0,
+  });
 };
 
 const ensureEmail = (email?: string | null) => {
@@ -186,6 +190,14 @@ const exchangeCodeForIdentity = async (
   throw new Error("Unsupported social provider");
 };
 
+const ALLOWED_MOBILE_SCHEMES = ["materialcrate://", "exp://"];
+
+const buildMobileErrorRedirect = (mobileReturn: string, message: string) => {
+  const url = new URL(mobileReturn);
+  url.searchParams.set("error", message);
+  return url.toString();
+};
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
@@ -201,28 +213,21 @@ export async function GET(
   const state = req.nextUrl.searchParams.get("state");
   const savedState = req.cookies.get(`mc_oauth_state_${provider}`)?.value;
 
+  const mobileReturn = req.cookies.get(`mc_oauth_mobile_${provider}`)?.value ?? "";
+  const isMobile = ALLOWED_MOBILE_SCHEMES.some((s) => mobileReturn.startsWith(s));
+
   if (error) {
-    const response = NextResponse.redirect(
-      buildErrorRedirect(
-        origin,
-        mode,
-        provider,
-        "Social sign-in was cancelled",
-      ),
-    );
+    const response = isMobile
+      ? NextResponse.redirect(buildMobileErrorRedirect(mobileReturn, "Sign-in was cancelled"))
+      : NextResponse.redirect(buildErrorRedirect(origin, mode, provider, "Social sign-in was cancelled"));
     clearSocialCookies(response, provider);
     return response;
   }
 
   if (!code || !state || !savedState || state !== savedState) {
-    const response = NextResponse.redirect(
-      buildErrorRedirect(
-        origin,
-        mode,
-        provider,
-        "Invalid social sign-in state",
-      ),
-    );
+    const response = isMobile
+      ? NextResponse.redirect(buildMobileErrorRedirect(mobileReturn, "Invalid sign-in state"))
+      : NextResponse.redirect(buildErrorRedirect(origin, mode, provider, "Invalid social sign-in state"));
     clearSocialCookies(response, provider);
     return response;
   }
@@ -268,6 +273,22 @@ export async function GET(
     const hasCompletedProfile = Boolean(
       graphqlBody?.data?.socialAuth?.user?.username,
     );
+
+    // Mobile: redirect back to the app with the token in the URL
+    if (isMobile) {
+      const url = new URL(mobileReturn);
+      url.searchParams.set("token", sessionToken);
+      if (restoreRequired) {
+        url.searchParams.set("restoreRequired", "1");
+        if (restoreDeadline) url.searchParams.set("restoreDeadline", restoreDeadline);
+      }
+      if (!hasCompletedProfile) url.searchParams.set("needsProfile", "1");
+      const response = NextResponse.redirect(url.toString());
+      clearSocialCookies(response, provider);
+      return response;
+    }
+
+    // Web: set session cookie and redirect
     // Regardless of which page they started from (login or register):
     // - if the account is complete (has a username) → go home
     // - if not (brand new account) → go through registration steps
@@ -307,9 +328,9 @@ export async function GET(
       caughtError instanceof Error
         ? caughtError.message
         : "Social sign-in failed";
-    const response = NextResponse.redirect(
-      buildErrorRedirect(origin, mode, provider, message),
-    );
+    const response = isMobile
+      ? NextResponse.redirect(buildMobileErrorRedirect(mobileReturn, message))
+      : NextResponse.redirect(buildErrorRedirect(origin, mode, provider, message));
     clearSocialCookies(response, provider);
     return response;
   }

@@ -15,7 +15,8 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as WebBrowser from "expo-web-browser";
-import { GRAPHQL_URL, gql } from "@/lib/api";
+import * as Linking from "expo-linking";
+import { WEB_URL, GRAPHQL_URL } from "@/lib/api";
 import { setAuth } from "@/lib/auth-store";
 
 const BRAND = "#E1761F";
@@ -57,10 +58,34 @@ export default function LoginScreen() {
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  const handleGoogleAuth = async () => {
-    await WebBrowser.openBrowserAsync(
-      `${GRAPHQL_URL.replace("/graphql", "")}/api/auth/social/google?mode=login`,
-    );
+  const handleGooglePress = async () => {
+    setError(null);
+    // returnUrl is exp://... in Expo Go, materialcrate://... in standalone
+    const returnUrl = Linking.createURL("/google-callback");
+    const oauthUrl = `${WEB_URL}/api/auth/social/google?mode=login&mobileReturn=${encodeURIComponent(returnUrl)}`;
+
+    const result = await WebBrowser.openAuthSessionAsync(oauthUrl, returnUrl);
+    if (result.type !== "success") return;
+
+    const parsed = new URL(result.url);
+    const token = parsed.searchParams.get("token");
+    const authError = parsed.searchParams.get("error");
+
+    if (authError || !token) {
+      setError(authError || "Google sign-in failed");
+      return;
+    }
+
+    const restoreRequired = parsed.searchParams.get("restoreRequired") === "1";
+    const restoreDeadline = parsed.searchParams.get("restoreDeadline");
+
+    if (restoreRequired) {
+      handleRestore(token, restoreDeadline);
+      return;
+    }
+
+    setAuth(token);
+    router.replace("/(tabs)");
   };
 
   const handleRestore = (
@@ -78,7 +103,14 @@ export default function LoginScreen() {
             setLoading(true);
             setError(null);
             try {
-              await gql(RESTORE_MUTATION, {}, restoreToken);
+              await fetch(GRAPHQL_URL, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${restoreToken}`,
+                },
+                body: JSON.stringify({ query: RESTORE_MUTATION }),
+              });
               setAuth(restoreToken);
               router.replace("/(tabs)");
             } catch {
@@ -109,7 +141,6 @@ export default function LoginScreen() {
       if (json.errors?.length) {
         const firstError = json.errors[0];
 
-        // Email not verified — send to verification step
         if (firstError?.extensions?.code === "EMAIL_NOT_VERIFIED") {
           router.push({
             pathname: "/(auth)/register",
@@ -187,7 +218,8 @@ export default function LoginScreen() {
             <View style={styles.content}>
               <TouchableOpacity
                 style={styles.socialBtn}
-                onPress={handleGoogleAuth}
+                onPress={handleGooglePress}
+                disabled={loading}
               >
                 <Text style={styles.socialBtnText}>Continue with Google</Text>
                 <Ionicons name="logo-google" size={20} color="#111" />

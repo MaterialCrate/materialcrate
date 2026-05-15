@@ -1,9 +1,16 @@
 import { useEffect, useReducer } from 'react';
+import * as SecureStore from 'expo-secure-store';
+
+const TOKEN_KEY = 'mc_auth_token';
 
 type AuthState = { token: string | null; isAuthenticated: boolean };
 
 let _state: AuthState = { token: null, isAuthenticated: false };
 const _listeners = new Set<() => void>();
+
+function notify() {
+  _listeners.forEach((l) => l());
+}
 
 export function getAuth() {
   return _state;
@@ -11,12 +18,26 @@ export function getAuth() {
 
 export function setAuth(token: string) {
   _state = { token, isAuthenticated: true };
-  _listeners.forEach((l) => l());
+  notify();
+  SecureStore.setItemAsync(TOKEN_KEY, token).catch(() => null);
 }
 
 export function clearAuth() {
   _state = { token: null, isAuthenticated: false };
-  _listeners.forEach((l) => l());
+  notify();
+  SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => null);
+}
+
+export async function loadStoredAuth(): Promise<void> {
+  try {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (token) {
+      _state = { token, isAuthenticated: true };
+      notify();
+    }
+  } catch {
+    // Secure store unavailable (e.g. simulator edge case) — stay logged out
+  }
 }
 
 export function useAuth(): AuthState {

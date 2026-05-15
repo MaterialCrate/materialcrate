@@ -70,6 +70,12 @@ export async function GET(
 
   const state = randomUUID();
   const redirectUri = `${origin}${buildCallbackPath(provider)}`;
+
+  const mobileReturn = req.nextUrl.searchParams.get("mobileReturn") ?? "";
+  const isMobileReturn =
+    mobileReturn.startsWith("materialcrate://") ||
+    mobileReturn.startsWith("exp://");
+
   let oauthUrl: URL;
 
   if (provider === "google") {
@@ -94,6 +100,15 @@ export async function GET(
   }
 
   const response = NextResponse.redirect(oauthUrl.toString());
+  if (isMobileReturn) {
+    response.cookies.set(`mc_oauth_mobile_${provider}`, mobileReturn, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 10,
+    });
+  }
   response.cookies.set(`mc_oauth_state_${provider}`, state, {
     httpOnly: true,
     sameSite: "lax",

@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { loadStoredAuth } from '@/lib/auth-store';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -12,9 +13,16 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
-    SplashScreen.hideAsync();
+    loadStoredAuth().finally(() => {
+      setReady(true);
+      SplashScreen.hideAsync();
+    });
   }, []);
+
+  if (!ready) return null;
 
   return (
     <SafeAreaProvider>

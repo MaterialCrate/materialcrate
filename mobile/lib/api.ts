@@ -12,6 +12,15 @@ function getBaseUrl(): string {
   return "http://localhost:4000";
 }
 
+function getWebBaseUrl(): string {
+  if (!__DEV__) return "https://materialcrate.com";
+  const host = Constants.expoConfig?.hostUri?.split(":")[0];
+  if (host) return `http://${host}:3000`;
+  return "http://localhost:3000";
+}
+
+export const WEB_URL = getWebBaseUrl();
+
 const BASE_URL = getBaseUrl();
 export const GRAPHQL_URL = `${BASE_URL}/graphql`;
 
