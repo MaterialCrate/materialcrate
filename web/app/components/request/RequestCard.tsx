@@ -35,7 +35,12 @@ export type DocumentRequest = {
   };
 };
 
-type OptionsAnchor = { top: number; left: number; right: number; bottom: number };
+type OptionsAnchor = {
+  top: number;
+  left: number;
+  right: number;
+  bottom: number;
+};
 
 function formatTimeAgo(timestamp: string): string {
   const value = new Date(timestamp).getTime();
@@ -73,7 +78,7 @@ function RequestOptionsMenu({
     const pad = 12;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const menuH = 108; // 2 items × ~54px
+    const menuH = 108;
     const menuW = 160;
 
     const fitsBelow = anchor.bottom + gap + menuH <= vh - pad;
@@ -86,7 +91,10 @@ function RequestOptionsMenu({
 
     return leftEdgeIfRight >= pad
       ? { top: `${top}px`, right: `${rightFromEdge}px` }
-      : { top: `${top}px`, left: `${Math.max(pad, Math.min(Math.round(anchor.left), vw - menuW - pad))}px` };
+      : {
+          top: `${top}px`,
+          left: `${Math.max(pad, Math.min(Math.round(anchor.left), vw - menuW - pad))}px`,
+        };
   }, [anchor, isOpen]);
 
   useEffect(() => {
@@ -114,7 +122,10 @@ function RequestOptionsMenu({
       <div className="overflow-hidden rounded-xl bg-page">
         <button
           type="button"
-          onClick={() => { onEdit(); onClose(); }}
+          onClick={() => {
+            onEdit();
+            onClose();
+          }}
           className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-ink hover:bg-black/5 active:opacity-60 transition-colors border-b border-edge"
         >
           <Edit2 size={16} color="#111111" variant="Bold" />
@@ -161,7 +172,12 @@ export default function RequestCard({
   const handleMoreClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    setAnchor({ top: rect.top, left: rect.left, right: rect.right, bottom: rect.bottom });
+    setAnchor({
+      top: rect.top,
+      left: rect.left,
+      right: rect.right,
+      bottom: rect.bottom,
+    });
     setMenuOpen((v) => !v);
   };
 
@@ -170,10 +186,17 @@ export default function RequestCard({
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Delete this request? It will be kept for 30 days and can be restored.")) return;
+    if (
+      !window.confirm(
+        "Delete this request? It will be kept for 30 days and can be restored.",
+      )
+    )
+      return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/requests/${request.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/requests/${request.id}`, {
+        method: "DELETE",
+      });
       if (res.ok) {
         setMenuOpen(false);
         onDeleted?.(request.id);

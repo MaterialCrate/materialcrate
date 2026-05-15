@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   Modal,
   View,
@@ -11,9 +11,12 @@ import {
   Platform,
   StyleSheet,
   ActivityIndicator,
+  Alert,
+  Pressable,
+  Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Heart, Send2, CloseCircle, User, Verify } from "iconsax-react-nativejs";
+import { Heart, Send2, CloseCircle, User, Verify, Edit2, Trash, Flag } from "iconsax-react-nativejs";
 import { gql } from "@/lib/api";
 import { getAuth, useAuth } from "@/lib/auth-store";
 import type { HomePost } from "./Post";
@@ -53,6 +56,17 @@ type Props = {
 
 const REPLIES_BATCH_SIZE = 10;
 const COMMENTS_BATCH_SIZE = 50;
+
+const M = {
+  deleteComment: `mutation DeleteComment($commentId: ID!) { deleteComment(commentId: $commentId) }`,
+  editComment: `mutation EditComment($commentId: ID!, $content: String!) {
+    editComment(commentId: $commentId, content: $content) {
+      id postId parentId content replyCount likeCount viewerHasLiked createdAt
+      author { id displayName username profilePicture subscriptionPlan }
+    }
+  }`,
+  reportComment: `mutation ReportComment($commentId: ID!, $reason: String!) { reportComment(commentId: $commentId, reason: $reason) }`,
+};
 
 function formatTimeAgo(timestamp: string) {
   const trimmed = timestamp?.trim();
@@ -119,7 +133,21 @@ export default function CommentDrawer({ isOpen, onClose, postId, post }: Props) 
     Record<string, boolean>
   >({});
 
+  // Comment options state
+  const [viewerUsername, setViewerUsername] = useState<string | null>(null);
+  const [activeComment, setActiveComment] = useState<DrawerComment | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isDeletingCommentId, setIsDeletingCommentId] = useState<string | null>(null);
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+
   const commentsLocked = Boolean(post?.commentsDisabled);
+
+  const isPostOwner = Boolean(
+    viewerUsername &&
+      post?.author?.username?.trim().toLowerCase() === viewerUsername,
+  );
 
   const [keyboardPadding, setKeyboardPadding] = useState(0);
 
@@ -131,12 +159,43 @@ export default function CommentDrawer({ isOpen, onClose, postId, post }: Props) 
     return () => { show.remove(); hide.remove(); };
   }, []);
 
+  // Fetch current viewer's username to determine comment ownership
+  useEffect(() => {
+    if (!isOpen || !isAuthenticated) {
+      setViewerUsername(null);
+      return;
+    }
+    const { token } = getAuth();
+    if (!token) return;
+    gql<{ me: { username: string } | null }>(
+      `query Me { me { username } }`,
+      {},
+      token,
+    )
+      .then((data) =>
+        setViewerUsername(data?.me?.username?.trim().toLowerCase() ?? null),
+      )
+      .catch(() => null);
+  }, [isOpen, isAuthenticated]);
+
+  // Animate options sheet in/out
+  useEffect(() => {
+    Animated.timing(sheetAnim, {
+      toValue: activeComment ? 1 : 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [activeComment, sheetAnim]);
+
   const resetState = useCallback(() => {
     setExpandedRepliesByCommentId({});
     setRepliesByCommentId({});
     setDraftComment("");
     setReplyTarget(null);
     setCommentsError(null);
+    setEditingCommentId(null);
+    setEditDraft("");
+    setActiveComment(null);
   }, []);
 
   const ensureAuthenticated = useCallback(() => {
@@ -231,6 +290,17 @@ export default function CommentDrawer({ isOpen, onClose, postId, post }: Props) 
     },
     [],
   );
+
+  const removeComment = useCallback((commentId: string) => {
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
+    setRepliesByCommentId((prev) => {
+      const next: Record<string, DrawerComment[]> = {};
+      for (const [parentId, replies] of Object.entries(prev)) {
+        next[parentId] = replies.filter((r) => r.id !== commentId);
+      }
+      return next;
+    });
+  }, []);
 
   const handleToggleReplies = async (comment: DrawerComment) => {
     const isExpanded = Boolean(expandedRepliesByCommentId[comment.id]);
@@ -348,6 +418,105 @@ export default function CommentDrawer({ isOpen, onClose, postId, post }: Props) 
     }
   };
 
+  const handleLongPressComment = useCallback(
+    (comment: DrawerComment) => {
+      if (!isAuthenticated) return;
+      setActiveComment(comment);
+    },
+    [isAuthenticated],
+  );
+
+  const handleEditPress = useCallback(() => {
+    if (!activeComment) return;
+    setEditingCommentId(activeComment.id);
+    setEditDraft(activeComment.content);
+    setActiveComment(null);
+  }, [activeComment]);
+
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingCommentId || !editDraft.trim() || isSubmittingEdit) return;
+    setIsSubmittingEdit(true);
+    try {
+      const { token } = getAuth();
+      const data = await gql<{ editComment: DrawerComment }>(
+        M.editComment,
+        { commentId: editingCommentId, content: editDraft.trim() },
+        token ?? undefined,
+      );
+      if (data?.editComment) {
+        applyUpdatedComment(data.editComment);
+      }
+      setEditingCommentId(null);
+      setEditDraft("");
+    } catch {
+      setCommentsError("Failed to edit comment");
+    } finally {
+      setIsSubmittingEdit(false);
+    }
+  }, [editingCommentId, editDraft, isSubmittingEdit, applyUpdatedComment]);
+
+  const handleDeletePress = useCallback(() => {
+    if (!activeComment) return;
+    const comment = activeComment;
+    const isOwn =
+      viewerUsername &&
+      comment.author?.username?.trim().toLowerCase() === viewerUsername;
+    setActiveComment(null);
+    Alert.alert(
+      isOwn ? "Delete comment?" : "Remove comment?",
+      isOwn
+        ? "This will permanently delete your comment."
+        : "This comment will be permanently removed from your post.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isOwn ? "Delete" : "Remove",
+          style: "destructive",
+          onPress: async () => {
+            setIsDeletingCommentId(comment.id);
+            try {
+              const { token } = getAuth();
+              await gql(M.deleteComment, { commentId: comment.id }, token ?? undefined);
+              removeComment(comment.id);
+            } catch {
+              setCommentsError("Failed to delete comment");
+            } finally {
+              setIsDeletingCommentId(null);
+            }
+          },
+        },
+      ],
+    );
+  }, [activeComment, viewerUsername, removeComment]);
+
+  const handleReportPress = useCallback(() => {
+    if (!activeComment) return;
+    const comment = activeComment;
+    setActiveComment(null);
+    Alert.alert(
+      "Report comment?",
+      "This comment will be flagged for review by our team.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Report",
+          onPress: async () => {
+            try {
+              const { token } = getAuth();
+              await gql(
+                M.reportComment,
+                { commentId: comment.id, reason: "Inappropriate content" },
+                token ?? undefined,
+              );
+            } catch {
+              setCommentsError("Failed to report comment");
+            }
+          },
+        },
+      ],
+    );
+  }, [activeComment]);
+
   const handleClose = () => {
     resetState();
     onClose();
@@ -358,54 +527,142 @@ export default function CommentDrawer({ isOpen, onClose, postId, post }: Props) 
     const name = getAuthorName(comment.author);
     const isPaid = hasPaidSubscription(comment.author?.subscriptionPlan);
     const isLiking = Boolean(isLikingByCommentId[comment.id]);
+    const isDeleting = isDeletingCommentId === comment.id;
+    const isEditing = editingCommentId === comment.id;
+    const isCommentAuthor =
+      Boolean(viewerUsername) &&
+      comment.author?.username?.trim().toLowerCase() === viewerUsername;
 
     return (
-      <View key={comment.id} style={[styles.commentRow, isReply && styles.replyRow]}>
-        <View style={styles.avatar}>
-          {pic ? (
-            <Image source={{ uri: pic }} style={styles.avatarImage} />
-          ) : (
-            <User size={14} color="#AAAAAA" variant="Bold" />
-          )}
-        </View>
-        <View style={styles.commentBody}>
-          <View style={styles.commentNameRow}>
-            <Text style={styles.commentAuthor} numberOfLines={1}>
-              {name}
-            </Text>
-            {isPaid && <Verify size={12} color="#E1761F" variant="Bold" />}
+      <TouchableOpacity
+        key={comment.id}
+        activeOpacity={0.85}
+        onLongPress={() => handleLongPressComment(comment)}
+        delayLongPress={400}
+        disabled={isDeleting}
+      >
+        <View style={[styles.commentRow, isReply && styles.replyRow, isDeleting && styles.commentDeleting]}>
+          <View style={styles.avatar}>
+            {pic ? (
+              <Image source={{ uri: pic }} style={styles.avatarImage} />
+            ) : (
+              <User size={14} color="#AAAAAA" variant="Bold" />
+            )}
           </View>
-          <Text style={styles.commentContent}>{comment.content}</Text>
-          <View style={styles.commentMeta}>
-            <View style={styles.commentMetaLeft}>
-              <Text style={styles.commentTime}>{formatTimeAgo(comment.createdAt)}</Text>
-              {!commentsLocked && (
+          <View style={styles.commentBody}>
+            <View style={styles.commentNameRow}>
+              <Text style={styles.commentAuthor} numberOfLines={1}>
+                {name}
+              </Text>
+              {isPaid && <Verify size={12} color="#E1761F" variant="Bold" />}
+            </View>
+
+            {isEditing ? (
+              <View style={styles.editContainer}>
+                <TextInput
+                  style={styles.editInput}
+                  value={editDraft}
+                  onChangeText={setEditDraft}
+                  multiline
+                  autoFocus
+                  maxLength={2000}
+                  placeholderTextColor="#AAAAAA"
+                />
+                <View style={styles.editActions}>
+                  <TouchableOpacity
+                    onPress={() => { setEditingCommentId(null); setEditDraft(""); }}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.editCancelBtn}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => void handleSaveEdit()}
+                    disabled={isSubmittingEdit || !editDraft.trim()}
+                    hitSlop={8}
+                  >
+                    {isSubmittingEdit ? (
+                      <ActivityIndicator color="#E1761F" size="small" />
+                    ) : (
+                      <Text
+                        style={[
+                          styles.editSaveBtn,
+                          !editDraft.trim() && styles.editSaveBtnDisabled,
+                        ]}
+                      >
+                        Save
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.commentContent}>{comment.content}</Text>
+            )}
+
+            {!isEditing && (
+              <View style={styles.commentMeta}>
+                <View style={styles.commentMetaLeft}>
+                  <Text style={styles.commentTime}>{formatTimeAgo(comment.createdAt)}</Text>
+                  {!commentsLocked && (
+                    <TouchableOpacity
+                      onPress={() => handleReplyToComment(comment)}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.replyBtn}>Reply</Text>
+                    </TouchableOpacity>
+                  )}
+                  {isCommentAuthor && (
+                    <TouchableOpacity
+                      onPress={() => { setEditingCommentId(comment.id); setEditDraft(comment.content); }}
+                      hitSlop={8}
+                    >
+                      <Text style={styles.replyBtn}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 <TouchableOpacity
-                  onPress={() => handleReplyToComment(comment)}
+                  style={styles.likeRow}
+                  onPress={() => void handleLikeComment(comment.id)}
+                  disabled={isLiking}
                   hitSlop={8}
                 >
-                  <Text style={styles.replyBtn}>Reply</Text>
+                  <Text style={styles.likeCount}>{comment.likeCount ?? 0}</Text>
+                  <Heart
+                    size={16}
+                    color={comment.viewerHasLiked ? "#E00505" : "#959595"}
+                    variant={comment.viewerHasLiked ? "Bold" : "Linear"}
+                  />
                 </TouchableOpacity>
-              )}
-            </View>
-            <TouchableOpacity
-              style={styles.likeRow}
-              onPress={() => void handleLikeComment(comment.id)}
-              disabled={isLiking}
-              hitSlop={8}
-            >
-              <Text style={styles.likeCount}>{comment.likeCount ?? 0}</Text>
-              <Heart
-                size={16}
-                color={comment.viewerHasLiked ? "#E00505" : "#959595"}
-                variant={comment.viewerHasLiked ? "Bold" : "Linear"}
-              />
-            </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
+
+  const activeCommentActions = (() => {
+    if (!activeComment) return [];
+    const isCommentAuthor =
+      Boolean(viewerUsername) &&
+      activeComment.author?.username?.trim().toLowerCase() === viewerUsername;
+
+    if (isCommentAuthor) {
+      return [
+        { label: "Edit", icon: Edit2, color: "#111111", onPress: handleEditPress },
+        { label: "Delete", icon: Trash, color: "#DC2626", onPress: handleDeletePress, destructive: true },
+      ];
+    }
+    if (isPostOwner) {
+      return [
+        { label: "Remove comment", icon: Trash, color: "#DC2626", onPress: handleDeletePress, destructive: true },
+        { label: "Report", icon: Flag, color: "#111111", onPress: handleReportPress },
+      ];
+    }
+    return [
+      { label: "Report", icon: Flag, color: "#111111", onPress: handleReportPress },
+    ];
+  })();
 
   return (
     <Modal
@@ -552,6 +809,71 @@ export default function CommentDrawer({ isOpen, onClose, postId, post }: Props) 
           </View>
         </View>
       </View>
+
+      {activeComment && (
+        <Modal
+          visible={Boolean(activeComment)}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setActiveComment(null)}
+        >
+          <Pressable style={styles.optionsBackdrop} onPress={() => setActiveComment(null)}>
+            <Animated.View
+              style={[
+                styles.optionsSheet,
+                {
+                  transform: [
+                    {
+                      translateY: sheetAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [200, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <View style={styles.optionsDragHandle} />
+              <View style={styles.optionsPreview}>
+                <Text style={styles.optionsPreviewText} numberOfLines={2}>
+                  {activeComment.content}
+                </Text>
+              </View>
+              <View style={styles.optionsDivider} />
+              {activeCommentActions.map((action) => (
+                <TouchableOpacity
+                  key={action.label}
+                  style={styles.optionRow}
+                  onPress={action.onPress}
+                  activeOpacity={0.7}
+                >
+                  <action.icon
+                    size={20}
+                    color={action.color}
+                    variant="Bold"
+                  />
+                  <Text
+                    style={[
+                      styles.optionLabel,
+                      action.destructive && styles.optionLabelDestructive,
+                    ]}
+                  >
+                    {action.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <View style={styles.optionsDivider} />
+              <TouchableOpacity
+                style={styles.optionRow}
+                onPress={() => setActiveComment(null)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.optionCancelLabel}>Cancel</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </Pressable>
+        </Modal>
+      )}
     </Modal>
   );
 }
@@ -623,6 +945,9 @@ const styles = StyleSheet.create({
   },
   replyRow: {
     marginLeft: 4,
+  },
+  commentDeleting: {
+    opacity: 0.4,
   },
   avatar: {
     width: 36,
@@ -766,5 +1091,94 @@ const styles = StyleSheet.create({
   },
   inputDisabled: {
     opacity: 0.5,
+  },
+  // Inline edit
+  editContainer: {
+    gap: 6,
+  },
+  editInput: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: "#131212",
+    lineHeight: 18,
+    maxHeight: 120,
+  },
+  editActions: {
+    flexDirection: "row",
+    gap: 16,
+    justifyContent: "flex-end",
+  },
+  editCancelBtn: {
+    fontSize: 12,
+    color: "#959595",
+    fontWeight: "600",
+  },
+  editSaveBtn: {
+    fontSize: 12,
+    color: "#E1761F",
+    fontWeight: "700",
+  },
+  editSaveBtnDisabled: {
+    opacity: 0.4,
+  },
+  // Options bottom sheet
+  optionsBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  optionsSheet: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 32,
+    paddingTop: 8,
+  },
+  optionsDragHandle: {
+    alignSelf: "center",
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#E5E7EB",
+    marginBottom: 12,
+  },
+  optionsPreview: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  optionsPreviewText: {
+    fontSize: 13,
+    color: "#959595",
+    lineHeight: 18,
+  },
+  optionsDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 20,
+  },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  optionLabel: {
+    fontSize: 15,
+    color: "#111111",
+    fontWeight: "500",
+  },
+  optionLabelDestructive: {
+    color: "#DC2626",
+  },
+  optionCancelLabel: {
+    fontSize: 15,
+    color: "#959595",
+    fontWeight: "600",
+    flex: 1,
+    textAlign: "center",
   },
 });
