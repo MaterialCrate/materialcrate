@@ -4,7 +4,7 @@ import Image from "next/image";
 
 export default function AuthSplashScreen() {
   return (
-    <div className="fixed inset-0 z-100 flex min-h-dvh items-center justify-center bg-[#f7f1e8] text-ink">
+    <div className="fixed inset-0 z-100 flex min-h-dvh items-center justify-center bg-[#070706] text-ink">
       <div className="flex flex-col items-center">
         <Image
           src="/logo.png"
@@ -17,8 +17,8 @@ export default function AuthSplashScreen() {
       </div>
       <div className="absolute bottom-10">
         <Image
-          src="/mc-wordmark.svg"
-          alt="MaterialCrate Logo"
+          src="/protagenlabs-logo-text.png"
+          alt="Protagen Labs"
           width={120}
           height={120}
           priority
